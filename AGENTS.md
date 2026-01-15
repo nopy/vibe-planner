@@ -1,0 +1,259 @@
+# OPENCODE PROJECT MANAGER - AGENT KNOWLEDGE BASE
+
+**Generated:** 2026-01-15 22:48:00  
+**Branch:** HEAD  
+**Project:** Go backend + React frontend + K8s orchestration (MVP bootstrap)
+**Status:** ✅ All critical issues resolved - Ready for Phase 1
+
+---
+
+## OVERVIEW
+
+Multi-module monorepo: Go API server, React SPA, 2 Go sidecars (file-browser, session-proxy), K8s manifests. Project management system with AI-powered coding via OpenCode agents. All critical issues resolved - ready for Phase 1 (auth implementation).
+
+---
+
+## STRUCTURE
+
+```
+.
+├── backend/              # Go API (Gin, GORM, PostgreSQL)
+├── frontend/             # React SPA (Vite, TypeScript, Tailwind)
+├── sidecars/             # 2 Go services (file ops, session proxy)
+├── k8s/                  # Kubernetes manifests (base + overlays)
+├── db/migrations/        # SQL migrations (postgres)
+├── scripts/              # Shell utilities (Keycloak, image build, kind deploy)
+├── docker-compose.yml    # Local services (postgres, keycloak, redis)
+└── Makefile              # Dev commands
+```
+
+---
+
+## WHERE TO LOOK
+
+| Task | Location | Notes |
+|------|----------|-------|
+| Start backend | `backend/cmd/api/main.go` | Entry point, port 8080 |
+| Start frontend | `frontend/src/main.tsx` | Vite SPA entry, port 5173 |
+| API handlers | `backend/internal/api/` | Thin layer (stubs only) |
+| Models | `backend/internal/model/` | GORM structs (User, Project, Task) |
+| DB schema | `db/migrations/001_init.up.sql` | All tables defined |
+| React routes | `frontend/src/App.tsx` | Placeholder pages |
+| Types | `frontend/src/types/index.ts` | TS interfaces |
+| File browser | `sidecars/file-browser/cmd/main.go` | Port 3001 |
+| Session proxy | `sidecars/session-proxy/cmd/main.go` | Port 3002 |
+| K8s base | `k8s/base/` | Namespace, ConfigMap, Secrets |
+| K8s dev | `k8s/overlays/dev/` | Dev environment patches |
+
+---
+
+## CRITICAL ISSUES ~~(Fix Before Development)~~ **[RESOLVED 2026-01-15]**
+
+**All critical issues have been resolved. Project is ready for Phase 1 development.**
+
+**1. Committed Binaries** ✅ FIXED
+- ~~`backend/opencode-api`, `sidecars/*/file-browser`, `sidecars/*/session-proxy` are checked in~~
+- **Resolution:** Deleted binaries + updated `.gitignore` to prevent future commits
+
+**2. Multi-Module Without Workspace** ✅ FIXED
+- ~~3 separate `go.mod` files (backend + 2 sidecars)~~
+- **Resolution:** Created `go.work` at root with all 3 modules
+
+**3. Missing Service/Repository Layers** ⚠️ DEFERRED
+- No `internal/service/` or `internal/repository/` in backend
+- **Status:** Documented as "Planned" in backend/AGENTS.md - will be created during Phase 1-2
+
+**4. Frontend Structure Mismatch** ✅ FIXED
+- ~~README claims `src/components/`, `src/hooks/`, `src/contexts/` but they don't exist~~
+- **Resolution:** Created all three directories
+
+**5. Placeholder Module Path** ✅ FIXED
+- ~~`github.com/yourusername/opencode-project-manager` in go.mod~~
+- **Resolution:** Updated to `github.com/npinot/vibe/backend` and sidecars paths, all imports updated
+
+**6. Keycloak DB Mismatch** ✅ FIXED
+- ~~docker-compose: `POSTGRES_DB=opencode_dev` but Keycloak expects `keycloak` DB~~
+- **Resolution:** Added `init-multiple-dbs.sh` script to create both databases
+
+**7. Broken `make docker-push`** ✅ FIXED
+- ~~Runs `docker-compose push` but compose only has postgres/keycloak/redis~~
+- **Resolution:** Updated Makefile to call `build-images.sh` then push each image individually
+
+**8. No CI Pipeline** ⚠️ DEFERRED
+- No `.github/workflows/` found
+- **Status:** Deferred to Phase 9 (Testing & Documentation)
+
+---
+
+## CONVENTIONS
+
+### Go Backend
+
+**Imports (3 groups, blank-separated):**
+```go
+import (
+    "context"
+    "log"
+
+    "github.com/gin-gonic/gin"
+    "github.com/google/uuid"
+
+    "github.com/npinot/vibe/backend/internal/service"
+)
+```
+
+**Error Handling:**
+- Always explicit (no `_` discard)
+- Wrap with context: `fmt.Errorf("failed to X: %w", err)`
+- Log at top level (handlers), return up the stack
+
+**Types:**
+- IDs: `uuid.UUID`
+- Timestamps: `time.Time`
+- Optional fields: pointers
+- Struct tags: `json:"field_name" gorm:"column:field_name"`
+
+**Naming:**
+- Interfaces: `UserRepository`, `Authenticator`
+- Functions: `CreateUser`, `ValidateToken`
+- Receivers: `u *User`, `ur *UserRepository`
+
+### Frontend
+
+**Imports (3 groups):**
+```typescript
+import { useState, useEffect } from 'react'
+
+import axios from 'axios'
+import { useParams } from 'react-router-dom'
+
+import { ProjectCard } from '@/components/ProjectCard'
+import { useAuth } from '@/hooks/useAuth'
+import type { Project } from '@/types'
+```
+
+**Types:**
+- Interfaces in `src/types/index.ts`
+- Always type props/state/returns
+- Optional: `description?: string`
+- Use `interface` for objects, `type` for unions
+
+**Components:**
+- Functional only
+- Hooks for state/effects
+- Single responsibility
+
+**Styling:**
+- Tailwind utilities only
+- Responsive: `sm:`, `md:`, `lg:`
+
+---
+
+## ANTI-PATTERNS (FORBIDDEN)
+
+**Never:**
+- `as any`, `@ts-ignore`, `@ts-expect-error`
+- Commit secrets, API keys, credentials
+- Mix business logic in handlers
+- Suppress type errors
+
+**Always:**
+- Validate user input (frontend + backend)
+- Use parameterized queries (GORM does this)
+- Handle errors explicitly
+- Check DB connection before server start
+
+---
+
+## COMMANDS
+
+**Development:**
+```bash
+make dev                    # All services
+make dev-services           # Postgres, Keycloak, Redis
+make backend-dev            # Go server :8080
+make frontend-dev           # Vite dev server :5173
+```
+
+**Testing:**
+```bash
+# Backend
+cd backend && go test ./...
+cd backend && go test -v -run TestFunctionName ./path/to/package
+
+# Frontend
+cd frontend && npm test
+cd frontend && npm test -- path/to/test.spec.ts
+cd frontend && npm test -- --watch
+```
+
+**Linting:**
+```bash
+# Backend
+cd backend && go fmt ./...
+cd backend && go vet ./...
+
+# Frontend
+cd frontend && npm run lint
+cd frontend && npm run format
+```
+
+**Database:**
+```bash
+make db-migrate-up          # Run migrations
+make db-migrate-down        # Rollback 1
+make db-reset               # Drop all + rerun
+```
+
+**Build:**
+```bash
+cd backend && go build -o opencode-api cmd/api/main.go
+cd frontend && npm run build
+./scripts/build-images.sh   # All Docker images
+```
+
+---
+
+## TEST SETUP
+
+- **Backend:** Standard Go tests (`*_test.go`), none written yet
+- **Frontend:** Vitest (no config file - uses defaults)
+- **No E2E:** Cypress referenced in docs but not present
+- **Coverage:** `go test -coverprofile=coverage.out ./...`
+
+---
+
+## BUILD PATTERNS
+
+- **Multi-stage Dockerfiles** for all services (backend, frontend, sidecars)
+- **Registry:** `registry.legal-suite.com/opencode`
+- **Image builder:** `scripts/build-images.sh` (tags by VERSION env)
+- **Keycloak setup:** `scripts/setup-keycloak.sh` (waits for ready, prints creds - no realm provisioning)
+- **Kind deploy:** `scripts/deploy-kind.sh`
+
+---
+
+## DEPENDENCIES
+
+**Go:**
+- Gin (HTTP), GORM (ORM), UUID, godotenv
+- Go 1.21 across all modules
+
+**TypeScript/React:**
+- React 18, React Router, Axios, Zustand
+- Vite, Tailwind CSS, Monaco Editor, dnd-kit
+- ESLint (extends recommended + TS + React hooks + prettier)
+- Prettier (configured in `.prettierrc`)
+
+---
+
+## GOTCHAS
+
+1. **Three `go.mod` files** - backend and each sidecar are separate modules (unified via `go.work`)
+2. **Strict lint policy** - ESLint `--max-warnings 0` fails on any warning
+3. **Prettier config** - `.prettierrc` configured with project defaults
+4. **ESLint + Prettier** - `eslint-config-prettier` installed to prevent conflicts
+5. **Path alias `@/`** - maps to `./src/` in tsconfig
+6. **Migration tool** - Uses golang-migrate CLI (not GORM auto-migrate in prod)
+7. **Bootstrap complete** - 43 source files, all Go services build, frontend structure minimal
+8. **Next phase:** Implement OIDC auth (Phase 1 per IMPLEMENTATION_PLAN.md)

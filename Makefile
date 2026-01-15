@@ -1,0 +1,160 @@
+.PHONY: help dev dev-services backend-dev frontend-dev db-migrate-up db-migrate-down db-reset test backend-test frontend-test kind-create kind-deploy kind-delete docker-build docker-push clean
+
+# Default target
+help:
+	@echo "OpenCode Project Manager - Development Commands"
+	@echo ""
+	@echo "Setup:"
+	@echo "  make setup              - Install all dependencies"
+	@echo "  make dev                - Start all services (one command)"
+	@echo ""
+	@echo "Development:"
+	@echo "  make dev-services       - Start Docker services (PostgreSQL, Keycloak, Redis)"
+	@echo "  make backend-dev        - Start Go backend"
+	@echo "  make frontend-dev       - Start React frontend"
+	@echo ""
+	@echo "Database:"
+	@echo "  make db-migrate-up      - Run database migrations"
+	@echo "  make db-migrate-down    - Rollback database migrations"
+	@echo "  make db-reset           - Reset database"
+	@echo ""
+	@echo "Testing:"
+	@echo "  make test               - Run all tests"
+	@echo "  make backend-test       - Run Go tests"
+	@echo "  make frontend-test      - Run React tests"
+	@echo ""
+	@echo "Kubernetes (kind):"
+	@echo "  make kind-create        - Create kind cluster"
+	@echo "  make kind-deploy        - Deploy to kind"
+	@echo "  make kind-logs          - View pod logs"
+	@echo "  make kind-delete        - Delete kind cluster"
+	@echo ""
+	@echo "Docker:"
+	@echo "  make docker-build       - Build all Docker images"
+	@echo "  make docker-push        - Push images to registry"
+	@echo ""
+	@echo "Cleanup:"
+	@echo "  make clean              - Stop all services and cleanup"
+
+# Setup
+setup:
+	@echo "Installing dependencies..."
+	@cd backend && go mod download
+	@cd frontend && npm install
+	@echo "Setup complete!"
+
+# Development - Start everything
+dev: dev-services
+	@echo "Starting backend and frontend..."
+	@echo "Backend will be available at http://localhost:8080"
+	@echo "Frontend will be available at http://localhost:5173"
+	@echo "Press Ctrl+C to stop"
+	@$(MAKE) -j2 backend-dev frontend-dev
+
+# Start Docker services
+dev-services:
+	@echo "Starting Docker services..."
+	@docker compose up -d postgres keycloak redis
+	@echo "Waiting for services to be ready..."
+	@sleep 10
+	@echo "Services started!"
+
+dev-services-down:
+	@docker compose down
+
+dev-services-logs:
+	@docker compose logs -f
+
+# Backend development
+backend-dev:
+	@echo "Starting backend..."
+	@cd backend && go run cmd/api/main.go
+
+backend-build:
+	@echo "Building backend..."
+	@cd backend && go build -o opencode-api cmd/api/main.go
+
+backend-test:
+	@echo "Running backend tests..."
+	@cd backend && go test ./... -v
+
+backend-lint:
+	@echo "Linting backend..."
+	@cd backend && go fmt ./...
+	@cd backend && go vet ./...
+
+# Frontend development
+frontend-dev:
+	@echo "Starting frontend..."
+	@cd frontend && npm run dev
+
+frontend-build:
+	@echo "Building frontend..."
+	@cd frontend && npm run build
+
+frontend-test:
+	@echo "Running frontend tests..."
+	@cd frontend && npm test
+
+frontend-lint:
+	@echo "Linting frontend..."
+	@cd frontend && npm run lint
+
+# Database migrations
+db-migrate-up:
+	@echo "Running database migrations..."
+	@migrate -path db/migrations -database "${DATABASE_URL}" up
+
+db-migrate-down:
+	@echo "Rolling back database migrations..."
+	@migrate -path db/migrations -database "${DATABASE_URL}" down 1
+
+db-reset:
+	@echo "Resetting database..."
+	@migrate -path db/migrations -database "${DATABASE_URL}" drop -f
+	@migrate -path db/migrations -database "${DATABASE_URL}" up
+
+# Testing
+test: backend-test frontend-test
+
+# Kubernetes (kind)
+kind-create:
+	@echo "Creating kind cluster..."
+	@kind create cluster --config k8s/kind-config.yaml --name opencode-dev
+	@kubectl cluster-info
+
+kind-deploy:
+	@echo "Deploying to kind..."
+	@kubectl create namespace opencode --dry-run=client -o yaml | kubectl apply -f -
+	@kubectl apply -k k8s/base/
+	@echo "Waiting for pods to be ready..."
+	@kubectl wait --for=condition=ready pod -l app=opencode-controller -n opencode --timeout=300s
+
+kind-logs:
+	@kubectl logs -n opencode -l app=opencode-controller -f
+
+kind-delete:
+	@echo "Deleting kind cluster..."
+	@kind delete cluster --name opencode-dev
+
+# Docker
+docker-build:
+	@echo "Building Docker images..."
+	@./scripts/build-images.sh
+
+docker-push:
+	@echo "Pushing Docker images..."
+	@./scripts/build-images.sh
+	@docker push registry.legal-suite.com/opencode/backend:latest
+	@docker push registry.legal-suite.com/opencode/frontend:latest
+	@docker push registry.legal-suite.com/opencode/file-browser-sidecar:latest
+	@docker push registry.legal-suite.com/opencode/session-proxy-sidecar:latest
+
+# Cleanup
+clean:
+	@echo "Cleaning up..."
+	@docker compose down -v
+	@rm -rf backend/opencode-api
+	@rm -rf frontend/dist
+	@rm -rf frontend/node_modules/.vite
+	@echo "Cleanup complete!"

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: opencode
+data:
+  DATABASE_URL: "postgres://opencode:password@postgres:5432/opencode_prod"
+  OIDC_ISSUER: "http://keycloak:8080/realms/opencode"
+  OIDC_CLIENT_ID: "opencode-app"
+  K8S_NAMESPACE: "opencode"
+  LOG_LEVEL: "info"
+  ENVIRONMENT: "production"
