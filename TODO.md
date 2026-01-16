@@ -1,285 +1,348 @@
 # OpenCode Project Manager - TODO List
 
-## Phase 1: OIDC Authentication - ✅ COMPLETE (2026-01-16 21:28)
-
-**Status**: All implementation complete, all E2E tests passing. **Ready for Phase 2.**
-
-**Critical Fix Applied (2026-01-16 21:28)**:
-- Fixed React StrictMode double code exchange issue in `OidcCallbackPage.tsx`
-- Added `useRef` guard to prevent duplicate OAuth callback processing
-- All E2E tests now passing (login → Keycloak auth → callback → JWT → protected routes)
-- User creation in database verified
-
-**E2E Test Summary**: 7/7 tests passing ✅
-- Full OAuth flow working end-to-end
-- No Keycloak "code already used" errors
-- Protected routes functioning correctly
-- Database integration verified
-
-### Completed Implementation (21/28 tasks)
-
-#### Backend ✅
-- [x] OIDC provider integration (go-oidc v3)
-- [x] JWT token generation and validation (HS256)
-- [x] User repository with OIDC upsert logic
-- [x] Auth service layer
-- [x] Auth middleware for protected routes
-- [x] All auth endpoints implemented:
-  - `GET /api/auth/oidc/login` - Get Keycloak authorization URL
-  - `GET /api/auth/oidc/callback` - Exchange code for JWT
-  - `GET /api/auth/me` - Get current user (protected)
-  - `POST /api/auth/logout` - Logout
-
-#### Frontend ✅
-- [x] AuthContext for global auth state
-- [x] useAuth hook
-- [x] LoginPage component
-- [x] OidcCallbackPage component
-- [x] ProtectedRoute wrapper
-- [x] App.tsx integration with route protection
-
-#### Infrastructure ✅
-- [x] Keycloak realm `opencode` created
-- [x] Keycloak client `opencode-app` configured
-- [x] PostgreSQL running with `users` table migrated
-- [x] Backend server running on port 8090
-- [x] All linting passes (ESLint + TypeScript)
-- [x] Backend compiles successfully
-
-### E2E Testing Session - 2026-01-16 🔄 IN PROGRESS
-
-**Critical Bugs Fixed During Testing**:
-
-1. **Database Column Mismatch** (FIXED ✅):
-   - **Issue**: GORM auto-migration created column `o_id_c_subject` instead of `oidc_subject`
-   - **Impact**: Callback endpoint returned 401 - "column oidc_subject does not exist"
-   - **Fix**: Renamed column `ALTER TABLE users RENAME COLUMN o_id_c_subject TO oidc_subject`
-   - **Root Cause**: GORM's automatic snake_case conversion conflicts with migration file
-   - **Prevention**: Added explicit `gorm:"column:oidc_subject"` tags to User model
-
-2. **User Repository Error Handling** (FIXED ✅):
-   - **Issue**: `CreateOrUpdateFromOIDC` string-compared error instead of using `errors.Is()`
-   - **Impact**: New users couldn't be created, callback always returned 401
-   - **Fix**: Changed to `errors.Is(err, gorm.ErrRecordNotFound)` + import "errors" package
-   - **Location**: `backend/internal/repository/user_repository.go:70`
-
-3. **Frontend API URL Configuration** (FIXED ✅):
-   - **Issue**: Frontend hardcoded to `http://localhost:8080` but backend runs on port 8090
-   - **Fix**: Created `frontend/.env.local` with `VITE_API_URL=http://localhost:8090`
-   - **Root Cause**: Port conflict with SearXNG service
-
-4. **Keycloak Test User** (CREATED ✅):
-   - Username: `testuser`
-   - Password: `testpass123`
-   - Email: `testuser@example.com`
-   - Created via: `docker exec` commands to Keycloak admin CLI
-
-5. **Backend Environment Loading** (FIXED ✅ - 2026-01-16 21:44):
-   - **Issue**: `godotenv.Load()` only looks for `.env` in `backend/` directory, but file is in project root
-   - **Impact**: Backend failed to start - "unsupported protocol scheme" error (OIDC_ISSUER not loaded)
-   - **Fix**: Updated `backend/cmd/api/main.go` to load from `../.env` first, then fallback to current directory
-   - **Location**: `backend/cmd/api/main.go:19-26`
-   - **Verification**: Backend now starts successfully on port 8090
-
-6. **React StrictMode Double Code Exchange** (FIXED ✅ - 2026-01-16 21:28):
-   - **Issue**: Keycloak reported "Code already used" error (CODE_TO_TOKEN_ERROR) causing 403 responses
-   - **Impact**: OAuth callback failed after successful Keycloak login
-   - **Root Cause**: React.StrictMode in dev mode double-invokes useEffect, causing OidcCallbackPage to exchange the authorization code twice
-   - **Fix**: Added `useRef` guard in `OidcCallbackPage.tsx` to prevent duplicate code exchange
-   - **Location**: `frontend/src/pages/OidcCallbackPage.tsx:10-17`
-   - **Verification**: Full E2E test passed - login successful, user created in database
-
-**Automated Test Results** (Completed via Playwright + curl - PARTIALLY SUCCESSFUL):
-
-✅ **Test 1: Navigate to Frontend**
-   - Page loaded successfully at http://localhost:5173
-   - Landing page displayed with "Get Started" button
-   - No console errors
-   - **Status**: PASS
-
-✅ **Test 2: Login Page Navigation**
-   - Clicking "Get Started" → redirects to /login
-   - Login page displays with "Login with Keycloak" button
-   - No errors
-   - **Status**: PASS
-
-✅ **Test 3: Backend OIDC Login Endpoint**
-   - `GET /api/auth/oidc/login` returns valid Keycloak authorization URL
-   - URL contains correct client_id, redirect_uri, scopes, and state parameter
-   - **Status**: PASS
-
-✅ **Test 4: Backend Health & Protected Endpoints**
-   - `GET /healthz` returns 200 with `{"status":"ok"}`
-   - `GET /ready` returns 200 with `{"status":"ready"}`
-   - `GET /api/auth/me` (without token) returns 401 with proper error message
-   - **Status**: PASS
-
-✅ **Test 5: Database Schema Verification**
-   - `users` table has correct column `oidc_subject` (not `o_id_c_subject`)
-   - All expected columns present: id, oidc_subject, email, name, picture_url, last_login_at
-   - Unique index on oidc_subject exists
-   - **Status**: PASS
-
-✅ **Test 6: Code Quality Verification**
-   - Backend compiles without errors
-   - User repository uses correct `errors.Is()` pattern
-   - User model has explicit GORM column tags
-   - Backend loads .env from correct location
-   - **Status**: PASS
-
-✅ **Test 7: Complete OAuth Flow E2E** (2026-01-16 21:28)
-   - ✓ Login button triggers API call to `/api/auth/oidc/login`
-   - ✓ Redirects to Keycloak login page
-   - ✓ User authentication with testuser/testpass123
-   - ✓ Redirect to `/auth/callback?code=...`
-   - ✓ Code exchange returns 200 (no duplicate exchange error)
-   - ✓ JWT stored in localStorage
-   - ✓ Redirect to `/projects` page
-   - ✓ User created in database with correct OIDC claims
-   - **Status**: PASS
-
-**E2E Testing Complete** ✅ (Automated via Playwright - 2026-01-16 21:28):
-
-All OAuth flow tests passed:
-1. ✅ Frontend navigation (landing → login → projects)
-2. ✅ OIDC redirect to Keycloak
-3. ✅ User authentication with testuser/testpass123
-4. ✅ Callback code exchange (single request, no duplicates)
-5. ✅ JWT storage in localStorage
-6. ✅ User creation in PostgreSQL database
-7. ✅ Protected route access after authentication
-
-**Test User Verified in Database**:
-```
-ID: 53bf0971-6915-4858-92eb-233c74f134cc
-OIDC Subject: 5afce404-06b9-4400-80f1-8aed9bbb621b
-Email: testuser@example.com
-Name: Test User
-Created: 2026-01-16 20:41:44 UTC
-```
-
-**Confidence Level**: HIGH ✅
-
-All Phase 1 components verified:
-- ✅ Backend OIDC integration working correctly
-- ✅ Frontend auth flow complete (login, callback, protected routes)
-- ✅ Database schema correct and operational
-- ✅ No code replay errors (React StrictMode guard working)
-- ✅ Environment variables loaded correctly
-- ✅ All health checks passing
-
-**Services Status**:
-- ✅ Backend: Running on port 8090 (PID in /tmp/backend.pid)
-- ✅ Frontend: Running on port 5173 (Vite dev server)
-- ✅ Keycloak: Running on port 8081 (Docker container)
-- ✅ PostgreSQL: Running on port 5432 (Docker container)
-- ✅ Test user created in Keycloak
-
-### Deferred/Future Improvements
-
-#### High Priority (Before Production)
-- [ ] **Token Refresh Logic** (Task 16 - deferred)
-  - Current: 401 clears token and redirects to login
-  - Needed: Silent token refresh with retry logic
-  - Location: `frontend/src/services/api.ts`
-
-- [ ] **Keycloak User Management**
-  - Setup script currently only creates realm/client
-  - Need: Initial admin user creation
-  - Need: User registration flow or manual user creation docs
-
-- [ ] **Environment-Specific Configuration**
-  - Hardcoded redirect URI in backend
-  - Should read from env: `OIDC_REDIRECT_URI`
-  - Location: `backend/internal/service/auth_service.go:35`
-
-- [ ] **Error Handling Improvements**
-  - Generic error messages in frontend
-  - Need: User-friendly error messages
-  - Need: Error boundary for React components
-
-- [ ] **Security Hardening**
-  - JWT secret should be 32+ chars (currently using placeholder)
-  - Consider httpOnly cookies instead of localStorage
-  - Add CSRF protection
-  - Add rate limiting to auth endpoints
-
-#### Medium Priority
-- [ ] **Testing**
-  - Unit tests for AuthService (token validation, OIDC flow)
-  - Unit tests for UserRepository (upsert logic)
-  - Frontend component tests (AuthContext, useAuth, LoginPage)
-  - Integration tests for complete auth flow
-
-- [ ] **Logging & Monitoring**
-  - Structured logging (JSON format)
-  - Log auth events (login success/failure, token refresh)
-  - Metrics for auth endpoint latency
-
-- [ ] **Documentation**
-  - API endpoint documentation (Swagger/OpenAPI)
-  - Auth flow diagram
-  - Deployment guide for Keycloak configuration
-
-#### Low Priority (Nice to Have)
-- [ ] **UI/UX Polish**
-  - Loading states for auth operations
-  - Better error messages
-  - Toast notifications for auth events
-  - Remember me functionality
-
-- [ ] **Developer Experience**
-  - Docker Compose profiles for frontend dev (optional backend in container)
-  - Hot reload for backend (air or similar)
-  - VS Code debug configurations
-
-- [ ] **Alternative Auth Methods**
-  - Social login (Google, GitHub)
-  - SSO with other providers
-  - API key authentication for CLI tools
-
-### Known Issues & Limitations
-
-1. **Port Conflict**: 
-   - Default port 8080 conflicts with SearXNG
-   - Temporarily using 8090 for backend
-   - Update docs to reflect this
-
-2. **No Token Refresh**:
-   - Tokens expire after 1 hour (configurable via JWT_EXPIRY)
-   - Users must re-login after expiry
-   - No silent refresh mechanism yet
-
-3. **No User Profile Management**:
-   - Users created automatically via OIDC
-   - No UI to view/edit profile
-   - No way to delete users
-
-4. **Keycloak Setup Script Incomplete**:
-   - Creates realm and client only
-   - Doesn't create test users
-   - Doesn't configure email/password policies
-
-5. **Frontend .env Not Loaded**:
-   - Vite env vars must be prefixed with `VITE_`
-   - All are configured in .env but need verification
-
-### Next Steps (Proceed to Phase 2)
-
-Once manual testing is complete and passes:
-
-1. **Update AGENTS.md** to reflect Phase 1 completion
-2. **Begin Phase 2**: Project Management (K8s pods)
-   - Implement project CRUD operations
-   - Kubernetes client integration
-   - Pod lifecycle management
-   - Volume provisioning for project workspaces
-
-3. **Consider**: Skip token refresh for MVP, add in post-MVP hardening phase
+**Last Updated:** 2026-01-16 23:44 CET  
+**Current Phase:** Phase 2 - Project Management  
+**Branch:** main
 
 ---
 
-**Last Updated**: 2026-01-16 21:28 CET (React StrictMode Fix + E2E Verification)
-**Author**: Sisyphus (OpenCode AI Agent)  
-**Branch**: main  
-**Status**: Phase 1 Complete ✅ - All E2E tests passing
+## ✅ Phase 1: OIDC Authentication - COMPLETE
+
+**Completion Date:** 2026-01-16 21:28 CET  
+**Status:** All implementation complete, all E2E tests passing (7/7)
+
+🎉 **Phase 1 archived to PHASE1.md** - Ready for Phase 2 development!
+
+**Key Achievements:**
+- ✅ Complete OIDC authentication flow (Keycloak + JWT)
+- ✅ Backend auth service with middleware
+- ✅ Frontend auth context and protected routes
+- ✅ All E2E tests passing (no code replay errors)
+- ✅ User creation in PostgreSQL verified
+
+See [PHASE1.md](./PHASE1.md) for complete archive of Phase 1 tasks and resolution details.
+
+---
+
+## 🔄 Phase 2: Project Management (Weeks 3-4)
+
+**Objective:** Implement project CRUD operations with Kubernetes pod lifecycle management.
+
+**Status:** 🚀 READY TO START
+
+### Overview
+
+Phase 2 introduces the core project management functionality:
+- Projects are stored in PostgreSQL
+- Each project spawns a dedicated Kubernetes pod with:
+  - OpenCode server container
+  - File browser sidecar (port 3001)
+  - Session proxy sidecar (port 3002)
+  - Shared PVC for workspace persistence
+- Real-time pod status updates via WebSocket
+
+---
+
+### Backend Tasks (11 tasks)
+
+#### 2.1 Database & Models
+- [ ] **DB Migration**: Create `002_projects.sql` migration
+  - Projects table (id, user_id, name, description, repo_url, created_at, updated_at, deleted_at)
+  - K8s metadata (pod_name, namespace, pvc_name, status, pod_created_at)
+  - Indexes on user_id and status
+  - Foreign key to users table
+  - **Location:** `db/migrations/002_projects.up.sql` + `002_projects.down.sql`
+
+- [ ] **Project Model**: Implement GORM model
+  - UUID primary key
+  - GORM tags for all fields (explicit column names)
+  - Soft delete support (`DeletedAt`)
+  - User association (belongs to User)
+  - K8s metadata fields (pod_name, namespace, pvc_name, status enum)
+  - **Location:** `backend/internal/model/project.go`
+
+#### 2.2 Repository Layer
+- [ ] **Project Repository**: Implement data access layer
+  - `Create(project *Project) error`
+  - `FindByID(id uuid.UUID) (*Project, error)`
+  - `FindByUserID(userID uuid.UUID) ([]Project, error)`
+  - `Update(project *Project) error`
+  - `SoftDelete(id uuid.UUID) error` (sets DeletedAt)
+  - `UpdatePodStatus(id uuid.UUID, status string) error`
+  - Interface-based design for testability
+  - **Location:** `backend/internal/repository/project_repository.go`
+
+#### 2.3 Kubernetes Service Layer
+- [ ] **Kubernetes Client Wrapper**: Implement K8s operations
+  - Initialize in-cluster or kubeconfig-based client
+  - `CreateProjectPod(project *Project) error` - spawn pod with 3 containers + PVC
+  - `DeleteProjectPod(podName, namespace string) error` - cleanup pod and PVC
+  - `GetPodStatus(podName, namespace string) (string, error)` - query pod phase
+  - `WatchPodStatus(podName, namespace string) (<-chan string, error)` - watch for status changes
+  - Use K8s client-go library
+  - **Location:** `backend/internal/service/kubernetes_service.go`
+
+- [ ] **Pod Manifest Template**: Define pod specification
+  - 3-container pod:
+    1. OpenCode server (port 3000)
+    2. File browser sidecar (port 3001)
+    3. Session proxy sidecar (port 3002)
+  - Shared PVC mounted to all containers at `/workspace`
+  - Resource limits (CPU, memory)
+  - Labels for project_id tracking
+  - **Location:** `backend/internal/service/pod_template.go` (Go struct) or `k8s/base/project-pod-template.yaml`
+
+#### 2.4 Business Logic Layer
+- [ ] **Project Service**: Implement business logic
+  - `CreateProject(userID uuid.UUID, name, description, repoUrl string) (*Project, error)`
+    - Validate input
+    - Create project in DB
+    - Spawn K8s pod via KubernetesService
+    - Update project with pod metadata
+    - Return project
+  - `GetProject(id, userID uuid.UUID) (*Project, error)` - authorization check
+  - `ListProjects(userID uuid.UUID) ([]Project, error)`
+  - `UpdateProject(id, userID uuid.UUID, updates map[string]interface{}) error`
+  - `DeleteProject(id, userID uuid.UUID) error`
+    - Delete pod from K8s
+    - Soft delete in DB
+  - **Location:** `backend/internal/service/project_service.go`
+
+#### 2.5 API Handlers
+- [ ] **Project API Endpoints**: Implement HTTP handlers
+  - `POST /api/projects` - Create project (protected)
+  - `GET /api/projects` - List user's projects (protected)
+  - `GET /api/projects/:id` - Get project details (protected)
+  - `PATCH /api/projects/:id` - Update project (protected)
+  - `DELETE /api/projects/:id` - Delete project (protected)
+  - Request validation (bind JSON)
+  - Error handling with proper status codes
+  - Authorization checks (user owns project)
+  - **Location:** `backend/internal/api/projects.go`
+
+- [ ] **WebSocket Status Endpoint**: Real-time pod status
+  - `WebSocket /ws/projects/:id/status` - Stream pod status changes
+  - Upgrade HTTP to WebSocket
+  - Watch K8s pod status via KubernetesService
+  - Send status updates to client as JSON
+  - Cleanup on disconnect
+  - **Location:** `backend/internal/api/projects.go` (or separate `websocket.go`)
+
+#### 2.6 Integration
+- [ ] **Register Routes**: Wire up project endpoints
+  - Add project routes to Gin router
+  - Apply auth middleware to all project routes
+  - **Location:** `backend/cmd/api/main.go`
+
+- [ ] **Kubernetes RBAC**: Configure service account permissions
+  - Create ServiceAccount for backend pod
+  - Create Role with permissions: `pods`, `persistentvolumeclaims` (create, delete, get, list, watch)
+  - Create RoleBinding
+  - Update backend deployment to use ServiceAccount
+  - **Location:** `k8s/base/rbac.yaml` + `k8s/base/deployment.yaml`
+
+#### 2.7 Testing & Verification
+- [ ] **Unit Tests**: Test core logic
+  - ProjectRepository CRUD operations (use testcontainers or in-memory DB)
+  - ProjectService business logic (mock repository and K8s service)
+  - **Location:** `backend/internal/repository/project_repository_test.go`, `backend/internal/service/project_service_test.go`
+
+- [ ] **Integration Test**: End-to-end project creation
+  - POST /api/projects → verify pod created in K8s
+  - Verify PVC created
+  - GET /api/projects/:id → verify project returned
+  - DELETE /api/projects/:id → verify pod deleted
+  - **Location:** `backend/internal/api/projects_test.go`
+
+---
+
+### Frontend Tasks (8 tasks)
+
+#### 2.8 Types & API Client
+- [ ] **Project Types**: Define TypeScript interfaces
+  - `Project` interface (id, userId, name, description, repoUrl, createdAt, updatedAt, podStatus)
+  - `CreateProjectRequest` interface
+  - `UpdateProjectRequest` interface
+  - Pod status enum: `Pending | Running | Succeeded | Failed | Unknown`
+  - **Location:** `frontend/src/types/index.ts`
+
+- [ ] **Project API Client**: Implement API methods
+  - `createProject(data: CreateProjectRequest): Promise<Project>`
+  - `getProjects(): Promise<Project[]>`
+  - `getProject(id: string): Promise<Project>`
+  - `updateProject(id: string, data: UpdateProjectRequest): Promise<Project>`
+  - `deleteProject(id: string): Promise<void>`
+  - Use axios instance from `services/api.ts` (JWT already configured)
+  - **Location:** `frontend/src/services/api.ts` (extend existing)
+
+#### 2.9 UI Components
+- [ ] **ProjectList Component**: Display all projects
+  - Fetch projects on mount
+  - Display project cards in grid
+  - Show pod status badge (color-coded: Pending=yellow, Running=green, Failed=red)
+  - "Create Project" button → opens modal
+  - Loading state while fetching
+  - Empty state (no projects)
+  - **Location:** `frontend/src/components/Projects/ProjectList.tsx`
+
+- [ ] **ProjectCard Component**: Single project display
+  - Project name, description
+  - Pod status indicator (live badge)
+  - Created date
+  - Click → navigate to `/projects/:id`
+  - Delete button with confirmation
+  - **Location:** `frontend/src/components/Projects/ProjectCard.tsx`
+
+- [ ] **CreateProjectModal Component**: Project creation form
+  - Form fields: name (required), description (optional), repoUrl (optional)
+  - Form validation (name length, URL format)
+  - Submit → call API → close modal → refresh list
+  - Cancel button
+  - Loading state during creation
+  - Error display
+  - **Location:** `frontend/src/components/Projects/CreateProjectModal.tsx`
+
+- [ ] **ProjectDetailPage**: Single project view
+  - Display project metadata
+  - Show real-time pod status (via WebSocket)
+  - Placeholder for future tabs (Tasks, Files, Config)
+  - Edit project button
+  - Delete project button
+  - Breadcrumb navigation
+  - **Location:** `frontend/src/pages/ProjectDetailPage.tsx`
+
+#### 2.10 Real-time Updates
+- [ ] **WebSocket Hook**: Pod status subscription
+  - `useProjectStatus(projectId: string)` hook
+  - Connect to `ws://localhost:8090/ws/projects/:id/status`
+  - Listen for status updates
+  - Update local state on message
+  - Cleanup on unmount
+  - Reconnect logic on disconnect
+  - **Location:** `frontend/src/hooks/useProjectStatus.ts`
+
+#### 2.11 Routes & Navigation
+- [ ] **Add Project Routes**: Update router
+  - `/projects` → ProjectList page (protected)
+  - `/projects/:id` → ProjectDetailPage (protected)
+  - Update navigation menu (add "Projects" link)
+  - **Location:** `frontend/src/App.tsx`
+
+---
+
+### Infrastructure Tasks (3 tasks)
+
+#### 2.12 Kubernetes Setup
+- [ ] **Update Base Manifests**: Add project pod template
+  - Define PVC template for project workspaces
+  - ConfigMap for OpenCode server config (if needed)
+  - **Location:** `k8s/base/` (new files or updates)
+
+- [ ] **Local Testing**: Verify in kind cluster
+  - Deploy updated manifests to kind
+  - Test project creation via API
+  - Verify pod spawns correctly
+  - Verify PVC mounts
+  - Check logs of all 3 containers
+  - **Command:** `make kind-deploy` then manual API testing
+
+#### 2.13 Documentation
+- [ ] **Update Documentation**: Reflect Phase 2 changes
+  - Update AGENTS.md with Phase 2 status
+  - Update README.md with project management features
+  - Add API examples to DEVELOPMENT.md
+  - **Location:** `AGENTS.md`, `README.md`, `DEVELOPMENT.md`
+
+---
+
+## Success Criteria (Phase 2 Complete When...)
+
+- [ ] User can create a project via UI
+- [ ] Project creation spawns a K8s pod with 3 containers
+- [ ] Project list shows all user's projects with live pod status
+- [ ] Project detail page displays real-time status updates
+- [ ] User can delete a project (pod cleanup verified)
+- [ ] All backend unit tests passing
+- [ ] Integration test: full project lifecycle (create → verify pod → delete → verify cleanup)
+- [ ] No TypeScript errors in frontend
+- [ ] All ESLint warnings resolved
+
+---
+
+## Phase 2 Dependencies
+
+**Required Before Starting:**
+- ✅ Phase 1 complete (auth working)
+- ✅ PostgreSQL running
+- ✅ Kubernetes cluster accessible (kind or other)
+- ✅ Service account with RBAC permissions configured
+
+**External Dependencies:**
+- Kubernetes cluster (kind for local dev)
+- Docker registry for sidecar images (file-browser, session-proxy)
+- OpenCode server image (TBD - may use existing or build custom)
+
+---
+
+## Deferred to Later Phases
+
+**Not in Phase 2 scope:**
+- Task management (Phase 3)
+- File explorer UI (Phase 4)
+- OpenCode execution (Phase 5)
+- Configuration management (Phase 6)
+- Two-way interactions (Phase 7)
+
+---
+
+## Notes & Considerations
+
+### Pod Naming Convention
+- Format: `project-<project-id>-<random-suffix>`
+- Namespace: `opencode` (consistent with base manifests)
+- Labels: `app=opencode-project`, `project-id=<uuid>`
+
+### PVC Naming Convention
+- Format: `workspace-<project-id>`
+- Storage class: Use cluster default (kind uses `standard`)
+- Size: Start with 1Gi, make configurable later
+
+### Pod Status Mapping
+- K8s Pod Phase → Project Status
+  - `Pending` → "Pending"
+  - `Running` → "Running"
+  - `Succeeded` → "Completed" (not expected for long-running pods)
+  - `Failed` → "Failed"
+  - `Unknown` → "Unknown"
+
+### Error Handling
+- Pod creation failures should NOT block project creation in DB
+- Store pod creation errors in project metadata (add `pod_error` column if needed)
+- Retry logic for transient K8s errors
+- User-friendly error messages in UI
+
+### Security
+- Ensure user can only access their own projects (authorization checks)
+- Validate project name (no special chars for K8s compatibility)
+- Limit number of projects per user (add quota later if needed)
+
+### Performance
+- Paginate project list if >100 projects
+- Cache pod status for 5-10 seconds to reduce K8s API calls
+- Use WebSocket for real-time updates (don't poll)
+
+---
+
+## Next Phase Preview
+
+**Phase 3: Task Management & Kanban Board (Weeks 5-6)**
+- Task CRUD operations
+- State machine: TODO → IN_PROGRESS → AI_REVIEW → HUMAN_REVIEW → DONE
+- Kanban board UI with drag-and-drop
+- Task detail panel
+
+---
+
+**Phase 2 Start Date:** 2026-01-16 23:44 CET  
+**Target Completion:** TBD (flexible, 3-developer team)  
+**Author:** Sisyphus (OpenCode AI Agent)

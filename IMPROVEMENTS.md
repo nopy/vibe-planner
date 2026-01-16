@@ -1,14 +1,828 @@
 # Project Improvements & Future Enhancements
 
-**Last Updated**: 2026-01-16  
+**Last Updated**: 2026-01-16 23:45 CET  
 **Project**: OpenCode Project Manager  
-**Current Phase**: Phase 1 (OIDC Authentication) Complete
+**Current Phase**: Phase 2 (Project Management) - Starting  
+**Previous Phase**: Phase 1 (OIDC Authentication) - Complete ✅
 
 ---
 
 ## Overview
 
 This document tracks optional improvements and enhancements that could be implemented to further improve code quality, test coverage, and developer experience. All items listed here are **non-blocking** - the project is production-ready in its current state.
+
+**Sources:**
+- Original testing and infrastructure improvements
+- Phase 1 deferred improvements (from PHASE1.md)
+- Ongoing quality enhancements
+
+---
+
+## 🔐 Authentication & Security Improvements (Phase 1 Deferred)
+
+### A1. Token Refresh Logic
+
+**Impact**: Improve user experience by avoiding forced re-login  
+**Effort**: Medium (4-6 hours)  
+**Priority**: High (before production)
+
+**Current Behavior**:
+- 401 response clears token and redirects to login
+- Users must re-authenticate after 1-hour token expiry
+
+**What to Implement**:
+```typescript
+// frontend/src/services/api.ts
+
+// Add refresh token storage
+const setRefreshToken = (token: string) => {
+  localStorage.setItem('refresh_token', token);
+};
+
+// Modify response interceptor
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      try {
+        // Attempt token refresh
+        const refreshToken = localStorage.getItem('refresh_token');
+        const { data } = await api.post('/auth/refresh', { refreshToken });
+        
+        setAuthToken(data.token);
+        setRefreshToken(data.refreshToken);
+        
+        // Retry original request
+        return api(originalRequest);
+      } catch (refreshError) {
+        // Refresh failed, logout
+        clearAuth();
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
+      }
+    }
+    
+    return Promise.reject(error);
+  }
+);
+```
+
+**Backend Changes Needed**:
+```go
+// backend/internal/api/auth.go
+
+// Add refresh endpoint
+func (h *AuthHandler) RefreshToken(c *gin.Context) {
+    // Validate refresh token
+    // Generate new access token + refresh token
+    // Return both tokens
+}
+```
+
+**Files to Modify**:
+- `frontend/src/services/api.ts`
+- `backend/internal/api/auth.go`
+- `backend/internal/service/auth_service.go`
+
+**Referenced in**: PHASE1.md, TODO.md (Phase 1 deferred)
+
+---
+
+### A2. Environment-Specific Configuration
+
+**Impact**: Enable proper multi-environment deployment  
+**Effort**: Low (1-2 hours)  
+**Priority**: High (before production)
+
+**Current Issue**:
+- Hardcoded redirect URI: `http://localhost:5173/auth/callback`
+- Should be environment-specific
+
+**What to Implement**:
+```bash
+# .env (add)
+OIDC_REDIRECT_URI=http://localhost:5173/auth/callback
+
+# .env.production (create)
+OIDC_REDIRECT_URI=https://opencode.example.com/auth/callback
+```
+
+```go
+// backend/internal/service/auth_service.go
+
+func (s *AuthService) GetOIDCLoginURL() (string, error) {
+    redirectURI := os.Getenv("OIDC_REDIRECT_URI") // Read from env
+    
+    authURL := s.oauth2Config.AuthCodeURL(
+        state,
+        oauth2.SetAuthURLParam("redirect_uri", redirectURI),
+    )
+    
+    return authURL, nil
+}
+```
+
+**Files to Modify**:
+- `backend/internal/service/auth_service.go:35`
+- `.env.example`
+
+**Referenced in**: PHASE1.md (Deferred Improvements - High Priority)
+
+---
+
+### A3. Enhanced Error Handling
+
+**Impact**: Better user experience during auth failures  
+**Effort**: Medium (3-4 hours)  
+**Priority**: Medium
+
+**Current Issue**:
+- Generic error messages in frontend
+- No error boundary for React components
+
+**What to Implement**:
+
+**1. Error Boundary Component**:
+```typescript
+// frontend/src/components/ErrorBoundary.tsx
+
+class ErrorBoundary extends React.Component {
+  state = { hasError: false, error: null };
+  
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  
+  componentDidCatch(error, errorInfo) {
+    console.error('Error caught by boundary:', error, errorInfo);
+  }
+  
+  render() {
+    if (this.state.hasError) {
+      return <ErrorFallback error={this.state.error} />;
+    }
+    return this.props.children;
+  }
+}
+```
+
+**2. User-Friendly Error Messages**:
+```typescript
+// frontend/src/utils/errorMessages.ts
+
+export const getAuthErrorMessage = (error: any): string => {
+  if (error.response?.status === 401) {
+    return 'Invalid credentials. Please try again.';
+  }
+  if (error.response?.status === 403) {
+    return 'Access denied. Please contact administrator.';
+  }
+  if (error.code === 'NETWORK_ERROR') {
+    return 'Network error. Please check your connection.';
+  }
+  return 'An unexpected error occurred. Please try again.';
+};
+```
+
+**Files to Create**:
+- `frontend/src/components/ErrorBoundary.tsx`
+- `frontend/src/utils/errorMessages.ts`
+
+**Files to Modify**:
+- `frontend/src/App.tsx` (wrap with ErrorBoundary)
+- `frontend/src/contexts/AuthContext.tsx` (use error messages)
+
+**Referenced in**: PHASE1.md (Deferred Improvements - High Priority)
+
+---
+
+### A4. Security Hardening
+
+**Impact**: Production-ready security  
+**Effort**: Medium (4-6 hours)  
+**Priority**: High (before production)
+
+**Current Issues**:
+1. JWT secret should be 32+ characters (currently placeholder)
+2. Tokens stored in localStorage (vulnerable to XSS)
+3. No CSRF protection
+4. No rate limiting on auth endpoints
+
+**What to Implement**:
+
+**1. Strong JWT Secret**:
+```bash
+# Generate secure secret
+openssl rand -base64 32
+
+# .env
+JWT_SECRET=<generated-32-char-secret>
+```
+
+**2. httpOnly Cookies** (alternative to localStorage):
+```go
+// backend/internal/api/auth.go
+
+func (h *AuthHandler) OIDCCallback(c *gin.Context) {
+    // ... existing code to generate token ...
+    
+    // Set httpOnly cookie instead of returning token in JSON
+    c.SetSameSite(http.SameSiteStrictMode)
+    c.SetCookie(
+        "auth_token",
+        token,
+        3600, // maxAge
+        "/",
+        "",
+        true,  // secure (HTTPS only)
+        true,  // httpOnly
+    )
+    
+    c.JSON(200, gin.H{"message": "Login successful"})
+}
+```
+
+**3. Rate Limiting**:
+```go
+// backend/internal/middleware/rate_limit.go
+
+import "github.com/ulule/limiter/v3"
+
+func RateLimitAuth() gin.HandlerFunc {
+    rate := limiter.Rate{
+        Period: 1 * time.Minute,
+        Limit:  5, // 5 login attempts per minute
+    }
+    
+    store := memory.NewStore()
+    instance := limiter.New(store, rate)
+    
+    return func(c *gin.Context) {
+        context, err := instance.Get(c, c.ClientIP())
+        if err != nil {
+            c.AbortWithStatus(500)
+            return
+        }
+        
+        if context.Reached {
+            c.AbortWithStatusJSON(429, gin.H{
+                "error": "Too many requests",
+            })
+            return
+        }
+        
+        c.Next()
+    }
+}
+```
+
+**Files to Modify**:
+- `.env` (update JWT_SECRET)
+- `backend/internal/api/auth.go` (cookie-based auth)
+- `backend/cmd/api/main.go` (add rate limiter to auth routes)
+
+**Files to Create**:
+- `backend/internal/middleware/rate_limit.go`
+
+**Dependencies to Add**:
+- `github.com/ulule/limiter/v3`
+
+**Referenced in**: PHASE1.md (Deferred Improvements - High Priority)
+
+---
+
+### A5. Keycloak User Management
+
+**Impact**: Complete Keycloak setup automation  
+**Effort**: Low (2-3 hours)  
+**Priority**: Medium
+
+**Current Limitation**:
+- Setup script only creates realm and client
+- Test users must be created manually
+
+**What to Implement**:
+```bash
+# scripts/setup-keycloak.sh (extend)
+
+# Create test user
+docker exec opencode-keycloak /opt/keycloak/bin/kcadm.sh create users \
+  -r opencode \
+  -s username=testuser \
+  -s email=testuser@example.com \
+  -s enabled=true
+
+# Set password
+docker exec opencode-keycloak /opt/keycloak/bin/kcadm.sh set-password \
+  -r opencode \
+  --username testuser \
+  --new-password testpass123
+
+# Create admin user
+docker exec opencode-keycloak /opt/keycloak/bin/kcadm.sh create users \
+  -r opencode \
+  -s username=admin \
+  -s email=admin@example.com \
+  -s enabled=true
+
+docker exec opencode-keycloak /opt/keycloak/bin/kcadm.sh set-password \
+  -r opencode \
+  --username admin \
+  --new-password adminpass123
+```
+
+**Files to Modify**:
+- `scripts/setup-keycloak.sh`
+
+**Documentation to Add**:
+- User registration flow instructions
+- Manual user creation guide
+
+**Referenced in**: PHASE1.md (Deferred Improvements - High Priority)
+
+---
+
+## 🧪 Testing Improvements
+
+### T1. Auth Service Unit Tests (Backend)
+
+**Impact**: Establish baseline test coverage for critical auth logic  
+**Effort**: High (8-10 hours)  
+**Priority**: High (from PHASE1.md + original IMPROVEMENTS.md)
+
+**What to Test**:
+```go
+// backend/internal/service/auth_service_test.go
+
+func TestAuthService_GetOIDCLoginURL(t *testing.T) {
+    // Test OIDC authorization URL generation
+    // Test state parameter generation
+    // Test URL encoding
+}
+
+func TestAuthService_HandleOIDCCallback(t *testing.T) {
+    // Test authorization code exchange
+    // Test JWT token generation
+    // Test user creation/update via repository
+    // Test error handling for invalid code
+    // Test error handling for OIDC provider errors
+}
+
+func TestAuthService_ValidateToken(t *testing.T) {
+    // Test valid JWT validation
+    // Test expired token rejection
+    // Test invalid signature rejection
+    // Test missing claims rejection
+}
+```
+
+**Implementation Approach**:
+- Mock OIDC provider using `httptest.Server`
+- Use `github.com/stretchr/testify/mock` for repository mocking
+- Test both success and error paths
+- Verify JWT claims structure
+
+**Files to Create/Modify**:
+- `/home/npinot/vibe/backend/internal/service/auth_service_test.go` (expand existing)
+
+**Referenced in**: PHASE1.md (Deferred - Medium Priority), Original IMPROVEMENTS.md (#4)
+
+---
+
+### T2. User Repository Tests (Backend)
+
+**Impact**: Ensure database operations work correctly  
+**Effort**: Medium (4-6 hours)  
+**Priority**: Medium (from PHASE1.md + original IMPROVEMENTS.md)
+
+**What to Test** (see original IMPROVEMENTS.md section 5 for full details)
+
+**Referenced in**: PHASE1.md (Deferred - Medium Priority), Original IMPROVEMENTS.md (#5)
+
+---
+
+### T3. Auth Middleware Tests (Backend)
+
+**Impact**: Verify JWT validation in HTTP layer  
+**Effort**: Low (2-3 hours)  
+**Priority**: Medium (from PHASE1.md + original IMPROVEMENTS.md)
+
+**What to Test** (see original IMPROVEMENTS.md section 6 for full details)
+
+**Referenced in**: PHASE1.md (Deferred - Medium Priority), Original IMPROVEMENTS.md (#6)
+
+---
+
+### T4. Frontend Component Tests
+
+**Impact**: Increase frontend test coverage  
+**Effort**: Medium (6-8 hours)  
+**Priority**: Medium (from PHASE1.md)
+
+**What to Test**:
+1. **AuthContext Component Tests** - see original IMPROVEMENTS.md (#2)
+2. **API Interceptor Tests** - see original IMPROVEMENTS.md (#1)
+3. **LoginPage Component Tests**
+4. **OidcCallbackPage Component Tests**
+5. **useAuth Hook Tests**
+
+**Referenced in**: PHASE1.md (Deferred - Medium Priority)
+
+---
+
+### T5. Integration Tests
+
+**Impact**: Ensure complete auth flow works end-to-end  
+**Effort**: High (6-8 hours)  
+**Priority**: Medium (from PHASE1.md)
+
+**What to Test**:
+```go
+// backend/internal/api/integration_test.go
+
+func TestAuthFlow_Complete(t *testing.T) {
+    // 1. GET /api/auth/oidc/login → returns Keycloak URL
+    // 2. Simulate Keycloak callback with code
+    // 3. GET /api/auth/oidc/callback?code=... → returns JWT
+    // 4. GET /api/auth/me with JWT → returns user data
+    // 5. Verify user created in database
+}
+```
+
+**Referenced in**: PHASE1.md (Deferred - Medium Priority)
+
+---
+
+## 📊 Monitoring & Logging (Phase 1 Deferred)
+
+### M1. Structured Logging
+
+**Impact**: Easier debugging and monitoring  
+**Effort**: Low (2-3 hours)  
+**Priority**: Medium
+
+**What to Implement**:
+```go
+// backend/internal/util/logger.go
+
+import "go.uber.org/zap"
+
+var logger *zap.Logger
+
+func InitLogger(env string) {
+    var err error
+    if env == "production" {
+        logger, err = zap.NewProduction()
+    } else {
+        logger, err = zap.NewDevelopment()
+    }
+    
+    if err != nil {
+        panic(err)
+    }
+}
+
+func Info(msg string, fields ...zap.Field) {
+    logger.Info(msg, fields...)
+}
+
+func Error(msg string, fields ...zap.Field) {
+    logger.Error(msg, fields...)
+}
+```
+
+**Usage**:
+```go
+// backend/internal/service/auth_service.go
+
+import "github.com/npinot/vibe/backend/internal/util"
+
+func (s *AuthService) HandleOIDCCallback(code string) (string, error) {
+    util.Info("OIDC callback initiated", 
+        zap.String("code", code[:10]+"..."))
+    
+    // ... rest of implementation
+    
+    util.Info("User authenticated successfully",
+        zap.String("user_id", user.ID.String()),
+        zap.String("email", user.Email))
+}
+```
+
+**Files to Create**:
+- `backend/internal/util/logger.go`
+
+**Files to Modify**:
+- `backend/cmd/api/main.go` (initialize logger)
+- `backend/internal/service/auth_service.go` (add logging)
+- `backend/internal/api/auth.go` (add logging)
+
+**Referenced in**: PHASE1.md (Deferred - Medium Priority)
+
+---
+
+### M2. Metrics for Auth Endpoints
+
+**Impact**: Track auth performance  
+**Effort**: Medium (3-4 hours)  
+**Priority**: Low
+
+**What to Implement**:
+- Track login success/failure rates
+- Track token validation latency
+- Track OIDC callback latency
+
+**Files to Create**:
+- `backend/internal/middleware/metrics.go`
+
+**Referenced in**: PHASE1.md (Deferred - Medium Priority)
+
+---
+
+## 📚 Documentation (Phase 1 Deferred)
+
+### D1. API Endpoint Documentation
+
+**Impact**: Easier API consumption for frontend developers  
+**Effort**: Medium (4-6 hours)  
+**Priority**: Medium
+
+**What to Implement**:
+- OpenAPI/Swagger specification
+- Interactive API explorer UI
+
+**Tools**: `swaggo/swag` (see original IMPROVEMENTS.md #13 for details)
+
+**Referenced in**: PHASE1.md (Deferred - Medium Priority), Original IMPROVEMENTS.md (#13)
+
+---
+
+### D2. Auth Flow Diagram
+
+**Impact**: Visual documentation of OIDC flow  
+**Effort**: Low (1-2 hours)  
+**Priority**: Low
+
+**What to Create**:
+```
+┌─────────┐          ┌─────────┐          ┌──────────┐          ┌──────────┐
+│ Browser │          │ Backend │          │ Keycloak │          │ Database │
+└────┬────┘          └────┬────┘          └────┬─────┘          └────┬─────┘
+     │                    │                    │                     │
+     │ 1. GET /login      │                    │                     │
+     ├───────────────────>│                    │                     │
+     │                    │                    │                     │
+     │ 2. Redirect to KC  │                    │                     │
+     │<───────────────────┤                    │                     │
+     │                    │                    │                     │
+     │ 3. Authenticate    │                    │                     │
+     ├────────────────────┼───────────────────>│                     │
+     │                    │                    │                     │
+     │ 4. Code in callback│                    │                     │
+     │<───────────────────┼────────────────────┤                     │
+     │                    │                    │                     │
+     │ 5. Exchange code   │                    │                     │
+     ├───────────────────>│                    │                     │
+     │                    │                    │                     │
+     │                    │ 6. Validate code   │                     │
+     │                    ├───────────────────>│                     │
+     │                    │                    │                     │
+     │                    │ 7. User info       │                     │
+     │                    │<───────────────────┤                     │
+     │                    │                    │                     │
+     │                    │ 8. Create/update user                    │
+     │                    ├──────────────────────────────────────────>│
+     │                    │                    │                     │
+     │ 9. JWT token       │                    │                     │
+     │<───────────────────┤                    │                     │
+     │                    │                    │                     │
+```
+
+**Files to Create**:
+- `docs/auth-flow.md`
+- `docs/diagrams/auth-flow.svg`
+
+**Referenced in**: PHASE1.md (Deferred - Medium Priority)
+
+---
+
+### D3. Deployment Guide for Keycloak
+
+**Impact**: Easier production setup  
+**Effort**: Low (2-3 hours)  
+**Priority**: Medium
+
+**What to Document**:
+- Keycloak installation steps
+- Realm configuration
+- Client configuration
+- User management
+- SSL/TLS setup
+- Backup and recovery
+
+**Files to Create**:
+- `docs/keycloak-deployment.md`
+
+**Referenced in**: PHASE1.md (Deferred - Medium Priority)
+
+---
+
+## 🎨 UI/UX Improvements (Phase 1 Deferred)
+
+### UI1. Loading States
+
+**Impact**: Better user feedback  
+**Effort**: Low (2-3 hours)  
+**Priority**: Low
+
+**What to Implement**:
+```typescript
+// frontend/src/pages/LoginPage.tsx
+
+const [isLoading, setIsLoading] = useState(false);
+
+const handleLogin = async () => {
+  setIsLoading(true);
+  try {
+    await login();
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+return (
+  <button onClick={handleLogin} disabled={isLoading}>
+    {isLoading ? <Spinner /> : 'Login with Keycloak'}
+  </button>
+);
+```
+
+**Files to Modify**:
+- `frontend/src/pages/LoginPage.tsx`
+- `frontend/src/pages/OidcCallbackPage.tsx`
+
+**Referenced in**: PHASE1.md (Deferred - Low Priority)
+
+---
+
+### UI2. Toast Notifications
+
+**Impact**: Better error/success feedback  
+**Effort**: Low (2-3 hours)  
+**Priority**: Low
+
+**What to Implement**:
+- Use `react-hot-toast` or similar
+- Show notifications for auth events (login success, logout, errors)
+
+**Files to Modify**:
+- `frontend/src/contexts/AuthContext.tsx`
+
+**Referenced in**: PHASE1.md (Deferred - Low Priority)
+
+---
+
+### UI3. Remember Me Functionality
+
+**Impact**: Convenience for users  
+**Effort**: Medium (3-4 hours)  
+**Priority**: Low
+
+**What to Implement**:
+- Checkbox on login page
+- Store preference in localStorage
+- Extend token expiry if enabled
+
+**Referenced in**: PHASE1.md (Deferred - Low Priority)
+
+---
+
+## 🛠️ Developer Experience (Phase 1 Deferred)
+
+### DX1. Docker Compose Profiles
+
+**Impact**: Flexible development setup  
+**Effort**: Low (1-2 hours)  
+**Priority**: Low
+
+**What to Implement**:
+```yaml
+# docker-compose.yml
+
+services:
+  backend:
+    profiles: ["backend", "full"]
+    # ... existing config
+  
+  frontend:
+    profiles: ["frontend", "full"]
+    # ... existing config
+```
+
+**Usage**:
+```bash
+# Run only services
+docker-compose up
+
+# Run with backend in container
+docker-compose --profile backend up
+
+# Run full stack
+docker-compose --profile full up
+```
+
+**Referenced in**: PHASE1.md (Deferred - Low Priority)
+
+---
+
+### DX2. Hot Reload for Backend
+
+**Impact**: Faster development iteration  
+**Effort**: Low (1-2 hours)  
+**Priority**: Low
+
+**What to Implement**:
+```bash
+# Install air
+go install github.com/cosmtrek/air@latest
+
+# Create .air.toml config
+```
+
+**Files to Create**:
+- `.air.toml`
+
+**Referenced in**: PHASE1.md (Deferred - Low Priority)
+
+---
+
+### DX3. VS Code Debug Configurations
+
+**Impact**: Easier debugging  
+**Effort**: Low (1 hour)  
+**Priority**: Low
+
+**What to Create**:
+```json
+// .vscode/launch.json
+
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Backend",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/backend/cmd/api",
+      "env": {
+        "DATABASE_URL": "..."
+      }
+    }
+  ]
+}
+```
+
+**Files to Create**:
+- `.vscode/launch.json`
+
+**Referenced in**: PHASE1.md (Deferred - Low Priority)
+
+---
+
+## 🔌 Alternative Auth Methods (Phase 1 Deferred)
+
+### ALT1. Social Login (Google, GitHub)
+
+**Impact**: More login options for users  
+**Effort**: Medium (4-6 hours per provider)  
+**Priority**: Low
+
+**What to Implement**:
+- Add Google OAuth provider to Keycloak
+- Add GitHub OAuth provider to Keycloak
+- Update login page UI
+
+**Referenced in**: PHASE1.md (Deferred - Low Priority)
+
+---
+
+### ALT2. API Key Authentication
+
+**Impact**: Enable CLI tool authentication  
+**Effort**: High (8-10 hours)  
+**Priority**: Low
+
+**What to Implement**:
+- API key generation endpoint
+- API key validation middleware
+- API key management UI
+
+**Referenced in**: PHASE1.md (Deferred - Low Priority)
 
 ---
 
@@ -592,47 +1406,189 @@ go list -m all | nancy sleuth
 
 ---
 
-## Summary
+## 🔄 Original Improvements (Pre-Phase 1 Archive)
 
-### High Priority (Should Do)
-1. ✅ Backend Auth Service Unit Tests (establishes test baseline)
-2. ✅ CI/CD Pipeline (automates quality checks)
-3. ✅ Dependency Vulnerability Scanning (security)
+The following sections preserve the original improvement tracking from before Phase 1 completion. Many of these are now integrated into the categorized sections above.
 
-### Medium Priority (Nice to Have)
-1. API Interceptor Tests (frontend coverage)
-2. AuthContext Async Flow Tests (frontend coverage)
-3. User Repository Tests (backend coverage)
-4. Auth Middleware Tests (backend coverage)
-5. Security Headers Middleware (security hardening)
-6. API Documentation Generation (developer experience)
-7. E2E Testing Setup (integration confidence)
+<details>
+<summary><b>Click to expand original sections</b></summary>
 
-### Low Priority (Optional)
-1. App.tsx Route Tests (marginal coverage increase)
-2. TypeScript Strict Mode Fixes (type safety)
-3. Linter Configuration Enhancements (code quality)
-4. Frontend Bundle Optimization (already fast)
-5. Docker Image Optimization (already optimized)
-6. Architecture Decision Records (documentation)
+### Frontend Testing Improvements
+
+**Current Status**: ✅ 83.51% overall test coverage (exceeds 80% target)
+
+#### 1. API Interceptor Tests
+(See T4 above - now categorized under Frontend Component Tests)
+
+#### 2. AuthContext Async Flow Tests
+(See T4 above - now categorized under Frontend Component Tests)
+
+#### 3. App.tsx Route Tests
+(See original IMPROVEMENTS.md section 3 for full details)
+
+### Backend Testing Improvements
+
+**Current Status**: ⚠️ Minimal test coverage
+
+#### 4. Auth Service Unit Tests
+(See T1 above - now elevated to High Priority)
+
+#### 5. User Repository Tests
+(See T2 above)
+
+#### 6. Auth Middleware Tests
+(See T3 above)
+
+### Infrastructure Improvements
+
+#### 7. CI/CD Pipeline
+(See original IMPROVEMENTS.md section 7 for full details)
+**Status**: Deferred to Phase 9
+
+#### 8. E2E Testing Setup
+(See original IMPROVEMENTS.md section 8 for full details)
+**Status**: Deferred to Phase 9
+
+### Code Quality Improvements
+
+#### 9. TypeScript Strict Mode Fixes
+(See original IMPROVEMENTS.md section 9 for full details)
+
+#### 10. Linter Configuration Enhancements
+(See original IMPROVEMENTS.md section 10 for full details)
+
+### Performance Improvements
+
+#### 11. Frontend Bundle Optimization
+(See original IMPROVEMENTS.md section 11 for full details)
+
+#### 12. Docker Image Optimization
+(See original IMPROVEMENTS.md section 12 for full details)
+**Note**: Current 29MB is already exceptional
+
+### Documentation Improvements
+
+#### 13. API Documentation Generation
+(See D1 above)
+
+#### 14. Architecture Decision Records (ADRs)
+(See original IMPROVEMENTS.md section 14 for full details)
+
+### Security Improvements
+
+#### 15. Security Headers Middleware
+(See original IMPROVEMENTS.md section 15 for full details)
+
+#### 16. Dependency Vulnerability Scanning
+(See original IMPROVEMENTS.md section 16 for full details)
+**Current Status**: 7 vulnerabilities detected in frontend (6 moderate, 1 critical) - should be addressed
+
+</details>
 
 ---
 
-## Progress Tracking
+## 📊 Summary & Prioritization
 
-| Item | Status | Completion Date | Notes |
-|------|--------|----------------|-------|
-| Frontend Test Infrastructure | ✅ Complete | 2026-01-16 | 83.51% coverage achieved |
-| ProtectedRoute Tests | ✅ Complete | 2026-01-16 | All 5 tests passing |
-| API Interceptor Tests | 📋 Planned | - | Would increase api.ts to ~90% |
-| AuthContext Async Tests | 📋 Planned | - | Would increase AuthContext to ~85% |
-| Backend Auth Service Tests | 📋 Planned | - | Critical for Phase 2 |
-| CI/CD Pipeline | 📋 Planned | - | Deferred to Phase 9 |
-| E2E Testing | 📋 Planned | - | Deferred to Phase 9 |
+### 🔴 High Priority (Before Production)
+
+**Phase 1 Deferred (Must Address)**:
+1. **A1** - Token Refresh Logic (user experience)
+2. **A2** - Environment-Specific Configuration (deployment)
+3. **A4** - Security Hardening (JWT secret, rate limiting, CSRF)
+4. **T1** - Auth Service Unit Tests (test baseline)
+
+**Original High Priority**:
+5. **CI/CD Pipeline** (#7 - deferred to Phase 9)
+6. **Dependency Vulnerability Scanning** (#16 - 7 frontend vulnerabilities)
+
+### 🟡 Medium Priority (Improve Quality)
+
+**Phase 1 Deferred**:
+1. **A3** - Enhanced Error Handling (UX)
+2. **A5** - Keycloak User Management (setup automation)
+3. **T2** - User Repository Tests (coverage)
+4. **T3** - Auth Middleware Tests (coverage)
+5. **T4** - Frontend Component Tests (coverage)
+6. **T5** - Integration Tests (e2e confidence)
+7. **M1** - Structured Logging (debugging)
+8. **D1** - API Documentation (developer experience)
+9. **D3** - Keycloak Deployment Guide (production setup)
+
+**Original Medium Priority**:
+10. **Security Headers Middleware** (#15)
+11. **E2E Testing Setup** (#8 - deferred to Phase 9)
+
+### 🟢 Low Priority (Nice to Have)
+
+**Phase 1 Deferred**:
+1. **M2** - Auth Metrics (monitoring)
+2. **D2** - Auth Flow Diagram (visual docs)
+3. **UI1** - Loading States (UX polish)
+4. **UI2** - Toast Notifications (UX polish)
+5. **UI3** - Remember Me (convenience)
+6. **DX1** - Docker Compose Profiles (flexibility)
+7. **DX2** - Hot Reload for Backend (dev speed)
+8. **DX3** - VS Code Debug Configs (debugging)
+9. **ALT1** - Social Login (alternative auth)
+10. **ALT2** - API Key Auth (CLI tools)
+
+**Original Low Priority**:
+11. App.tsx Route Tests (#3)
+12. TypeScript Strict Mode Fixes (#9)
+13. Linter Configuration Enhancements (#10)
+14. Frontend Bundle Optimization (#11)
+15. Docker Image Optimization (#12)
+16. Architecture Decision Records (#14)
 
 ---
 
-**Last Updated**: 2026-01-16  
-**Next Review**: Before Phase 2 kickoff
+## 📈 Progress Tracking
 
-**Note**: This document is a living guide. Prioritization should be revisited as project needs evolve.
+| Category | Item | Status | Completion Date | Priority | Notes |
+|----------|------|--------|----------------|----------|-------|
+| **Auth** | Token Refresh Logic (A1) | 📋 Planned | - | High | Phase 1 deferred |
+| **Auth** | Environment Config (A2) | 📋 Planned | - | High | Phase 1 deferred |
+| **Auth** | Error Handling (A3) | 📋 Planned | - | Medium | Phase 1 deferred |
+| **Auth** | Security Hardening (A4) | 📋 Planned | - | High | Phase 1 deferred |
+| **Auth** | Keycloak User Mgmt (A5) | 📋 Planned | - | Medium | Phase 1 deferred |
+| **Testing** | Frontend Infrastructure | ✅ Complete | 2026-01-16 | - | 83.51% coverage |
+| **Testing** | ProtectedRoute Tests | ✅ Complete | 2026-01-16 | - | All tests passing |
+| **Testing** | Auth Service Tests (T1) | 📋 Planned | - | High | Phase 1 deferred |
+| **Testing** | User Repo Tests (T2) | 📋 Planned | - | Medium | Phase 1 deferred |
+| **Testing** | Auth Middleware (T3) | 📋 Planned | - | Medium | Phase 1 deferred |
+| **Testing** | Frontend Components (T4) | 📋 Planned | - | Medium | Phase 1 deferred |
+| **Testing** | Integration Tests (T5) | 📋 Planned | - | Medium | Phase 1 deferred |
+| **Infra** | CI/CD Pipeline (#7) | 📋 Planned | - | High | Deferred to Phase 9 |
+| **Infra** | E2E Testing (#8) | 📋 Planned | - | Medium | Deferred to Phase 9 |
+| **Logging** | Structured Logging (M1) | 📋 Planned | - | Medium | Phase 1 deferred |
+| **Logging** | Auth Metrics (M2) | 📋 Planned | - | Low | Phase 1 deferred |
+| **Docs** | API Documentation (D1) | 📋 Planned | - | Medium | Phase 1 deferred |
+| **Docs** | Auth Flow Diagram (D2) | 📋 Planned | - | Low | Phase 1 deferred |
+| **Docs** | Keycloak Deploy (D3) | 📋 Planned | - | Medium | Phase 1 deferred |
+| **Security** | Security Headers (#15) | 📋 Planned | - | Medium | Original |
+| **Security** | Vuln Scanning (#16) | 📋 Planned | - | High | 7 frontend vulns |
+| **UI/UX** | Loading States (UI1) | 📋 Planned | - | Low | Phase 1 deferred |
+| **UI/UX** | Toast Notifications (UI2) | 📋 Planned | - | Low | Phase 1 deferred |
+| **UI/UX** | Remember Me (UI3) | 📋 Planned | - | Low | Phase 1 deferred |
+
+---
+
+## 📝 Notes
+
+1. **Phase 1 Deferred Items**: All items marked as "Phase 1 deferred" were identified during Phase 1 implementation but deferred to maintain focus on core authentication functionality. These should be addressed before production deployment.
+
+2. **Testing Strategy**: Focus on high-priority tests (T1, T2, T3) before Phase 2 begins to establish a solid testing baseline for new features.
+
+3. **Security First**: Items A2, A4, and #16 should be addressed together as a security hardening sprint before production.
+
+4. **Documentation**: Items D1, D2, D3 can be bundled together in a documentation sprint, likely during Phase 9 (Testing & Documentation).
+
+5. **UX Polish**: Items UI1, UI2, UI3 are low priority and can be addressed in Phase 10 (Polish & Optimization).
+
+---
+
+**Last Updated**: 2026-01-16 23:45 CET  
+**Next Review**: Before Phase 2 kickoff  
+**Source Documents**: PHASE1.md (deferred improvements) + original IMPROVEMENTS.md
+
+**Note**: This document is a living guide. Prioritization should be revisited as project needs evolve. Items from Phase 1 are now centralized here to maintain a single source of truth for all improvements.
