@@ -55,6 +55,10 @@ func (r *userRepository) FindByOIDCSubject(ctx context.Context, subject string) 
 }
 
 func (r *userRepository) Create(ctx context.Context, user *model.User) error {
+	if user.ID == uuid.Nil {
+		user.ID = uuid.New()
+	}
+
 	if err := r.db.WithContext(ctx).Create(user).Error; err != nil {
 		return fmt.Errorf("failed to create user: %w", err)
 	}
