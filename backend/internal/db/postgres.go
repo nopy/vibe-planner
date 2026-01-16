@@ -4,6 +4,8 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+
+	"github.com/npinot/vibe/backend/internal/model"
 )
 
 func NewPostgresConnection(databaseURL string) (*gorm.DB, error) {
@@ -18,7 +20,7 @@ func NewPostgresConnection(databaseURL string) (*gorm.DB, error) {
 }
 
 func RunMigrations(db *gorm.DB) error {
-	// Auto-migrate GORM models
-	// This will be populated with actual models later
-	return nil
+	return db.AutoMigrate(
+		&model.User{},
+	)
 }

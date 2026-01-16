@@ -1,32 +1,67 @@
 package api
 
-import "github.com/gin-gonic/gin"
+import (
+	"net/http"
 
-// AuthHandler handles authentication-related requests
+	"github.com/gin-gonic/gin"
+
+	"github.com/npinot/vibe/backend/internal/middleware"
+	"github.com/npinot/vibe/backend/internal/service"
+)
+
 type AuthHandler struct {
-	// Add dependencies here (auth service, etc.)
+	authService service.AuthService
 }
 
-func NewAuthHandler() *AuthHandler {
-	return &AuthHandler{}
+func NewAuthHandler(authService service.AuthService) *AuthHandler {
+	return &AuthHandler{
+		authService: authService,
+	}
 }
 
-// OIDCLogin initiates OIDC login flow
 func (h *AuthHandler) OIDCLogin(c *gin.Context) {
-	c.JSON(501, gin.H{"error": "Not implemented yet"})
+	state := c.Query("state")
+
+	authURL, err := h.authService.GetAuthorizationURL(state)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate authorization URL"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"authorization_url": authURL,
+	})
 }
 
-// OIDCCallback handles OIDC callback
 func (h *AuthHandler) OIDCCallback(c *gin.Context) {
-	c.JSON(501, gin.H{"error": "Not implemented yet"})
+	code := c.Query("code")
+	if code == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing authorization code"})
+		return
+	}
+
+	user, token, err := h.authService.ExchangeCodeForToken(c.Request.Context(), code)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Failed to exchange code for token"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"token": token,
+		"user":  user,
+	})
 }
 
-// GetCurrentUser returns the current authenticated user
 func (h *AuthHandler) GetCurrentUser(c *gin.Context) {
-	c.JSON(501, gin.H{"error": "Not implemented yet"})
+	user, err := middleware.GetCurrentUser(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
 }
 
-// Logout logs out the current user
 func (h *AuthHandler) Logout(c *gin.Context) {
-	c.JSON(501, gin.H{"error": "Not implemented yet"})
+	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 }

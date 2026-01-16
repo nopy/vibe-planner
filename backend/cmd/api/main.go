@@ -7,34 +7,42 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 
+	"github.com/npinot/vibe/backend/internal/api"
 	"github.com/npinot/vibe/backend/internal/config"
 	"github.com/npinot/vibe/backend/internal/db"
+	"github.com/npinot/vibe/backend/internal/middleware"
+	"github.com/npinot/vibe/backend/internal/repository"
+	"github.com/npinot/vibe/backend/internal/service"
 )
 
 func main() {
-	// Load environment variables
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found, using environment variables")
 	}
 
-	// Load configuration
 	cfg := config.Load()
 
-	// Initialize database
 	database, err := db.NewPostgresConnection(cfg.DatabaseURL)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	// Run migrations (auto-migrate GORM models)
 	if err := db.RunMigrations(database); err != nil {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}
 
-	// Initialize Gin router
-	router := setupRouter(cfg)
+	userRepo := repository.NewUserRepository(database)
 
-	// Start server
+	authService, err := service.NewAuthService(cfg, userRepo)
+	if err != nil {
+		log.Fatalf("Failed to create auth service: %v", err)
+	}
+
+	authMiddleware := middleware.NewAuthMiddleware(cfg, userRepo)
+	authHandler := api.NewAuthHandler(authService)
+
+	router := setupRouter(cfg, authHandler, authMiddleware)
+
 	port := cfg.Port
 	if port == "" {
 		port = "8080"
@@ -46,15 +54,13 @@ func main() {
 	}
 }
 
-func setupRouter(cfg *config.Config) *gin.Engine {
-	// Set Gin mode
+func setupRouter(cfg *config.Config, authHandler *api.AuthHandler, authMiddleware *middleware.AuthMiddleware) *gin.Engine {
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
 	router := gin.Default()
 
-	// CORS middleware
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:5173", "http://localhost:3000"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
@@ -63,7 +69,6 @@ func setupRouter(cfg *config.Config) *gin.Engine {
 		AllowCredentials: true,
 	}))
 
-	// Health check endpoint
 	router.GET("/healthz", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
@@ -72,27 +77,16 @@ func setupRouter(cfg *config.Config) *gin.Engine {
 		c.JSON(200, gin.H{"status": "ready"})
 	})
 
-	// API v1 routes
 	v1 := router.Group("/api")
 	{
-		// Auth routes (to be implemented)
 		auth := v1.Group("/auth")
 		{
-			auth.POST("/oidc/login", func(c *gin.Context) {
-				c.JSON(501, gin.H{"error": "Not implemented yet"})
-			})
-			auth.POST("/oidc/callback", func(c *gin.Context) {
-				c.JSON(501, gin.H{"error": "Not implemented yet"})
-			})
-			auth.GET("/me", func(c *gin.Context) {
-				c.JSON(501, gin.H{"error": "Not implemented yet"})
-			})
-			auth.POST("/logout", func(c *gin.Context) {
-				c.JSON(501, gin.H{"error": "Not implemented yet"})
-			})
+			auth.GET("/oidc/login", authHandler.OIDCLogin)
+			auth.GET("/oidc/callback", authHandler.OIDCCallback)
+			auth.GET("/me", authMiddleware.JWTAuth(), authHandler.GetCurrentUser)
+			auth.POST("/logout", authHandler.Logout)
 		}
 
-		// Projects routes (to be implemented)
 		projects := v1.Group("/projects")
 		{
 			projects.GET("", func(c *gin.Context) {
@@ -111,7 +105,6 @@ func setupRouter(cfg *config.Config) *gin.Engine {
 				c.JSON(501, gin.H{"error": "Not implemented yet"})
 			})
 
-			// Tasks routes (to be implemented)
 			projects.GET("/:id/tasks", func(c *gin.Context) {
 				c.JSON(501, gin.H{"error": "Not implemented yet"})
 			})

@@ -1,17 +1,38 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 
+import { AuthProvider } from '@/contexts/AuthContext'
+import { LoginPage } from '@/pages/LoginPage'
+import { OidcCallbackPage } from '@/pages/OidcCallbackPage'
+import { ProtectedRoute } from '@/components/ProtectedRoute'
+
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/auth/callback" element={<OidcCallback />} />
-        <Route path="/projects" element={<ProjectsPage />} />
-        <Route path="/projects/:id" element={<ProjectDetailPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Router>
+    <AuthProvider>
+      <Router>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/auth/callback" element={<OidcCallbackPage />} />
+          <Route
+            path="/projects"
+            element={
+              <ProtectedRoute>
+                <ProjectsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/projects/:id"
+            element={
+              <ProtectedRoute>
+                <ProjectDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
   )
 }
 
@@ -34,23 +55,6 @@ function HomePage() {
       </div>
     </div>
   )
-}
-
-function LoginPage() {
-  return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-      <div className="bg-white p-8 rounded-lg shadow-md">
-        <h2 className="text-2xl font-bold mb-6">Login</h2>
-        <button className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-          Login with Keycloak
-        </button>
-      </div>
-    </div>
-  )
-}
-
-function OidcCallback() {
-  return <div>Loading...</div>
 }
 
 function ProjectsPage() {

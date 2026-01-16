@@ -1,9 +1,9 @@
 # OPENCODE PROJECT MANAGER - AGENT KNOWLEDGE BASE
 
-**Generated:** 2026-01-15 22:48:00  
-**Branch:** HEAD  
-**Project:** Go backend + React frontend + K8s orchestration (MVP bootstrap)
-**Status:** ✅ All critical issues resolved - Ready for Phase 1
+**Generated:** 2026-01-15 23:50:00  
+**Branch:** main  
+**Project:** Go backend + React frontend + K8s orchestration
+**Status:** ✅ Phase 1 (OIDC Authentication) Complete - Ready for Phase 2
 
 ---
 
@@ -33,15 +33,21 @@ Multi-module monorepo: Go API server, React SPA, 2 Go sidecars (file-browser, se
 
 | Task | Location | Notes |
 |------|----------|-------|
-| Start backend | `backend/cmd/api/main.go` | Entry point, port 8080 |
+| Start backend | `backend/cmd/api/main.go` | Entry point, port 8090 |
 | Start frontend | `frontend/src/main.tsx` | Vite SPA entry, port 5173 |
-| API handlers | `backend/internal/api/` | Thin layer (stubs only) |
-| Models | `backend/internal/model/` | GORM structs (User, Project, Task) |
+| Auth handlers | `backend/internal/api/auth.go` | ✅ Fully implemented |
+| Auth service | `backend/internal/service/auth_service.go` | ✅ OIDC + JWT |
+| Auth middleware | `backend/internal/middleware/auth.go` | ✅ JWT validation |
+| User repository | `backend/internal/repository/user_repository.go` | ✅ CRUD + upsert |
+| Models | `backend/internal/model/` | GORM structs (User complete) |
 | DB schema | `db/migrations/001_init.up.sql` | All tables defined |
-| React routes | `frontend/src/App.tsx` | Placeholder pages |
+| React auth | `frontend/src/contexts/AuthContext.tsx` | ✅ Global auth state |
+| React routes | `frontend/src/App.tsx` | ✅ Protected routes |
+| Login page | `frontend/src/pages/LoginPage.tsx` | ✅ OIDC flow |
+| Callback page | `frontend/src/pages/OidcCallbackPage.tsx` | ✅ Token exchange |
 | Types | `frontend/src/types/index.ts` | TS interfaces |
-| File browser | `sidecars/file-browser/cmd/main.go` | Port 3001 |
-| Session proxy | `sidecars/session-proxy/cmd/main.go` | Port 3002 |
+| File browser | `sidecars/file-browser/cmd/main.go` | Port 3001 (Phase 4) |
+| Session proxy | `sidecars/session-proxy/cmd/main.go` | Port 3002 (Phase 5) |
 | K8s base | `k8s/base/` | Namespace, ConfigMap, Secrets |
 | K8s dev | `k8s/overlays/dev/` | Dev environment patches |
 
@@ -49,7 +55,7 @@ Multi-module monorepo: Go API server, React SPA, 2 Go sidecars (file-browser, se
 
 ## CRITICAL ISSUES ~~(Fix Before Development)~~ **[RESOLVED 2026-01-15]**
 
-**All critical issues have been resolved. Project is ready for Phase 1 development.**
+**All critical issues have been resolved. Project is ready for Phase 2 development.**
 
 **1. Committed Binaries** ✅ FIXED
 - ~~`backend/opencode-api`, `sidecars/*/file-browser`, `sidecars/*/session-proxy` are checked in~~
@@ -59,13 +65,13 @@ Multi-module monorepo: Go API server, React SPA, 2 Go sidecars (file-browser, se
 - ~~3 separate `go.mod` files (backend + 2 sidecars)~~
 - **Resolution:** Created `go.work` at root with all 3 modules
 
-**3. Missing Service/Repository Layers** ⚠️ DEFERRED
-- No `internal/service/` or `internal/repository/` in backend
-- **Status:** Documented as "Planned" in backend/AGENTS.md - will be created during Phase 1-2
+**3. Missing Service/Repository Layers** ✅ FIXED
+- ~~No `internal/service/` or `internal/repository/` in backend~~
+- **Resolution:** Implemented for auth (AuthService, UserRepository) - pattern established for Phase 2
 
 **4. Frontend Structure Mismatch** ✅ FIXED
 - ~~README claims `src/components/`, `src/hooks/`, `src/contexts/` but they don't exist~~
-- **Resolution:** Created all three directories
+- **Resolution:** Created all directories and populated with Phase 1 components
 
 **5. Placeholder Module Path** ✅ FIXED
 - ~~`github.com/yourusername/opencode-project-manager` in go.mod~~
@@ -228,7 +234,7 @@ cd frontend && npm run build
 - **Multi-stage Dockerfiles** for all services (backend, frontend, sidecars)
 - **Registry:** `registry.legal-suite.com/opencode`
 - **Image builder:** `scripts/build-images.sh` (tags by VERSION env)
-- **Keycloak setup:** `scripts/setup-keycloak.sh` (waits for ready, prints creds - no realm provisioning)
+- **Keycloak setup:** `scripts/setup-keycloak.sh` (creates realm `opencode` and client `opencode-app`)
 - **Kind deploy:** `scripts/deploy-kind.sh`
 
 ---
@@ -237,7 +243,8 @@ cd frontend && npm run build
 
 **Go:**
 - Gin (HTTP), GORM (ORM), UUID, godotenv
-- Go 1.21 across all modules
+- go-oidc v3 (OIDC provider), golang-jwt/jwt v5 (JWT)
+- Go 1.24 across all modules
 
 **TypeScript/React:**
 - React 18, React Router, Axios, Zustand
@@ -255,5 +262,6 @@ cd frontend && npm run build
 4. **ESLint + Prettier** - `eslint-config-prettier` installed to prevent conflicts
 5. **Path alias `@/`** - maps to `./src/` in tsconfig
 6. **Migration tool** - Uses golang-migrate CLI (not GORM auto-migrate in prod)
-7. **Bootstrap complete** - 43 source files, all Go services build, frontend structure minimal
-8. **Next phase:** Implement OIDC auth (Phase 1 per IMPLEMENTATION_PLAN.md)
+7. **Phase 1 complete** - OIDC authentication fully implemented (backend + frontend)
+8. **Backend port** - Runs on 8090 (not 8080 due to port conflict with SearXNG)
+9. **Next phase:** Phase 2 - Project Management (K8s pod lifecycle per IMPLEMENTATION_PLAN.md)
