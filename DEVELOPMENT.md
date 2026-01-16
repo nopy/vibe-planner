@@ -390,6 +390,86 @@ docker volume prune
 
 ---
 
+## Docker Build Modes
+
+### Production Build (Unified Image)
+
+**Single Docker image (29MB) with embedded frontend:**
+
+```bash
+# Build unified image
+make docker-build-prod
+
+# Or with custom version
+./scripts/build-images.sh --mode prod --version v1.0.0
+
+# Build and push
+make docker-push-prod
+```
+
+**What it builds:**
+- `registry.legal-suite.com/opencode/app:latest` - Backend + Frontend (29MB)
+- `registry.legal-suite.com/opencode/file-browser-sidecar:latest`
+- `registry.legal-suite.com/opencode/session-proxy-sidecar:latest`
+
+**How it works:**
+1. Stage 1: Build React frontend → `dist/` directory
+2. Stage 2: Build Go backend with embedded frontend (using `//go:embed`)
+3. Stage 3: Minimal alpine image with single binary
+
+**When to use:**
+- Production deployments
+- Staging environments
+- Integration testing
+- Simpler Kubernetes manifests (one pod, one container)
+
+### Development Build (Separate Images)
+
+**Separate backend and frontend images:**
+
+```bash
+# Build separate images
+make docker-build-dev
+
+# Or with custom version
+./scripts/build-images.sh --mode dev --version dev
+
+# Build and push
+make docker-push-dev
+```
+
+**What it builds:**
+- `registry.legal-suite.com/opencode/backend:latest` - Backend only
+- `registry.legal-suite.com/opencode/frontend:latest` - Frontend + nginx
+- `registry.legal-suite.com/opencode/file-browser-sidecar:latest`
+- `registry.legal-suite.com/opencode/session-proxy-sidecar:latest`
+
+**When to use:**
+- Local development with Docker
+- Debugging individual services
+- Independent scaling of frontend/backend
+- CI/CD pipeline stages
+
+### Build Script Options
+
+```bash
+./scripts/build-images.sh --help
+
+# Examples:
+./scripts/build-images.sh --mode prod --version v1.2.3
+./scripts/build-images.sh --mode dev --version dev --push
+./scripts/build-images.sh --mode prod --registry my-registry.com/app
+```
+
+**Available flags:**
+- `--mode MODE` - Build mode: `prod` (unified) or `dev` (separate)
+- `--version VERSION` - Image tag version (default: `latest`)
+- `--push` - Push images to registry after building
+- `--registry URL` - Docker registry URL
+- `-h, --help` - Show help message
+
+---
+
 ## Common Issues & Troubleshooting
 
 ### 1. "Port already in use"
@@ -506,8 +586,10 @@ make kind-logs            # View pod logs
 make kind-delete          # Delete cluster
 
 # Docker
-make docker-build         # Build all images
-make docker-push          # Push to registry
+make docker-build-prod    # Build production images (unified)
+make docker-build-dev     # Build development images (separate)
+make docker-push-prod     # Build and push production images
+make docker-push-dev      # Build and push development images
 
 # All-in-one
 make dev                  # Start everything (services + backends)
@@ -630,9 +712,9 @@ EXPLAIN ANALYZE SELECT * FROM tasks WHERE project_id = '...';
 - [ ] Backup strategy for database
 - [ ] Rollback procedure documented
 
-# Build & push images
-make docker-build
-make docker-push
+# Build & push production images (unified)
+make docker-build-prod
+make docker-push-prod
 
 # Deploy to production K8s
 kubectl apply -k k8s/overlays/prod/

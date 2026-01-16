@@ -213,9 +213,19 @@ make db-reset               # Drop all + rerun
 
 **Build:**
 ```bash
+# Local binaries
 cd backend && go build -o opencode-api cmd/api/main.go
 cd frontend && npm run build
-./scripts/build-images.sh   # All Docker images
+
+# Docker images
+make docker-build-prod      # Production (unified 29MB image)
+make docker-build-dev       # Development (separate images)
+make docker-push-prod       # Build and push production
+make docker-push-dev        # Build and push development
+
+# Or use script directly
+./scripts/build-images.sh --mode prod --version v1.0.0
+./scripts/build-images.sh --mode dev --push
 ```
 
 ---
@@ -231,9 +241,33 @@ cd frontend && npm run build
 
 ## BUILD PATTERNS
 
-- **Multi-stage Dockerfiles** for all services (backend, frontend, sidecars)
-- **Registry:** `registry.legal-suite.com/opencode`
-- **Image builder:** `scripts/build-images.sh` (tags by VERSION env)
+### Docker Build Modes
+
+**Production (Unified):**
+- Single image with embedded frontend (29MB)
+- Built from root `Dockerfile`
+- Frontend served via `embed.FS` from Go binary
+- Image: `registry.legal-suite.com/opencode/app:VERSION`
+- Command: `./scripts/build-images.sh --mode prod`
+
+**Development (Separate):**
+- Separate backend and frontend images
+- Backend from `backend/Dockerfile`
+- Frontend + nginx from `frontend/Dockerfile`
+- Images: `backend:VERSION`, `frontend:VERSION`
+- Command: `./scripts/build-images.sh --mode dev`
+
+**Build Script Features:**
+- Supports `--mode prod|dev`
+- Custom `--version` tag (default: `latest`)
+- Optional `--push` to registry
+- Custom `--registry` URL
+- Color-coded output with status indicators
+- Builds all 3 images: app/backend+frontend, file-browser-sidecar, session-proxy-sidecar
+
+**Registry:** `registry.legal-suite.com/opencode`
+
+**Other Scripts:**
 - **Keycloak setup:** `scripts/setup-keycloak.sh` (creates realm `opencode` and client `opencode-app`)
 - **Kind deploy:** `scripts/deploy-kind.sh`
 
@@ -264,4 +298,6 @@ cd frontend && npm run build
 6. **Migration tool** - Uses golang-migrate CLI (not GORM auto-migrate in prod)
 7. **Phase 1 complete** - OIDC authentication fully implemented (backend + frontend)
 8. **Backend port** - Runs on 8090 (not 8080 due to port conflict with SearXNG)
-9. **Next phase:** Phase 2 - Project Management (K8s pod lifecycle per IMPLEMENTATION_PLAN.md)
+9. **Unified production image** - Single 29MB Docker image serves both API and SPA (embedded with `go:embed`)
+10. **Build modes** - Use `--mode prod` for production (unified), `--mode dev` for development (separate)
+11. **Next phase:** Phase 2 - Project Management (K8s pod lifecycle per IMPLEMENTATION_PLAN.md)

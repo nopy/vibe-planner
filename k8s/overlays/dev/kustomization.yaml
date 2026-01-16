@@ -6,3 +6,7 @@ bases:
 
 patchesStrategicMerge:
   - environment-patch.yaml
+
+images:
+  - name: registry.legal-suite.com/opencode/app
+    newTag: dev

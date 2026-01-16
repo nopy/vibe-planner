@@ -7,6 +7,8 @@ resources:
   - namespace.yaml
   - configmap.yaml
   - secrets.yaml
+  - deployment.yaml
+  - service.yaml
 
 commonLabels:
   app: opencode

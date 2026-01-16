@@ -13,13 +13,14 @@ A comprehensive web application for managing software projects using OpenCode AI
 - Interact bidirectionally with the AI agent during execution
 
 **Tech Stack:**
-- **Backend:** Go 1.21+ (Gin framework)
+- **Backend:** Go 1.24+ (Gin framework)
 - **Frontend:** React 18+ (TypeScript, Vite)
 - **Database:** PostgreSQL 15+
 - **Orchestration:** Kubernetes (kind for local development)
 - **Authentication:** Keycloak (OIDC)
 - **Container Registry:** registry.legal-suite.com
 - **AI Model:** GPT-4o mini (configurable)
+- **Production Build:** Single unified Docker image (29MB) with embedded frontend
 
 **Team Size:** 3 developers
 **Scope:** MVP + Optional features for future
@@ -59,7 +60,7 @@ make dev
 
 # Access the application
 # Frontend: http://localhost:5173
-# Backend: http://localhost:8080
+# Backend: http://localhost:8090
 # Keycloak: http://localhost:8081
 ```
 
@@ -72,34 +73,38 @@ See [DEVELOPMENT.md](./DEVELOPMENT.md) for complete setup instructions.
 
 ```
 .
-├── backend/                    # Go backend service
-│   ├── cmd/api/               # Entry point
-│   ├── internal/              # Core application code
-│   │   ├── api/               # HTTP handlers
-│   │   ├── service/           # Business logic
-│   │   ├── repository/        # Database access
-│   │   ├── model/             # Domain models
-│   │   ├── middleware/        # HTTP middleware
-│   │   ├── config/            # Configuration
-│   │   ├── util/              # Utilities
-│   │   └── db/                # Database migrations
-│   ├── go.mod                 # Go dependencies
-│   └── Dockerfile
+├── Dockerfile                      # Unified production build (frontend + backend)
+├── backend/                        # Go backend service
+│   ├── cmd/api/                   # Entry point
+│   ├── internal/                  # Core application code
+│   │   ├── api/                   # HTTP handlers
+│   │   ├── service/               # Business logic
+│   │   ├── repository/            # Database access
+│   │   ├── model/                 # Domain models
+│   │   ├── middleware/            # HTTP middleware (auth, security, gzip)
+│   │   ├── static/                # Embedded frontend serving (production)
+│   │   ├── config/                # Configuration
+│   │   ├── util/                  # Utilities
+│   │   └── db/                    # Database migrations
+│   ├── go.mod                     # Go dependencies
+│   ├── Dockerfile                 # Backend-only build (development)
+│   └── .gitignore
 │
-├── frontend/                   # React frontend application
+├── frontend/                       # React frontend application
 │   ├── src/
-│   │   ├── components/        # React components
-│   │   ├── hooks/             # Custom hooks
-│   │   ├── contexts/          # React contexts
-│   │   ├── services/          # API clients
-│   │   ├── types/             # TypeScript types
-│   │   ├── utils/             # Utilities
-│   │   ├── App.tsx            # Root component
-│   │   └── main.tsx           # Entry point
-│   ├── package.json           # Node dependencies
-│   ├── vite.config.ts         # Vite configuration
-│   ├── tsconfig.json          # TypeScript config
-│   └── Dockerfile
+│   │   ├── components/            # React components
+│   │   ├── hooks/                 # Custom hooks
+│   │   ├── contexts/              # React contexts
+│   │   ├── services/              # API clients
+│   │   ├── types/                 # TypeScript types
+│   │   ├── utils/                 # Utilities
+│   │   ├── App.tsx                # Root component
+│   │   └── main.tsx               # Entry point
+│   ├── package.json               # Node dependencies
+│   ├── vite.config.ts             # Vite configuration
+│   ├── tsconfig.json              # TypeScript config
+│   ├── Dockerfile                 # Frontend-only build (development)
+│   └── nginx.conf                 # Nginx config (development only)
 │
 ├── sidecars/                   # Kubernetes sidecar services
 │   ├── file-browser/          # File browsing service (Go)
@@ -200,8 +205,10 @@ make kind-logs                 # View pod logs
 make kind-delete               # Delete cluster
 
 # Docker
-make docker-build              # Build Docker images
-make docker-push               # Push to registry
+make docker-build-prod         # Build production images (unified)
+make docker-build-dev          # Build development images (separate)
+make docker-push-prod          # Build and push production
+make docker-push-dev           # Build and push development
 
 # Cleanup
 make clean                     # Stop services and cleanup
@@ -377,11 +384,22 @@ See [API_SPECIFICATION.md](./docs/API_SPECIFICATION.md) for complete documentati
 
 ### Docker Images
 
+**Production (Unified):**
 ```
-registry.legal-suite.com/opencode/backend:latest
-registry.legal-suite.com/opencode/frontend:latest
+registry.legal-suite.com/opencode/app:latest           # Backend + Frontend (29MB)
 registry.legal-suite.com/opencode/file-browser-sidecar:latest
 registry.legal-suite.com/opencode/session-proxy-sidecar:latest
+```
+
+**Development (Separate):**
+```
+registry.legal-suite.com/opencode/backend:latest       # Backend only
+registry.legal-suite.com/opencode/frontend:latest      # Frontend + nginx
+```
+
+**Build Production Image:**
+```bash
+docker build -t registry.legal-suite.com/opencode/app:latest -f Dockerfile .
 ```
 
 ### Local Kubernetes (Kind)
@@ -394,7 +412,7 @@ kind create cluster --config k8s/kind-config.yaml --name opencode-dev
 kubectl apply -k k8s/base/
 
 # Port forward
-kubectl port-forward -n opencode svc/opencode-controller 8080:80
+kubectl port-forward -n opencode svc/opencode-controller 8090:8090
 ```
 
 See [DEVELOPMENT.md](./DEVELOPMENT.md#kind-kubernetes-cluster) for detailed K8s instructions.
@@ -404,9 +422,9 @@ See [DEVELOPMENT.md](./DEVELOPMENT.md#kind-kubernetes-cluster) for detailed K8s 
 ## 🚢 Production Deployment
 
 ```bash
-# Build and push images
-make docker-build
-make docker-push
+# Build and push production images
+make docker-build-prod
+make docker-push-prod
 
 # Deploy to production K8s
 kubectl apply -k k8s/overlays/prod/

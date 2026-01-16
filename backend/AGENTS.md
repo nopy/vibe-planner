@@ -8,13 +8,14 @@ Go 1.24 API server using Gin (HTTP), GORM (PostgreSQL), and Keycloak (OIDC).
 ## STRUCTURE
 ```
 .
-├── cmd/api/           # Entry point (main.go) - wired with auth dependencies
+├── cmd/api/           # Entry point (main.go) - wired with auth dependencies + static serving
 ├── internal/
 │   ├── api/           # HTTP Handlers - auth.go fully implemented
 │   ├── model/         # GORM structs (User model with OIDC fields)
 │   ├── service/       # ✅ auth_service.go - OIDC provider, token exchange, JWT
 │   ├── repository/    # ✅ user_repository.go - User CRUD with OIDC upsert
-│   ├── middleware/    # ✅ auth.go - JWT validation middleware
+│   ├── middleware/    # ✅ auth.go - JWT validation, security.go - Security headers
+│   ├── static/        # ✅ embed.go - Embedded frontend serving (production only)
 │   ├── config/        # Environment & App configuration
 │   └── db/            # Connection & Migration logic (User auto-migrate added)
 └── go.mod             # Module path: github.com/npinot/vibe/backend
@@ -54,6 +55,17 @@ Go 1.24 API server using Gin (HTTP), GORM (PostgreSQL), and Keycloak (OIDC).
 - Validates JWT signatures and claims
 - Loads authenticated user from DB
 - Injects user into Gin context
+
+**SecurityHeaders** (`internal/middleware/security.go`):
+- Sets X-Content-Type-Options, X-Frame-Options, X-XSS-Protection
+- Adds HSTS for HTTPS connections
+- Configures Permissions-Policy
+
+**StaticServing** (`internal/static/embed.go`):
+- Embeds frontend dist/ via Go embed.FS (production only)
+- Serves static assets with appropriate cache headers
+- SPA fallback for client-side routing (React Router)
+- Smart caching: long cache for hashed assets, no-cache for index.html
 
 ### Configuration (Environment Variables)
 ```bash

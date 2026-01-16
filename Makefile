@@ -1,4 +1,4 @@
-.PHONY: help dev dev-services backend-dev frontend-dev db-migrate-up db-migrate-down db-reset test backend-test frontend-test kind-create kind-deploy kind-delete docker-build docker-push clean
+.PHONY: help dev dev-services backend-dev frontend-dev db-migrate-up db-migrate-down db-reset test backend-test frontend-test kind-create kind-deploy kind-delete docker-build-prod docker-build-dev docker-push-prod docker-push-dev clean
 
 # Default target
 help:
@@ -30,8 +30,10 @@ help:
 	@echo "  make kind-delete        - Delete kind cluster"
 	@echo ""
 	@echo "Docker:"
-	@echo "  make docker-build       - Build all Docker images"
-	@echo "  make docker-push        - Push images to registry"
+	@echo "  make docker-build-prod  - Build production images (unified)"
+	@echo "  make docker-build-dev   - Build development images (separate)"
+	@echo "  make docker-push-prod   - Build and push production images"
+	@echo "  make docker-push-dev    - Build and push development images"
 	@echo ""
 	@echo "Cleanup:"
 	@echo "  make clean              - Stop all services and cleanup"
@@ -138,17 +140,17 @@ kind-delete:
 	@kind delete cluster --name opencode-dev
 
 # Docker
-docker-build:
-	@echo "Building Docker images..."
-	@./scripts/build-images.sh
+docker-build-prod:
+	@./scripts/build-images.sh --mode prod
 
-docker-push:
-	@echo "Pushing Docker images..."
-	@./scripts/build-images.sh
-	@docker push registry.legal-suite.com/opencode/backend:latest
-	@docker push registry.legal-suite.com/opencode/frontend:latest
-	@docker push registry.legal-suite.com/opencode/file-browser-sidecar:latest
-	@docker push registry.legal-suite.com/opencode/session-proxy-sidecar:latest
+docker-build-dev:
+	@./scripts/build-images.sh --mode dev
+
+docker-push-prod:
+	@./scripts/build-images.sh --mode prod --push
+
+docker-push-dev:
+	@./scripts/build-images.sh --mode dev --push
 
 # Cleanup
 clean:

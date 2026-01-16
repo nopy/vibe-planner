@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 
@@ -13,11 +14,16 @@ import (
 	"github.com/npinot/vibe/backend/internal/middleware"
 	"github.com/npinot/vibe/backend/internal/repository"
 	"github.com/npinot/vibe/backend/internal/service"
+	"github.com/npinot/vibe/backend/internal/static"
 )
 
 func main() {
-	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found, using environment variables")
+	// Load .env from parent directory (project root)
+	if err := godotenv.Load("../.env"); err != nil {
+		// Try current directory as fallback
+		if err := godotenv.Load(); err != nil {
+			log.Println("No .env file found, using environment variables")
+		}
 	}
 
 	cfg := config.Load()
@@ -43,9 +49,17 @@ func main() {
 
 	router := setupRouter(cfg, authHandler, authMiddleware)
 
+	// Setup static file serving for production (embedded frontend)
+	if cfg.Environment == "production" {
+		if err := static.ServeEmbeddedSPA(router); err != nil {
+			log.Fatalf("Failed to setup static file serving: %v", err)
+		}
+		log.Println("Static file serving enabled (embedded SPA)")
+	}
+
 	port := cfg.Port
 	if port == "" {
-		port = "8080"
+		port = "8090"
 	}
 
 	log.Printf("Server starting on port %s", port)
@@ -60,6 +74,9 @@ func setupRouter(cfg *config.Config, authHandler *api.AuthHandler, authMiddlewar
 	}
 
 	router := gin.Default()
+
+	router.Use(gzip.Gzip(gzip.DefaultCompression))
+	router.Use(middleware.SecurityHeaders())
 
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:5173", "http://localhost:3000"},

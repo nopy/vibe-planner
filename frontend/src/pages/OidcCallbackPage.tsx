@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 
@@ -7,9 +7,15 @@ export function OidcCallbackPage() {
   const { handleCallback } = useAuth()
   const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)
+  const hasProcessed = useRef(false)
 
   useEffect(() => {
     const processCallback = async () => {
+      // Prevent duplicate processing (React StrictMode double-invokes effects)
+      if (hasProcessed.current) {
+        return
+      }
+
       const code = searchParams.get('code')
       const errorParam = searchParams.get('error')
 
@@ -22,6 +28,8 @@ export function OidcCallbackPage() {
         setError('No authorization code received')
         return
       }
+
+      hasProcessed.current = true
 
       try {
         await handleCallback(code)
