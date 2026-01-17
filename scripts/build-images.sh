@@ -74,12 +74,12 @@ build_image() {
     local dockerfile="${3:-Dockerfile}"
     local tag="${REGISTRY}/${name}:${VERSION}"
     
-    log_info "Building ${name}..."
-    if docker build -t "${tag}" -f "${dockerfile}" "${context}"; then
-        log_success "Built ${tag}"
-        echo "${tag}"  # Return tag for push operations
+    log_info "Building ${name}..." >&2
+    if docker build -t "${tag}" -f "${dockerfile}" "${context}" >&2; then
+        log_success "Built ${tag}" >&2
+        echo "${tag}"  # Return tag for push operations (stdout only)
     else
-        log_error "Failed to build ${name}"
+        log_error "Failed to build ${name}" >&2
         exit 1
     fi
 }
@@ -89,9 +89,10 @@ push_image() {
     log_info "Pushing ${tag}..."
     if docker push "${tag}"; then
         log_success "Pushed ${tag}"
+        return 0
     else
         log_error "Failed to push ${tag}"
-        exit 1
+        return 1
     fi
 }
 
@@ -120,10 +121,26 @@ build_production() {
     if [ "${PUSH}" = "true" ]; then
         echo ""
         log_info "Pushing images to registry..."
+        
+        local failed_pushes=()
         for img in "${images[@]}"; do
-            push_image "${img}"
+            if ! push_image "${img}"; then
+                failed_pushes+=("${img}")
+            fi
         done
-        log_success "All images pushed successfully!"
+        
+        if [ ${#failed_pushes[@]} -eq 0 ]; then
+            log_success "All images pushed successfully!"
+        else
+            echo ""
+            log_warning "Some images failed to push:"
+            for img in "${failed_pushes[@]}"; do
+                echo "  - ${img}"
+            done
+            echo ""
+            log_info "You may need to authenticate with: docker login ${REGISTRY%%/*}"
+            exit 1
+        fi
     fi
 }
 
@@ -153,10 +170,26 @@ build_development() {
     if [ "${PUSH}" = "true" ]; then
         echo ""
         log_info "Pushing images to registry..."
+        
+        local failed_pushes=()
         for img in "${images[@]}"; do
-            push_image "${img}"
+            if ! push_image "${img}"; then
+                failed_pushes+=("${img}")
+            fi
         done
-        log_success "All images pushed successfully!"
+        
+        if [ ${#failed_pushes[@]} -eq 0 ]; then
+            log_success "All images pushed successfully!"
+        else
+            echo ""
+            log_warning "Some images failed to push:"
+            for img in "${failed_pushes[@]}"; do
+                echo "  - ${img}"
+            done
+            echo ""
+            log_info "You may need to authenticate with: docker login ${REGISTRY%%/*}"
+            exit 1
+        fi
     fi
 }
 
