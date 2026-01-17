@@ -28,7 +28,7 @@ See [PHASE1.md](./PHASE1.md) for complete archive of Phase 1 tasks and resolutio
 
 **Objective:** Implement project CRUD operations with Kubernetes pod lifecycle management.
 
-**Status:** 🔄 IN PROGRESS (2.1 Database & Models Complete, 2.2 Repository Layer Complete)
+**Status:** 🔄 IN PROGRESS (2.1, 2.2, 2.3 Complete - Ready for 2.4 Business Logic)
 
 ### Overview
 
@@ -77,25 +77,31 @@ Phase 2 introduces the core project management functionality:
   - **Tests:** `backend/internal/repository/project_repository_test.go` (9 tests, all passing)
   - **Status:** ✅ Implemented with comprehensive unit tests, all tests passing
 
-#### 2.3 Kubernetes Service Layer
-- [ ] **Kubernetes Client Wrapper**: Implement K8s operations
-  - Initialize in-cluster or kubeconfig-based client
-  - `CreateProjectPod(project *Project) error` - spawn pod with 3 containers + PVC
-  - `DeleteProjectPod(podName, namespace string) error` - cleanup pod and PVC
-  - `GetPodStatus(podName, namespace string) (string, error)` - query pod phase
-  - `WatchPodStatus(podName, namespace string) (<-chan string, error)` - watch for status changes
-  - Use K8s client-go library
-  - **Location:** `backend/internal/service/kubernetes_service.go`
+#### 2.3 Kubernetes Service Layer ✅ COMPLETE
+- [x] **Kubernetes Client Wrapper**: Implement K8s operations
+  - ✅ Initialize in-cluster or kubeconfig-based client
+  - ✅ `CreateProjectPod(ctx, project *Project) error` - spawn pod with 3 containers + PVC
+  - ✅ `DeleteProjectPod(ctx, podName, namespace string) error` - cleanup pod and PVC
+  - ✅ `GetPodStatus(ctx, podName, namespace string) (string, error)` - query pod phase
+  - ✅ `WatchPodStatus(ctx, podName, namespace string) (<-chan string, error)` - watch for status changes
+  - ✅ KubernetesService interface for testability
+  - ✅ Configurable images, resources, namespace
+  - ✅ k8s.io/client-go@v0.32.0 integrated
+  - **Location:** `backend/internal/service/kubernetes_service.go` (265 lines)
+  - **Tests:** `backend/internal/service/kubernetes_service_test.go` (8 tests, all passing)
 
-- [ ] **Pod Manifest Template**: Define pod specification
-  - 3-container pod:
-    1. OpenCode server (port 3000)
+- [x] **Pod Manifest Template**: Define pod specification
+  - ✅ 3-container pod:
+    1. OpenCode server (port 3000) with health probes
     2. File browser sidecar (port 3001)
     3. Session proxy sidecar (port 3002)
-  - Shared PVC mounted to all containers at `/workspace`
-  - Resource limits (CPU, memory)
-  - Labels for project_id tracking
-  - **Location:** `backend/internal/service/pod_template.go` (Go struct) or `k8s/base/project-pod-template.yaml`
+  - ✅ Shared PVC mounted to all containers at `/workspace`
+  - ✅ Configurable resource limits (CPU: 1000m, Memory: 1Gi)
+  - ✅ Configurable resource requests (CPU: 100m, Memory: 256Mi)
+  - ✅ Labels for project_id tracking
+  - ✅ PVC with ReadWriteOnce, configurable size (default 1Gi)
+  - **Location:** `backend/internal/service/pod_template.go` (184 lines)
+  - **Status:** ✅ Implemented with comprehensive builder functions
 
 #### 2.4 Business Logic Layer
 - [ ] **Project Service**: Implement business logic
@@ -271,6 +277,13 @@ Phase 2 introduces the core project management functionality:
   - [x] Comprehensive unit tests (9 tests, all passing)
   - [x] Context-aware methods for cancellation/timeout
   - [x] Soft delete functionality verified
+- [x] **2.3 Kubernetes Service Layer Complete**
+  - [x] KubernetesService with pod lifecycle management
+  - [x] Pod template with 3 containers + shared PVC
+  - [x] In-cluster and kubeconfig client support
+  - [x] Real-time pod status watching via channels
+  - [x] Comprehensive unit tests (8 tests, all passing)
+  - [x] Configurable images, resources, and namespace
 - [ ] User can create a project via UI
 - [ ] Project creation spawns a K8s pod with 3 containers
 - [ ] Project list shows all user's projects with live pod status
@@ -358,5 +371,56 @@ Phase 2 introduces the core project management functionality:
 ---
 
 **Phase 2 Start Date:** 2026-01-16 23:44 CET  
+**Phase 2.3 Completion:** 2026-01-17 12:17 CET  
 **Target Completion:** TBD (flexible, 3-developer team)  
 **Author:** Sisyphus (OpenCode AI Agent)
+
+---
+
+## Phase 2.3 Implementation Summary
+
+**Completed:** 2026-01-17 12:17 CET
+
+### What Was Implemented:
+
+1. **KubernetesService Interface** (`kubernetes_service.go`)
+   - Factory function: `NewKubernetesService(kubeconfig, namespace, config)`
+   - Auto-detects in-cluster vs local kubeconfig
+   - 4 core methods: CreateProjectPod, DeleteProjectPod, GetPodStatus, WatchPodStatus
+   - Configurable via `KubernetesConfig` struct (images, resources, storage)
+
+2. **Pod Template Builder** (`pod_template.go`)
+   - `buildProjectPodSpec()` - Creates complete pod with 3 containers
+   - `buildPVCSpec()` - Creates PersistentVolumeClaim
+   - Health probes on OpenCode server (liveness + readiness)
+   - Shared `/workspace` volume across all containers
+
+3. **Comprehensive Testing** (`kubernetes_service_test.go`)
+   - 8 unit tests using fake Kubernetes clientset
+   - Tests cover: pod creation, deletion, status query, watch mechanism
+   - All tests passing (8/8) ✅
+
+### Key Features:
+- ✅ Interface-based design for testability
+- ✅ Context-aware for cancellation/timeout
+- ✅ Graceful cleanup (deletes both pod and PVC)
+- ✅ Real-time status updates via Go channels
+- ✅ Configurable resource limits and requests
+- ✅ Project-ID labeling for tracking
+
+### Dependencies Added:
+- `k8s.io/client-go@v0.32.0`
+- `k8s.io/apimachinery@v0.32.0`
+- `k8s.io/api@v0.32.0`
+
+### Files Created:
+- `backend/internal/service/kubernetes_service.go` (265 lines)
+- `backend/internal/service/pod_template.go` (184 lines)
+- `backend/internal/service/kubernetes_service_test.go` (434 lines)
+
+### Next: Phase 2.4 - Business Logic Layer
+Ready to implement ProjectService that orchestrates:
+- Project creation in DB (via ProjectRepository)
+- Pod spawning in K8s (via KubernetesService)
+- Project updates with pod metadata
+- Delete operations with cleanup
