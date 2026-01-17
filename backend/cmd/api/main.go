@@ -38,6 +38,19 @@ func main() {
 	}
 
 	userRepo := repository.NewUserRepository(database)
+	projectRepo := repository.NewProjectRepository(database)
+
+	k8sService, err := service.NewKubernetesService(
+		cfg.Kubeconfig,
+		cfg.K8SNamespace,
+		nil,
+	)
+	if err != nil {
+		log.Printf("Warning: Failed to initialize Kubernetes service: %v", err)
+		log.Println("Project management features will be limited")
+	}
+
+	projectService := service.NewProjectService(projectRepo, k8sService)
 
 	authService, err := service.NewAuthService(cfg, userRepo)
 	if err != nil {
@@ -46,8 +59,9 @@ func main() {
 
 	authMiddleware := middleware.NewAuthMiddleware(cfg, userRepo)
 	authHandler := api.NewAuthHandler(authService)
+	projectHandler := api.NewProjectHandler(projectService)
 
-	router := setupRouter(cfg, authHandler, authMiddleware)
+	router := setupRouter(cfg, authHandler, projectHandler, authMiddleware)
 
 	// Setup static file serving for production (embedded frontend)
 	if cfg.Environment == "production" {
@@ -68,7 +82,7 @@ func main() {
 	}
 }
 
-func setupRouter(cfg *config.Config, authHandler *api.AuthHandler, authMiddleware *middleware.AuthMiddleware) *gin.Engine {
+func setupRouter(cfg *config.Config, authHandler *api.AuthHandler, projectHandler *api.ProjectHandler, authMiddleware *middleware.AuthMiddleware) *gin.Engine {
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -104,23 +118,14 @@ func setupRouter(cfg *config.Config, authHandler *api.AuthHandler, authMiddlewar
 			auth.POST("/logout", authHandler.Logout)
 		}
 
-		projects := v1.Group("/projects")
+		projects := v1.Group("/projects", authMiddleware.JWTAuth())
 		{
-			projects.GET("", func(c *gin.Context) {
-				c.JSON(501, gin.H{"error": "Not implemented yet"})
-			})
-			projects.POST("", func(c *gin.Context) {
-				c.JSON(501, gin.H{"error": "Not implemented yet"})
-			})
-			projects.GET("/:id", func(c *gin.Context) {
-				c.JSON(501, gin.H{"error": "Not implemented yet"})
-			})
-			projects.PATCH("/:id", func(c *gin.Context) {
-				c.JSON(501, gin.H{"error": "Not implemented yet"})
-			})
-			projects.DELETE("/:id", func(c *gin.Context) {
-				c.JSON(501, gin.H{"error": "Not implemented yet"})
-			})
+			projects.GET("", projectHandler.ListProjects)
+			projects.POST("", projectHandler.CreateProject)
+			projects.GET("/:id", projectHandler.GetProject)
+			projects.PATCH("/:id", projectHandler.UpdateProject)
+			projects.DELETE("/:id", projectHandler.DeleteProject)
+			projects.GET("/:id/status", projectHandler.ProjectStatus)
 
 			projects.GET("/:id/tasks", func(c *gin.Context) {
 				c.JSON(501, gin.H{"error": "Not implemented yet"})
