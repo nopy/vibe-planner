@@ -6,7 +6,8 @@ React 18 + TypeScript SPA powered by Vite, providing the project management dash
 **Phase 1 Status**: ✅ OIDC Authentication Complete  
 **Phase 2.8 Status**: ✅ Project Types & API Client Complete  
 **Phase 2.9 Status**: ✅ UI Components Complete  
-**Phase 2.10 Status**: ✅ Real-time Updates Complete
+**Phase 2.10 Status**: ✅ Real-time Updates Complete  
+**Phase 2.11 Status**: ✅ Routes & Navigation Complete
 
 ## STRUCTURE
 - `src/App.tsx`: Central router with AuthProvider and protected routes
@@ -21,6 +22,7 @@ React 18 + TypeScript SPA powered by Vite, providing the project management dash
 - `src/components/Projects/ProjectList.tsx`: ✅ Grid layout with project cards
 - `src/components/Projects/ProjectCard.tsx`: ✅ Project card with status badges
 - `src/components/Projects/CreateProjectModal.tsx`: ✅ Project creation form
+- `src/components/AppLayout.tsx`: ✅ Navigation header with menu
 - `src/hooks/useProjectStatus.ts`: ✅ WebSocket hook for real-time pod status updates
 - `src/styles/index.css`: Tailwind CSS entry point
 - `src/main.tsx`: Application entry point
@@ -161,4 +163,5 @@ npm test -- --watch   # Run tests in watch mode
 - **Phase 2.8 Complete**: Project types and API client ready for UI components
 - **Phase 2.9 Complete**: All 4 UI components implemented (ProjectList, ProjectCard, CreateProjectModal, ProjectDetailPage)
 - **Phase 2.10 Complete**: WebSocket hook for real-time pod status updates (useProjectStatus + integration)
-- **Next Phase**: Phase 2.11 - Navigation menu (add "Projects" link)
+- **Phase 2.11 Complete**: Navigation menu with AppLayout component (Projects link, user email, logout)
+- **Next Phase**: Phase 2.12 - Infrastructure (kind cluster deployment and E2E testing)

@@ -1,7 +1,7 @@
 # OpenCode Project Manager - TODO List
 
-**Last Updated:** 2026-01-17 13:36 CET  
-**Current Phase:** Phase 2 - Project Management (2.1-2.9 Complete - Backend + Frontend UI)  
+**Last Updated:** 2026-01-17 13:51 CET  
+**Current Phase:** Phase 2 - Project Management (2.1-2.11 Complete - Backend + Frontend Complete)  
 **Branch:** main
 
 ---
@@ -28,7 +28,7 @@ See [PHASE1.md](./PHASE1.md) for complete archive of Phase 1 tasks and resolutio
 
 **Objective:** Implement project CRUD operations with Kubernetes pod lifecycle management.
 
-**Status:** 🔄 IN PROGRESS (2.1-2.9 Complete - Backend + Frontend UI Complete)
+**Status:** 🔄 IN PROGRESS (2.1-2.11 Complete - Backend + Frontend Complete, Infrastructure pending)
 
 ### Overview
 
@@ -279,12 +279,15 @@ Phase 2 introduces the core project management functionality:
     - WebSocket error banner with reconnect button
     - Environment-configurable WebSocket URL (`VITE_WS_URL`)
 
-#### 2.11 Routes & Navigation
-- [ ] **Add Project Routes**: Update router
-  - `/projects` → ProjectList page (protected)
-  - `/projects/:id` → ProjectDetailPage (protected)
-  - Update navigation menu (add "Projects" link)
-  - **Location:** `frontend/src/App.tsx`
+#### 2.11 Routes & Navigation ✅ COMPLETE
+- [x] **Add Project Routes**: Update router
+  - ✅ `/projects` → ProjectList page (protected, wrapped in AppLayout)
+  - ✅ `/projects/:id` → ProjectDetailPage (protected, wrapped in AppLayout)
+  - ✅ Created AppLayout component with navigation header and "Projects" link
+  - ✅ Updated HomePage to show "Go to Projects" for authenticated users
+  - ✅ No ESLint errors/warnings in new code
+  - **Location:** `frontend/src/App.tsx`, `frontend/src/components/AppLayout.tsx`
+  - **Status:** ✅ Complete, manual browser testing pending
 
 ---
 
@@ -372,9 +375,13 @@ Phase 2 introduces the core project management functionality:
   - [x] useProjectStatus hook with auto-reconnect
   - [x] Integration into ProjectDetailPage
   - [x] Connection state indicators and error handling
-- [ ] **2.11 Routes & Navigation** - Next phase
-  - [ ] Navigation menu with "Projects" link
-- [ ] **2.12 Infrastructure** - Deferred
+- [x] **2.11 Routes & Navigation** ✅ COMPLETE
+  - [x] AppLayout component with navigation header
+  - [x] "Projects" link in navigation menu
+  - [x] User email and logout button in header
+  - [x] Protected routes wrapped with AppLayout
+  - [x] HomePage updated with authenticated user link
+- [ ] **2.12 Infrastructure** - Next phase
   - [ ] Deploy to kind cluster for E2E testing
 - [ ] **Integration Testing (Manual)**
   - [ ] Project creation spawns a K8s pod with 3 containers
@@ -1010,7 +1017,56 @@ go test -tags=integration -c ./internal/api -o /dev/null
   - Error handling with try/catch
 
 ### Next Steps:
-- Phase 2.11: Routes & Navigation (add "Projects" link to navigation menu)
+- ✅ Phase 2.11: Routes & Navigation complete
+- Phase 2.12: Infrastructure (kind cluster deployment and testing)
+
+---
+
+## Phase 2.11 Implementation Summary
+
+**Completed:** 2026-01-17 13:51 CET
+
+### What Was Implemented:
+
+1. **AppLayout Component** (`frontend/src/components/AppLayout.tsx` - 59 lines)
+   - ✅ Navigation header with "OpenCode" branding
+   - ✅ "Projects" link in navigation menu
+   - ✅ User email display in header
+   - ✅ Logout button
+   - ✅ Responsive design with max-width container
+   - ✅ Shared layout wrapper for all protected pages
+
+2. **App.tsx Updates**
+   - ✅ Imported AppLayout component
+   - ✅ Wrapped `/projects` route with AppLayout
+   - ✅ Wrapped `/projects/:id` route with AppLayout
+   - ✅ Updated HomePage to show conditional "Go to Projects" link for authenticated users
+   - ✅ Added useAuth hook to HomePage for authentication state
+
+### Key Features:
+- ✅ **Navigation Menu**: Persistent header on all protected pages
+- ✅ **User Context**: Displays logged-in user's email
+- ✅ **Quick Logout**: Logout button in header for easy access
+- ✅ **Responsive**: Mobile-friendly navigation (Projects link hidden on small screens)
+- ✅ **Consistent Layout**: Shared max-width container and padding
+- ✅ **Authentication-aware HomePage**: Different CTAs for authenticated vs unauthenticated users
+
+### Files Created/Modified:
+- **Created:** `frontend/src/components/AppLayout.tsx` (59 lines)
+- **Modified:** `frontend/src/App.tsx` (updated imports, wrapped routes, enhanced HomePage)
+
+### Code Quality:
+- ✅ **ESLint**: No errors/warnings in new code
+- ✅ **TypeScript**: Proper typing with ReactNode interface
+- ✅ **Conventions**: Follows all codebase patterns:
+  - Import ordering (React → third-party → local)
+  - Functional components with hooks
+  - Tailwind CSS for styling
+  - No `any` types
+
+### Next Steps:
+- Phase 2.12: Deploy to kind cluster and verify end-to-end
+- Phase 2.13: Update documentation (AGENTS.md, README.md)
 
 ---
 
@@ -1019,11 +1075,12 @@ go test -tags=integration -c ./internal/api -o /dev/null
 - All 55 unit tests passing
 - Integration test suite implemented (end-to-end verification)
 
-**Phase 2 Frontend Status:** ✅ **NEARLY COMPLETE (2.8-2.10)**
+**Phase 2 Frontend Status:** ✅ **COMPLETE (2.8-2.11)**
 - ✅ Phase 2.8: Types & API Client complete
 - ✅ Phase 2.9: UI Components complete (4/4 components)
 - ✅ Phase 2.10: Real-time Updates complete (WebSocket hook + integration)
-- ⏳ Phase 2.11: Routes & Navigation (next - add "Projects" to nav menu)
+- ✅ Phase 2.11: Routes & Navigation complete (AppLayout + menu)
+- ⏳ Phase 2.12: Infrastructure (next - kind deployment and testing)
 
 
 

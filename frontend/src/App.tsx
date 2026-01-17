@@ -1,11 +1,13 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom'
 
 import { AuthProvider } from '@/contexts/AuthContext'
+import { AppLayout } from '@/components/AppLayout'
 import { LoginPage } from '@/pages/LoginPage'
 import { OidcCallbackPage } from '@/pages/OidcCallbackPage'
 import { ProjectDetailPage } from '@/pages/ProjectDetailPage'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { ProjectList } from '@/components/Projects/ProjectList'
+import { useAuth } from '@/hooks/useAuth'
 
 function App() {
   return (
@@ -19,7 +21,9 @@ function App() {
             path="/projects"
             element={
               <ProtectedRoute>
-                <ProjectList />
+                <AppLayout>
+                  <ProjectList />
+                </AppLayout>
               </ProtectedRoute>
             }
           />
@@ -27,7 +31,9 @@ function App() {
             path="/projects/:id"
             element={
               <ProtectedRoute>
-                <ProjectDetailPage />
+                <AppLayout>
+                  <ProjectDetailPage />
+                </AppLayout>
               </ProtectedRoute>
             }
           />
@@ -39,6 +45,8 @@ function App() {
 }
 
 function HomePage() {
+  const { isAuthenticated } = useAuth()
+
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center">
       <div className="text-center">
@@ -46,12 +54,23 @@ function HomePage() {
         <p className="text-xl text-gray-600 mb-8">
           Manage your projects with AI-powered coding assistance
         </p>
-        <a
-          href="/login"
-          className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-        >
-          Get Started
-        </a>
+        <div className="flex justify-center gap-4">
+          {isAuthenticated ? (
+            <Link
+              to="/projects"
+              className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            >
+              Go to Projects
+            </Link>
+          ) : (
+            <a
+              href="/login"
+              className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            >
+              Get Started
+            </a>
+          )}
+        </div>
       </div>
     </div>
   )
