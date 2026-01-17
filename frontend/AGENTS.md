@@ -5,7 +5,8 @@ React 18 + TypeScript SPA powered by Vite, providing the project management dash
 
 **Phase 1 Status**: ✅ OIDC Authentication Complete  
 **Phase 2.8 Status**: ✅ Project Types & API Client Complete  
-**Phase 2.9 Status**: ✅ UI Components Complete
+**Phase 2.9 Status**: ✅ UI Components Complete  
+**Phase 2.10 Status**: ✅ Real-time Updates Complete
 
 ## STRUCTURE
 - `src/App.tsx`: Central router with AuthProvider and protected routes
@@ -20,6 +21,7 @@ React 18 + TypeScript SPA powered by Vite, providing the project management dash
 - `src/components/Projects/ProjectList.tsx`: ✅ Grid layout with project cards
 - `src/components/Projects/ProjectCard.tsx`: ✅ Project card with status badges
 - `src/components/Projects/CreateProjectModal.tsx`: ✅ Project creation form
+- `src/hooks/useProjectStatus.ts`: ✅ WebSocket hook for real-time pod status updates
 - `src/styles/index.css`: Tailwind CSS entry point
 - `src/main.tsx`: Application entry point
 - `src/vite-env.d.ts`: ✅ TypeScript environment definitions
@@ -93,13 +95,25 @@ React 18 + TypeScript SPA powered by Vite, providing the project management dash
 - Full project metadata display
 - Kubernetes pod information (pod name, namespace, PVC)
 - Status badge matching ProjectCard
+- Real-time pod status updates via WebSocket (useProjectStatus hook)
+- Connection indicator (green/red dot) and "Live" badge
+- WebSocket error banner with reconnect button
 - Breadcrumb navigation
 - Delete with warning message
 - Placeholder sections for future features (Tasks, Files, Config)
 
+**useProjectStatus Hook** (`src/hooks/useProjectStatus.ts`):
+- WebSocket connection to `/api/projects/:id/status`
+- Auto-connect on mount, cleanup on unmount
+- Automatic reconnection (max 5 attempts, 3-second delay)
+- Connection state tracking and error handling
+- Manual reconnect function
+- Environment-configurable URL (`VITE_WS_URL`)
+
 ### Environment Variables (VITE_* prefix required)
 ```bash
 VITE_API_URL=http://localhost:8090
+VITE_WS_URL=ws://localhost:8090/api/projects
 VITE_OIDC_AUTHORITY=http://localhost:8081/realms/opencode
 VITE_OIDC_CLIENT_ID=opencode-app
 VITE_OIDC_REDIRECT_URI=http://localhost:5173/auth/callback
@@ -146,4 +160,5 @@ npm test -- --watch   # Run tests in watch mode
 - **Environment**: Vite env vars must have `VITE_` prefix to be accessible in browser
 - **Phase 2.8 Complete**: Project types and API client ready for UI components
 - **Phase 2.9 Complete**: All 4 UI components implemented (ProjectList, ProjectCard, CreateProjectModal, ProjectDetailPage)
-- **Next Phase**: Phase 2.10 - WebSocket hook for real-time pod status updates
+- **Phase 2.10 Complete**: WebSocket hook for real-time pod status updates (useProjectStatus + integration)
+- **Next Phase**: Phase 2.11 - Navigation menu (add "Projects" link)

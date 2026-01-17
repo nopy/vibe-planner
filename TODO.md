@@ -261,15 +261,23 @@ Phase 2 introduces the core project management functionality:
   - **Status:** ✅ Implemented with all metadata display
   - **Note:** Real-time WebSocket status updates deferred to Phase 2.10
 
-#### 2.10 Real-time Updates
-- [ ] **WebSocket Hook**: Pod status subscription
-  - `useProjectStatus(projectId: string)` hook
-  - Connect to `ws://localhost:8090/ws/projects/:id/status`
-  - Listen for status updates
-  - Update local state on message
-  - Cleanup on unmount
-  - Reconnect logic on disconnect
-  - **Location:** `frontend/src/hooks/useProjectStatus.ts`
+#### 2.10 Real-time Updates ✅ COMPLETE
+- [x] **WebSocket Hook**: Pod status subscription
+  - ✅ `useProjectStatus(projectId: string)` hook
+  - ✅ Connect to `ws://localhost:8090/api/projects/:id/status`
+  - ✅ Listen for status updates via WebSocket messages
+  - ✅ Update local state on message (real-time pod status sync)
+  - ✅ Cleanup on unmount (proper WebSocket disconnect)
+  - ✅ Reconnect logic on disconnect (max 5 attempts, 3-second delay)
+  - ✅ Connection state tracking and error handling
+  - ✅ Manual reconnect function for user-triggered retry
+  - **Location:** `frontend/src/hooks/useProjectStatus.ts` (130 lines)
+  - **Integration:** `frontend/src/pages/ProjectDetailPage.tsx` (WebSocket status updates)
+  - **Features:**
+    - Connection indicator (green/red dot)
+    - "Live" badge on pod status when connected
+    - WebSocket error banner with reconnect button
+    - Environment-configurable WebSocket URL (`VITE_WS_URL`)
 
 #### 2.11 Routes & Navigation
 - [ ] **Add Project Routes**: Update router
@@ -359,8 +367,11 @@ Phase 2 introduces the core project management functionality:
   - [x] All components properly styled and responsive
   - [x] No TypeScript errors in frontend
   - [x] All ESLint warnings resolved
-- [ ] **2.10 Real-time Updates** - Next phase
-  - [ ] WebSocket hook for pod status updates
+- [x] **2.10 Real-time Updates** ✅ COMPLETE
+  - [x] WebSocket hook for pod status updates
+  - [x] useProjectStatus hook with auto-reconnect
+  - [x] Integration into ProjectDetailPage
+  - [x] Connection state indicators and error handling
 - [ ] **2.11 Routes & Navigation** - Next phase
   - [ ] Navigation menu with "Projects" link
 - [ ] **2.12 Infrastructure** - Deferred
@@ -951,15 +962,68 @@ go test -tags=integration -c ./internal/api -o /dev/null
 
 ---
 
+## Phase 2.10 Implementation Summary
+
+**Completed:** 2026-01-17 13:47 CET
+
+### What Was Implemented:
+
+1. **useProjectStatus Hook** (`frontend/src/hooks/useProjectStatus.ts` - 130 lines)
+   - ✅ WebSocket connection to backend endpoint `/api/projects/:id/status`
+   - ✅ Auto-connect on mount, cleanup on unmount
+   - ✅ Automatic reconnection logic with max 5 attempts (3-second delay)
+   - ✅ Real-time pod status updates via WebSocket messages
+   - ✅ Connection state tracking (`isConnected`)
+   - ✅ Error handling with user-friendly messages
+   - ✅ Manual reconnect function for user-triggered retry
+   - ✅ Configurable WebSocket URL via environment variable (`VITE_WS_URL`)
+
+2. **ProjectDetailPage Integration** (Updated `frontend/src/pages/ProjectDetailPage.tsx`)
+   - ✅ Imported and initialized `useProjectStatus` hook
+   - ✅ Live status updates automatically reflected in UI
+   - ✅ Connection indicator (green dot = connected, red dot = disconnected)
+   - ✅ "Live" badge next to pod status when connected
+   - ✅ WebSocket error banner with reconnect button
+   - ✅ Real-time pod status synchronization (updates `project.pod_status` when new status received)
+
+### Key Features:
+- ✅ **Real-time Updates**: Pod status changes reflected immediately without page refresh
+- ✅ **Connection Resilience**: Automatic reconnection on disconnect (up to 5 attempts)
+- ✅ **User Feedback**: Visual indicators for connection state and errors
+- ✅ **Error Recovery**: Manual reconnect button for persistent connection issues
+- ✅ **Clean Disconnect**: Proper WebSocket cleanup on component unmount
+- ✅ **Type-Safe**: Full TypeScript typing with `PodStatus` union type
+- ✅ **Environment-Aware**: Configurable WebSocket URL for different environments
+
+### Files Created/Modified:
+- **Created:** `frontend/src/hooks/useProjectStatus.ts` (130 lines)
+- **Modified:** `frontend/src/pages/ProjectDetailPage.tsx` (added WebSocket integration)
+
+### Verification:
+- ✅ Vite build successful (no TypeScript errors)
+- ✅ ESLint warnings are pre-existing (not from new code)
+- ✅ Code follows all codebase conventions:
+  - Import ordering (React → third-party → local)
+  - No unnecessary comments
+  - Functional components with hooks
+  - Proper TypeScript typing (no `any`)
+  - Error handling with try/catch
+
+### Next Steps:
+- Phase 2.11: Routes & Navigation (add "Projects" link to navigation menu)
+
+---
+
 **Phase 2 Backend Status:** ✅ **COMPLETE**
 - All backend layers implemented (DB, Repository, Service, API, Integration, RBAC)
 - All 55 unit tests passing
 - Integration test suite implemented (end-to-end verification)
 
-**Phase 2 Frontend Status:** 🔄 **IN PROGRESS (Phase 2.8-2.9 Complete)**
+**Phase 2 Frontend Status:** ✅ **NEARLY COMPLETE (2.8-2.10)**
 - ✅ Phase 2.8: Types & API Client complete
 - ✅ Phase 2.9: UI Components complete (4/4 components)
-- ⏳ Phase 2.10: Real-time Updates (next)
-- ⏳ Phase 2.11: Routes & Navigation
+- ✅ Phase 2.10: Real-time Updates complete (WebSocket hook + integration)
+- ⏳ Phase 2.11: Routes & Navigation (next - add "Projects" to nav menu)
+
 
 
