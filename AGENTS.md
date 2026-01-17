@@ -1,15 +1,15 @@
 # OPENCODE PROJECT MANAGER - AGENT KNOWLEDGE BASE
 
-**Generated:** 2026-01-17 13:24:00  
+**Generated:** 2026-01-17 13:36:00  
 **Branch:** main  
 **Project:** Go backend + React frontend + K8s orchestration
-**Status:** ✅ Phase 1 Complete + Phase 2 Backend Complete (2.1-2.7) + Phase 2.8 Frontend Complete
+**Status:** ✅ Phase 1 Complete + Phase 2 Backend Complete (2.1-2.7) + Phase 2 Frontend UI Complete (2.8-2.9)
 
 ---
 
 ## OVERVIEW
 
-Multi-module monorepo: Go API server, React SPA, 2 Go sidecars (file-browser, session-proxy), K8s manifests. Project management system with AI-powered coding via OpenCode agents. All critical issues resolved. Phase 1 + Phase 2 backend (2.1-2.7) + Phase 2.8 frontend complete.
+Multi-module monorepo: Go API server, React SPA, 2 Go sidecars (file-browser, session-proxy), K8s manifests. Project management system with AI-powered coding via OpenCode agents. All critical issues resolved. Phase 1 + Phase 2 backend (2.1-2.7) + Phase 2 frontend UI (2.8-2.9) complete.
 
 ---
 
@@ -49,9 +49,13 @@ Multi-module monorepo: Go API server, React SPA, 2 Go sidecars (file-browser, se
 | DB schema | `db/migrations/001_init.up.sql` | All tables defined |
 | DB migrations | `db/migrations/002_add_project_fields.up.sql` | Project fields |
 | React auth | `frontend/src/contexts/AuthContext.tsx` | ✅ Global auth state |
-| React routes | `frontend/src/App.tsx` | ✅ Protected routes |
+| React routes | `frontend/src/App.tsx` | ✅ Protected routes + Project pages |
 | Login page | `frontend/src/pages/LoginPage.tsx` | ✅ OIDC flow |
 | Callback page | `frontend/src/pages/OidcCallbackPage.tsx` | ✅ Token exchange |
+| Project detail page | `frontend/src/pages/ProjectDetailPage.tsx` | ✅ Full project metadata display |
+| Project list | `frontend/src/components/Projects/ProjectList.tsx` | ✅ Grid layout with CRUD |
+| Project card | `frontend/src/components/Projects/ProjectCard.tsx` | ✅ Status badges + delete |
+| Create modal | `frontend/src/components/Projects/CreateProjectModal.tsx` | ✅ Form validation |
 | Types | `frontend/src/types/index.ts` | ✅ TS interfaces (User, Project, Task, etc.) |
 | API client | `frontend/src/services/api.ts` | ✅ Axios client with JWT + Project APIs |
 | File browser | `sidecars/file-browser/cmd/main.go` | Port 3001 (Phase 4) |
@@ -333,5 +337,6 @@ make docker-push-dev        # Build and push development
 10. **Build modes** - Use `--mode prod` for production (unified), `--mode dev` for development (separate)
 11. **Phase 2 backend complete (2.1-2.7)** - Project CRUD, K8s pod lifecycle, RBAC configured, integration tests
 12. **Phase 2.8 frontend complete** - Project types and API client implemented (TypeScript interfaces + axios methods)
-13. **Integration tests** - Use `-tags=integration` flag to run, requires PostgreSQL + Kubernetes cluster
-14. **Next phase:** Phase 2 Frontend (2.9-2.11) - React UI components, WebSocket, routing
+13. **Phase 2.9 frontend complete** - React UI components implemented (ProjectList, ProjectCard, CreateProjectModal, ProjectDetailPage)
+14. **Integration tests** - Use `-tags=integration` flag to run, requires PostgreSQL + Kubernetes cluster
+15. **Next phase:** Phase 2 Frontend (2.10-2.11) - WebSocket for real-time updates, navigation menu

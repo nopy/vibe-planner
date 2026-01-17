@@ -3,7 +3,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from '@/contexts/AuthContext'
 import { LoginPage } from '@/pages/LoginPage'
 import { OidcCallbackPage } from '@/pages/OidcCallbackPage'
+import { ProjectDetailPage } from '@/pages/ProjectDetailPage'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
+import { ProjectList } from '@/components/Projects/ProjectList'
 
 function App() {
   return (
@@ -17,7 +19,7 @@ function App() {
             path="/projects"
             element={
               <ProtectedRoute>
-                <ProjectsPage />
+                <ProjectList />
               </ProtectedRoute>
             }
           />
@@ -40,9 +42,7 @@ function HomePage() {
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center">
       <div className="text-center">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">
-          OpenCode Project Manager
-        </h1>
+        <h1 className="text-4xl font-bold text-gray-900 mb-4">OpenCode Project Manager</h1>
         <p className="text-xl text-gray-600 mb-8">
           Manage your projects with AI-powered coding assistance
         </p>
@@ -52,28 +52,6 @@ function HomePage() {
         >
           Get Started
         </a>
-      </div>
-    </div>
-  )
-}
-
-function ProjectsPage() {
-  return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <h1 className="text-3xl font-bold mb-6">Projects</h1>
-      <div className="bg-white p-6 rounded-lg shadow-md">
-        <p>No projects yet. Create your first project!</p>
-      </div>
-    </div>
-  )
-}
-
-function ProjectDetailPage() {
-  return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <h1 className="text-3xl font-bold mb-6">Project Details</h1>
-      <div className="bg-white p-6 rounded-lg shadow-md">
-        <p>Project details will be displayed here.</p>
       </div>
     </div>
   )
