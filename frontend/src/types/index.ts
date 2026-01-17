@@ -68,3 +68,17 @@ export interface OpenCodeSession {
   created_at: string
   updated_at: string
 }
+
+export type PodStatus = 'Pending' | 'Running' | 'Succeeded' | 'Failed' | 'Unknown'
+
+export interface CreateProjectRequest {
+  name: string
+  description?: string
+  repo_url?: string
+}
+
+export interface UpdateProjectRequest {
+  name?: string
+  description?: string
+  repo_url?: string
+}

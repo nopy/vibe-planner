@@ -1,15 +1,15 @@
 # OPENCODE PROJECT MANAGER - AGENT KNOWLEDGE BASE
 
-**Generated:** 2026-01-15 23:50:00  
+**Generated:** 2026-01-17 13:24:00  
 **Branch:** main  
 **Project:** Go backend + React frontend + K8s orchestration
-**Status:** ✅ Phase 1 (OIDC Authentication) Complete - Ready for Phase 2
+**Status:** ✅ Phase 1 Complete + Phase 2 Backend Complete (2.1-2.7) + Phase 2.8 Frontend Complete
 
 ---
 
 ## OVERVIEW
 
-Multi-module monorepo: Go API server, React SPA, 2 Go sidecars (file-browser, session-proxy), K8s manifests. Project management system with AI-powered coding via OpenCode agents. All critical issues resolved - ready for Phase 1 (auth implementation).
+Multi-module monorepo: Go API server, React SPA, 2 Go sidecars (file-browser, session-proxy), K8s manifests. Project management system with AI-powered coding via OpenCode agents. All critical issues resolved. Phase 1 + Phase 2 backend (2.1-2.7) + Phase 2.8 frontend complete.
 
 ---
 
@@ -39,16 +39,25 @@ Multi-module monorepo: Go API server, React SPA, 2 Go sidecars (file-browser, se
 | Auth service | `backend/internal/service/auth_service.go` | ✅ OIDC + JWT |
 | Auth middleware | `backend/internal/middleware/auth.go` | ✅ JWT validation |
 | User repository | `backend/internal/repository/user_repository.go` | ✅ CRUD + upsert |
-| Models | `backend/internal/model/` | GORM structs (User complete) |
+| Project handlers | `backend/internal/api/projects.go` | ✅ CRUD + WebSocket |
+| Project service | `backend/internal/service/project_service.go` | ✅ Business logic |
+| Project repository | `backend/internal/repository/project_repository.go` | ✅ CRUD operations |
+| K8s service | `backend/internal/service/kubernetes_service.go` | ✅ Pod lifecycle |
+| Integration tests | `backend/internal/api/projects_integration_test.go` | ✅ E2E project lifecycle |
+| Integration docs | `backend/INTEGRATION_TESTING.md` | ✅ Test setup guide |
+| Models | `backend/internal/model/` | GORM structs (User, Project) |
 | DB schema | `db/migrations/001_init.up.sql` | All tables defined |
+| DB migrations | `db/migrations/002_add_project_fields.up.sql` | Project fields |
 | React auth | `frontend/src/contexts/AuthContext.tsx` | ✅ Global auth state |
 | React routes | `frontend/src/App.tsx` | ✅ Protected routes |
 | Login page | `frontend/src/pages/LoginPage.tsx` | ✅ OIDC flow |
 | Callback page | `frontend/src/pages/OidcCallbackPage.tsx` | ✅ Token exchange |
-| Types | `frontend/src/types/index.ts` | TS interfaces |
+| Types | `frontend/src/types/index.ts` | ✅ TS interfaces (User, Project, Task, etc.) |
+| API client | `frontend/src/services/api.ts` | ✅ Axios client with JWT + Project APIs |
 | File browser | `sidecars/file-browser/cmd/main.go` | Port 3001 (Phase 4) |
 | Session proxy | `sidecars/session-proxy/cmd/main.go` | Port 3002 (Phase 5) |
-| K8s base | `k8s/base/` | Namespace, ConfigMap, Secrets |
+| K8s base | `k8s/base/` | Namespace, ConfigMap, RBAC |
+| K8s RBAC | `k8s/base/rbac.yaml` | ✅ ServiceAccount + Role |
 | K8s dev | `k8s/overlays/dev/` | Dev environment patches |
 
 ---
@@ -232,10 +241,32 @@ make docker-push-dev        # Build and push development
 
 ## TEST SETUP
 
-- **Backend:** Standard Go tests (`*_test.go`), none written yet
-- **Frontend:** Vitest (no config file - uses defaults)
-- **No E2E:** Cypress referenced in docs but not present
+### Unit Tests
+- **Backend:** Standard Go tests (`*_test.go`)
+  - Repository layer: 9 tests (all passing)
+  - Service layer: 26 tests (all passing)
+  - API layer: 20 tests (all passing)
+  - **Total:** 55 unit tests, all passing
+  - **Run:** `cd backend && go test ./...`
+
+### Integration Tests
+- **Backend:** End-to-end project lifecycle tests
+  - **Location:** `backend/internal/api/projects_integration_test.go`
+  - **Documentation:** `backend/INTEGRATION_TESTING.md`
+  - **Requirements:** PostgreSQL + Kubernetes cluster
+  - **Build tag:** `-tags=integration` (isolated from regular tests)
+  - **Run:** `cd backend && go test -tags=integration -v ./internal/api`
+  - **Tests:**
+    - Complete project lifecycle (create → verify → delete)
+    - Pod failure graceful handling
+  - **Environment vars:** `TEST_DATABASE_URL`, `K8S_NAMESPACE`, `KUBECONFIG`
+
+### Frontend Tests
+- **Vitest:** No config file - uses defaults
 - **Coverage:** `go test -coverprofile=coverage.out ./...`
+
+### E2E Tests
+- **Status:** Cypress referenced in docs but not present (Phase 9)
 
 ---
 
@@ -300,4 +331,7 @@ make docker-push-dev        # Build and push development
 8. **Backend port** - Runs on 8090 (not 8080 due to port conflict with SearXNG)
 9. **Unified production image** - Single 29MB Docker image serves both API and SPA (embedded with `go:embed`)
 10. **Build modes** - Use `--mode prod` for production (unified), `--mode dev` for development (separate)
-11. **Next phase:** Phase 2 - Project Management (K8s pod lifecycle per IMPLEMENTATION_PLAN.md)
+11. **Phase 2 backend complete (2.1-2.7)** - Project CRUD, K8s pod lifecycle, RBAC configured, integration tests
+12. **Phase 2.8 frontend complete** - Project types and API client implemented (TypeScript interfaces + axios methods)
+13. **Integration tests** - Use `-tags=integration` flag to run, requires PostgreSQL + Kubernetes cluster
+14. **Next phase:** Phase 2 Frontend (2.9-2.11) - React UI components, WebSocket, routing

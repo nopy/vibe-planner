@@ -3,12 +3,13 @@
 ## OVERVIEW
 React 18 + TypeScript SPA powered by Vite, providing the project management dashboard.
 
-**Phase 1 Status**: ✅ OIDC Authentication Complete
+**Phase 1 Status**: ✅ OIDC Authentication Complete  
+**Phase 2.8 Status**: ✅ Project Types & API Client Complete
 
 ## STRUCTURE
 - `src/App.tsx`: Central router with AuthProvider and protected routes
-- `src/services/api.ts`: Axios-based API client with JWT interceptors
-- `src/types/index.ts`: Single source of truth for all shared TypeScript interfaces
+- `src/services/api.ts`: ✅ Axios client with JWT + Project API methods
+- `src/types/index.ts`: ✅ TypeScript interfaces (User, Project, Task, PodStatus, etc.)
 - `src/contexts/AuthContext.tsx`: ✅ Global auth state (login, callback, logout)
 - `src/hooks/useAuth.ts`: ✅ Auth hook for components
 - `src/pages/LoginPage.tsx`: ✅ Login UI with Keycloak integration
@@ -49,6 +50,12 @@ React 18 + TypeScript SPA powered by Vite, providing the project management dash
 - Axios instance with base URL from env
 - Request interceptor: Adds `Authorization: Bearer <token>`
 - Response interceptor: 401 → clear token + redirect to login
+- ✅ **Project API Methods** (Phase 2.8):
+  - `createProject(data: CreateProjectRequest): Promise<Project>`
+  - `getProjects(): Promise<Project[]>`
+  - `getProject(id: string): Promise<Project>`
+  - `updateProject(id: string, data: UpdateProjectRequest): Promise<Project>`
+  - `deleteProject(id: string): Promise<void>`
 
 ### Environment Variables (VITE_* prefix required)
 ```bash
@@ -97,3 +104,4 @@ npm test -- --watch   # Run tests in watch mode
 - **Prettier**: `.prettierrc` configured with project defaults
 - **API URL**: Backend runs on port 8090 (not 8080 due to port conflict)
 - **Environment**: Vite env vars must have `VITE_` prefix to be accessible in browser
+- **Phase 2.8 Complete**: Project types and API client ready for UI components (Phase 2.9)
