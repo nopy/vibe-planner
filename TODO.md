@@ -1,7 +1,7 @@
 # OpenCode Project Manager - TODO List
 
-**Last Updated:** 2026-01-16 23:44 CET  
-**Current Phase:** Phase 2 - Project Management  
+**Last Updated:** 2026-01-17 11:46 CET  
+**Current Phase:** Phase 2 - Project Management (2.1 & 2.2 Complete)  
 **Branch:** main
 
 ---
@@ -28,7 +28,7 @@ See [PHASE1.md](./PHASE1.md) for complete archive of Phase 1 tasks and resolutio
 
 **Objective:** Implement project CRUD operations with Kubernetes pod lifecycle management.
 
-**Status:** 🚀 READY TO START
+**Status:** 🔄 IN PROGRESS (2.1 Database & Models Complete, 2.2 Repository Layer Complete)
 
 ### Overview
 
@@ -45,32 +45,37 @@ Phase 2 introduces the core project management functionality:
 
 ### Backend Tasks (11 tasks)
 
-#### 2.1 Database & Models
-- [ ] **DB Migration**: Create `002_projects.sql` migration
-  - Projects table (id, user_id, name, description, repo_url, created_at, updated_at, deleted_at)
-  - K8s metadata (pod_name, namespace, pvc_name, status, pod_created_at)
-  - Indexes on user_id and status
-  - Foreign key to users table
-  - **Location:** `db/migrations/002_projects.up.sql` + `002_projects.down.sql`
+#### 2.1 Database & Models ✅ COMPLETE
+- [x] **DB Migration**: Create `002_add_project_fields.sql` migration
+  - Added repo_url, pod_created_at, deleted_at, pod_error fields
+  - Index on deleted_at for soft delete queries
+  - Works with existing projects table from 001_init.sql
+  - **Location:** `db/migrations/002_add_project_fields.up.sql` + `002_add_project_fields.down.sql`
+  - **Status:** ✅ Migrated and verified in database
 
-- [ ] **Project Model**: Implement GORM model
-  - UUID primary key
-  - GORM tags for all fields (explicit column names)
-  - Soft delete support (`DeletedAt`)
+- [x] **Project Model**: Implement GORM model
+  - UUID primary key with all required fields
+  - Explicit GORM column tags for all fields
+  - Soft delete support (`gorm.DeletedAt`)
   - User association (belongs to User)
-  - K8s metadata fields (pod_name, namespace, pvc_name, status enum)
+  - K8s metadata fields (pod_name, pod_namespace, workspace_pvc_name, pod_status, pod_created_at, pod_error)
+  - ProjectStatus enum constants (initializing, ready, error, archived)
   - **Location:** `backend/internal/model/project.go`
+  - **Status:** ✅ Implemented and compiles successfully
 
-#### 2.2 Repository Layer
-- [ ] **Project Repository**: Implement data access layer
-  - `Create(project *Project) error`
-  - `FindByID(id uuid.UUID) (*Project, error)`
-  - `FindByUserID(userID uuid.UUID) ([]Project, error)`
-  - `Update(project *Project) error`
-  - `SoftDelete(id uuid.UUID) error` (sets DeletedAt)
-  - `UpdatePodStatus(id uuid.UUID, status string) error`
+#### 2.2 Repository Layer ✅ COMPLETE
+- [x] **Project Repository**: Implement data access layer
+  - `Create(ctx, project *Project) error` - Creates new projects with auto-UUID generation
+  - `FindByID(ctx, id uuid.UUID) (*Project, error)` - Retrieves project by ID
+  - `FindByUserID(ctx, userID uuid.UUID) ([]Project, error)` - Lists user's projects (ordered by created_at DESC)
+  - `Update(ctx, project *Project) error` - Updates existing project
+  - `SoftDelete(ctx, id uuid.UUID) error` - Soft deletes project (sets DeletedAt)
+  - `UpdatePodStatus(ctx, id uuid.UUID, status string, podError string) error` - Updates pod status and error
   - Interface-based design for testability
+  - Context-aware methods for cancellation/timeout support
   - **Location:** `backend/internal/repository/project_repository.go`
+  - **Tests:** `backend/internal/repository/project_repository_test.go` (9 tests, all passing)
+  - **Status:** ✅ Implemented with comprehensive unit tests, all tests passing
 
 #### 2.3 Kubernetes Service Layer
 - [ ] **Kubernetes Client Wrapper**: Implement K8s operations
@@ -257,6 +262,15 @@ Phase 2 introduces the core project management functionality:
 
 ## Success Criteria (Phase 2 Complete When...)
 
+- [x] **2.1 Database & Models Complete**
+  - [x] Database migration adding project fields (repo_url, pod_created_at, deleted_at, pod_error)
+  - [x] Project GORM model with all fields and soft delete support
+  - [x] Migration verified in PostgreSQL
+- [x] **2.2 Repository Layer Complete**
+  - [x] ProjectRepository interface with all CRUD operations
+  - [x] Comprehensive unit tests (9 tests, all passing)
+  - [x] Context-aware methods for cancellation/timeout
+  - [x] Soft delete functionality verified
 - [ ] User can create a project via UI
 - [ ] Project creation spawns a K8s pod with 3 containers
 - [ ] Project list shows all user's projects with live pod status
