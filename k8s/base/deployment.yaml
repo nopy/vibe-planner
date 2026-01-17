@@ -18,6 +18,7 @@ spec:
         app: opencode
         component: controller
     spec:
+      serviceAccountName: opencode-controller
       containers:
       - name: opencode
         image: registry.legal-suite.com/opencode/app:latest

@@ -5,6 +5,7 @@ namespace: opencode
 
 resources:
   - namespace.yaml
+  - rbac.yaml
   - configmap.yaml
   - secrets.yaml
   - deployment.yaml
