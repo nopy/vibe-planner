@@ -24,12 +24,18 @@ export interface Project {
   updated_at: string
 }
 
+export type TaskStatus = 'todo' | 'in_progress' | 'ai_review' | 'human_review' | 'done'
+export type TaskPriority = 'low' | 'medium' | 'high'
+
 export interface Task {
   id: string
   project_id: string
   title: string
   description?: string
-  status: 'todo' | 'in_progress' | 'ai_review' | 'human_review' | 'done'
+  status: TaskStatus
+  position: number
+  priority: TaskPriority
+  assigned_to?: string
   current_session_id?: string
   opencode_output?: string
   execution_duration_ms: number
@@ -37,6 +43,7 @@ export interface Task {
   created_by: string
   created_at: string
   updated_at: string
+  deleted_at?: string
 }
 
 export interface OpenCodeConfig {
@@ -81,4 +88,21 @@ export interface UpdateProjectRequest {
   name?: string
   description?: string
   repo_url?: string
+}
+
+export interface CreateTaskRequest {
+  title: string
+  description?: string
+  priority?: TaskPriority
+}
+
+export interface UpdateTaskRequest {
+  title?: string
+  description?: string
+  priority?: TaskPriority
+}
+
+export interface MoveTaskRequest {
+  status: TaskStatus
+  position?: number
 }

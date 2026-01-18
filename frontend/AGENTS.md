@@ -7,12 +7,13 @@ React 18 + TypeScript SPA powered by Vite, providing the project management dash
 **Phase 2.8 Status**: ✅ Project Types & API Client Complete  
 **Phase 2.9 Status**: ✅ UI Components Complete  
 **Phase 2.10 Status**: ✅ Real-time Updates Complete  
-**Phase 2.11 Status**: ✅ Routes & Navigation Complete
+**Phase 2.11 Status**: ✅ Routes & Navigation Complete  
+**Phase 3.7 Status**: ✅ Task Types & API Client Complete
 
 ## STRUCTURE
 - `src/App.tsx`: Central router with AuthProvider and protected routes
-- `src/services/api.ts`: ✅ Axios client with JWT + Project API methods
-- `src/types/index.ts`: ✅ TypeScript interfaces (User, Project, Task, PodStatus, etc.)
+- `src/services/api.ts`: ✅ Axios client with JWT + Project & Task API methods
+- `src/types/index.ts`: ✅ TypeScript interfaces (User, Project, Task with Kanban fields, PodStatus, etc.)
 - `src/contexts/AuthContext.tsx`: ✅ Global auth state (login, callback, logout)
 - `src/hooks/useAuth.ts`: ✅ Auth hook for components
 - `src/pages/LoginPage.tsx`: ✅ Login UI with Keycloak integration
@@ -65,6 +66,13 @@ React 18 + TypeScript SPA powered by Vite, providing the project management dash
   - `getProject(id: string): Promise<Project>`
   - `updateProject(id: string, data: UpdateProjectRequest): Promise<Project>`
   - `deleteProject(id: string): Promise<void>`
+- ✅ **Task API Methods** (Phase 3.7):
+  - `listTasks(projectId: string): Promise<Task[]>`
+  - `createTask(projectId: string, data: CreateTaskRequest): Promise<Task>`
+  - `getTask(projectId: string, taskId: string): Promise<Task>`
+  - `updateTask(projectId: string, taskId: string, data: UpdateTaskRequest): Promise<Task>`
+  - `moveTask(projectId: string, taskId: string, data: MoveTaskRequest): Promise<Task>`
+  - `deleteTask(projectId: string, taskId: string): Promise<void>`
 
 ## PHASE 2.9 IMPLEMENTATION (COMPLETE)
 
@@ -164,4 +172,5 @@ npm test -- --watch   # Run tests in watch mode
 - **Phase 2.9 Complete**: All 4 UI components implemented (ProjectList, ProjectCard, CreateProjectModal, ProjectDetailPage)
 - **Phase 2.10 Complete**: WebSocket hook for real-time pod status updates (useProjectStatus + integration)
 - **Phase 2.11 Complete**: Navigation menu with AppLayout component (Projects link, user email, logout)
-- **Next Phase**: Phase 2.12 - Infrastructure (kind cluster deployment and E2E testing)
+- **Phase 3.7 Complete**: Task types and API client implemented (TaskStatus, TaskPriority, 6 API methods)
+- **Next Phase**: Phase 3.8 - Kanban Board UI components

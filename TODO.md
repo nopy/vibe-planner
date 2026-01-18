@@ -1,7 +1,7 @@
 # OpenCode Project Manager - TODO List
 
-**Last Updated:** 2026-01-18 22:45 CET  
-**Current Phase:** Phase 3 - Task Management & Kanban Board (In Progress - 3.1-3.4 Complete)  
+**Last Updated:** 2026-01-18 23:05 CET  
+**Current Phase:** Phase 3 - Task Management & Kanban Board (In Progress - 3.1-3.7 Complete)  
 **Branch:** main
 
 ---
@@ -41,7 +41,7 @@ See [PHASE2.md](./PHASE2.md) for complete archive of Phase 2 tasks and implement
 
 **Objective:** Implement task CRUD operations with state machine and drag-and-drop Kanban board UI.
 
-**Status:** 🔄 IN PROGRESS (3.1-3.4 Complete - Database, Models, Repository, Service & API Layer)
+**Status:** 🔄 IN PROGRESS (3.1-3.7 Complete - Backend API Layer + Frontend Types & API Client)
 
 ### Overview
 
@@ -290,24 +290,27 @@ projects.POST("/:id/tasks/:taskId/execute", taskHandler.ExecuteTask)
 
 ### Frontend Tasks (6 tasks)
 
-#### 3.7 Types & API Client
-- [ ] **Task Types**: Define TypeScript interfaces
-  - `TaskState` type: `'TODO' | 'IN_PROGRESS' | 'AI_REVIEW' | 'HUMAN_REVIEW' | 'DONE'`
-  - `TaskPriority` type: `'low' | 'medium' | 'high'`
-  - `CreateTaskRequest` interface (title, description?, priority?)
-  - `UpdateTaskRequest` interface (all fields optional)
-  - `MoveTaskRequest` interface (state, position)
-  - `Task` interface (id, project_id, title, description, state, position, priority, created_at, updated_at)
-  - **Location:** `frontend/src/types/index.ts` (extend)
+#### 3.7 Types & API Client ✅ **COMPLETE** (2026-01-18 23:05 CET)
+- [x] **Task Types**: Define TypeScript interfaces
+  - ✅ `TaskStatus` type: `'todo' | 'in_progress' | 'ai_review' | 'human_review' | 'done'`
+  - ✅ `TaskPriority` type: `'low' | 'medium' | 'high'`
+  - ✅ `CreateTaskRequest` interface (title, description?, priority?)
+  - ✅ `UpdateTaskRequest` interface (title?, description?, priority?)
+  - ✅ `MoveTaskRequest` interface (status, position?)
+  - ✅ `Task` interface (id, project_id, title, description, status, position, priority, assigned_to?, created_by, created_at, updated_at, deleted_at?)
+  - ✅ Updated existing Task interface to include new Kanban fields (position, priority, assigned_to, deleted_at)
+  - ✅ **Location:** `frontend/src/types/index.ts` (lines 27-108)
 
-- [ ] **Task API Client**: Implement API methods
-  - `createTask(projectId: string, data: CreateTaskRequest): Promise<Task>`
-  - `getTasks(projectId: string): Promise<Task[]>`
-  - `getTask(projectId: string, taskId: string): Promise<Task>`
-  - `updateTask(projectId: string, taskId: string, data: UpdateTaskRequest): Promise<Task>`
-  - `moveTask(projectId: string, taskId: string, data: MoveTaskRequest): Promise<Task>`
-  - `deleteTask(projectId: string, taskId: string): Promise<void>`
-  - **Location:** `frontend/src/services/api.ts` (extend)
+- [x] **Task API Client**: Implement API methods
+  - ✅ `listTasks(projectId: string): Promise<Task[]>`
+  - ✅ `createTask(projectId: string, data: CreateTaskRequest): Promise<Task>`
+  - ✅ `getTask(projectId: string, taskId: string): Promise<Task>`
+  - ✅ `updateTask(projectId: string, taskId: string, data: UpdateTaskRequest): Promise<Task>`
+  - ✅ `moveTask(projectId: string, taskId: string, data: MoveTaskRequest): Promise<Task>`
+  - ✅ `deleteTask(projectId: string, taskId: string): Promise<void>`
+  - ✅ All methods use axios client with JWT auth via interceptors
+  - ✅ Proper TypeScript typing matching backend API responses
+  - ✅ **Location:** `frontend/src/services/api.ts` (lines 71-121)
 
 #### 3.8 Kanban Board Components
 - [ ] **KanbanBoard Component**: Main board container

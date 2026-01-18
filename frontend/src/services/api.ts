@@ -2,8 +2,12 @@ import axios from 'axios'
 
 import type {
   CreateProjectRequest,
+  CreateTaskRequest,
+  MoveTaskRequest,
   Project,
+  Task,
   UpdateProjectRequest,
+  UpdateTaskRequest,
 } from '@/types'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
@@ -62,4 +66,56 @@ export async function updateProject(
 
 export async function deleteProject(id: string): Promise<void> {
   await api.delete(`/projects/${id}`)
+}
+
+export async function listTasks(projectId: string): Promise<Task[]> {
+  const response = await api.get<Task[]>(`/projects/${projectId}/tasks`)
+  return response.data
+}
+
+export async function createTask(
+  projectId: string,
+  data: CreateTaskRequest
+): Promise<Task> {
+  const response = await api.post<Task>(`/projects/${projectId}/tasks`, data)
+  return response.data
+}
+
+export async function getTask(
+  projectId: string,
+  taskId: string
+): Promise<Task> {
+  const response = await api.get<Task>(`/projects/${projectId}/tasks/${taskId}`)
+  return response.data
+}
+
+export async function updateTask(
+  projectId: string,
+  taskId: string,
+  data: UpdateTaskRequest
+): Promise<Task> {
+  const response = await api.patch<Task>(
+    `/projects/${projectId}/tasks/${taskId}`,
+    data
+  )
+  return response.data
+}
+
+export async function moveTask(
+  projectId: string,
+  taskId: string,
+  data: MoveTaskRequest
+): Promise<Task> {
+  const response = await api.patch<Task>(
+    `/projects/${projectId}/tasks/${taskId}/move`,
+    data
+  )
+  return response.data
+}
+
+export async function deleteTask(
+  projectId: string,
+  taskId: string
+): Promise<void> {
+  await api.delete(`/projects/${projectId}/tasks/${taskId}`)
 }
