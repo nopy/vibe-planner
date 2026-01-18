@@ -1,7 +1,7 @@
 # OpenCode Project Manager - TODO List
 
-**Last Updated:** 2026-01-18 23:05 CET  
-**Current Phase:** Phase 3 - Task Management & Kanban Board (In Progress - 3.1-3.7 Complete)  
+**Last Updated:** 2026-01-18 23:30 CET  
+**Current Phase:** Phase 3 - Task Management & Kanban Board (In Progress - 3.1-3.9 Complete)  
 **Branch:** main
 
 ---
@@ -41,7 +41,7 @@ See [PHASE2.md](./PHASE2.md) for complete archive of Phase 2 tasks and implement
 
 **Objective:** Implement task CRUD operations with state machine and drag-and-drop Kanban board UI.
 
-**Status:** 🔄 IN PROGRESS (3.1-3.8 Complete - Backend + Frontend Types/API + Kanban UI Components)
+**Status:** 🔄 IN PROGRESS (3.1-3.9 Complete - Backend + Frontend Kanban UI + Task Detail & Forms)
 
 ### Overview
 
@@ -355,20 +355,44 @@ projects.POST("/:id/tasks/:taskId/execute", taskHandler.ExecuteTask)
 - ✅ Uses existing API client (listTasks, moveTask from api.ts)
 - ✅ Uses existing types (Task, TaskStatus, TaskPriority from types/index.ts)
 
-#### 3.9 Task Detail & Forms
-- [ ] **TaskDetailPanel Component**: Sliding panel for task details
-  - Display full task metadata (title, description, state, priority, timestamps)
-  - Edit mode (inline or modal)
-  - Delete task button with confirmation
-  - Close button (slide out)
-  - **Location:** `frontend/src/components/Kanban/TaskDetailPanel.tsx`
+#### 3.9 Task Detail & Forms ✅ **COMPLETE** (2026-01-18 23:30 CET)
+- [x] **TaskDetailPanel Component**: Sliding panel for task details
+  - ✅ Display full task metadata (title, description, state, priority, timestamps)
+  - ✅ Edit mode (inline form with save/cancel)
+  - ✅ Delete task button with two-step confirmation
+  - ✅ Close button (slide out) + ESC key support
+  - ✅ Backdrop overlay with click-to-close
+  - ✅ Loading spinner and error states with retry
+  - ✅ Smooth Tailwind transitions (translate-x)
+  - ✅ **Location:** `frontend/src/components/Kanban/TaskDetailPanel.tsx` (452 lines)
 
-- [ ] **CreateTaskModal Component**: Task creation form
-  - Form fields: title (required), description (optional), priority (dropdown)
-  - Client-side validation (title required, max 255 chars)
-  - Submit → call API → close modal → refresh board
-  - Cancel button
-  - **Location:** `frontend/src/components/Kanban/CreateTaskModal.tsx`
+- [x] **CreateTaskModal Component**: Task creation form
+  - ✅ Form fields: title (required, max 255), description (textarea), priority (dropdown)
+  - ✅ Client-side validation (title required, length check, priority validation)
+  - ✅ Color-coded priority selector (red/yellow/green)
+  - ✅ Submit → call API → close modal → refresh board
+  - ✅ Cancel button
+  - ✅ Loading states ("Creating..." → "Create Task")
+  - ✅ Error banner for API failures
+  - ✅ Pattern matches CreateProjectModal exactly
+  - ✅ **Location:** `frontend/src/components/Kanban/CreateTaskModal.tsx` (214 lines)
+
+- [x] **KanbanBoard Integration**
+  - ✅ State management for modal open/close (isCreateModalOpen)
+  - ✅ State management for panel open/close (selectedTaskId)
+  - ✅ Wired "+" button → opens CreateTaskModal
+  - ✅ Wired TaskCard click → opens TaskDetailPanel
+  - ✅ Optimistic updates on create/update/delete
+  - ✅ Proper callback handling (onTaskCreated, onTaskUpdated, onTaskDeleted)
+  - ✅ **Location:** `frontend/src/components/Kanban/KanbanBoard.tsx` (modified, +50 lines)
+
+**Implementation Summary:**
+- ✅ 2 new components created (666 lines total)
+- ✅ ESLint passes (--max-warnings 0)
+- ✅ Prettier formatted
+- ✅ TypeScript build succeeds (no errors)
+- ✅ Pattern compliance verified (CreateProjectModal, ProjectCard, ProjectDetailPage)
+- ✅ Ready for manual E2E testing
 
 #### 3.10 Real-time Updates
 - [ ] **WebSocket Hook**: Task update subscription
@@ -446,16 +470,23 @@ projects.POST("/:id/tasks/:taskId/execute", taskHandler.ExecuteTask)
   - [x] 6 API client methods implemented
 
 - [x] **3.8 Kanban Board Components Complete** ✅ **(2026-01-18 23:10 CET)**
-  - [x] KanbanBoard with drag-and-drop (183 lines)
+  - [x] KanbanBoard with drag-and-drop (230 lines, updated)
   - [x] KanbanColumn component (59 lines)
   - [x] TaskCard component (58 lines)
   - [x] Full @dnd-kit integration with optimistic updates
   - [x] Pattern compliance verified (ESLint, Prettier, TypeScript strict mode)
   - [x] Build succeeds (`npm run build` passes)
 
-- [ ] **3.9 Task Detail & Forms Complete**
-  - [ ] TaskDetailPanel for viewing/editing
-  - [ ] CreateTaskModal with validation
+- [x] **3.9 Task Detail & Forms Complete** ✅ **(2026-01-18 23:30 CET)**
+  - [x] TaskDetailPanel for viewing/editing (452 lines)
+  - [x] CreateTaskModal with validation (214 lines)
+  - [x] KanbanBoard integration (+50 lines)
+  - [x] ESLint passes (--max-warnings 0)
+  - [x] Prettier formatted
+  - [x] TypeScript build succeeds
+  - [x] Two-step delete confirmation
+  - [x] Inline edit mode with save/cancel
+  - [x] Smooth slide-in animations (Tailwind)
 
 - [ ] **3.10 Real-time Updates Complete**
   - [ ] WebSocket hook for task updates
@@ -525,6 +556,41 @@ projects.POST("/:id/tasks/:taskId/execute", taskHandler.ExecuteTask)
 - **Task count:** Assume <100 tasks per project for MVP (no pagination needed)
 - **WebSocket:** Single connection per project, broadcast to all connected clients
 - **Optimistic updates:** Update UI immediately, rollback on API error
+
+### Phase 3.9 Notes (Completed 2026-01-18 23:30 CET)
+
+**Implementation Highlights:**
+- **CreateTaskModal (214 lines)**: Replicates CreateProjectModal pattern exactly
+  - Form validation with inline error messages
+  - Color-coded priority dropdown (red/yellow/green)
+  - API integration with loading states
+  - Tasks always created in TODO column (backend enforces this)
+- **TaskDetailPanel (452 lines)**: Custom sliding panel implementation
+  - Smooth Tailwind slide-in animation (translate-x)
+  - View mode: Full metadata display with priority badges
+  - Edit mode: Inline form with save/cancel
+  - Delete flow: Two-step confirmation ("Delete Task" → "Are you sure?")
+  - ESC key support + backdrop click-to-close
+  - Loading/error states with retry functionality
+- **KanbanBoard Integration**: 
+  - Modal state management (isCreateModalOpen)
+  - Panel state management (selectedTaskId)
+  - Optimistic UI updates with error rollback
+  - Proper callback chains for create/update/delete
+
+**Code Quality:**
+- ✅ ESLint passes (--max-warnings 0)
+- ✅ Prettier formatted
+- ✅ TypeScript build succeeds (tsc + vite)
+- ✅ Pattern compliance verified (no deviations)
+- ✅ 666 new lines of production code
+
+**Manual Testing Required:**
+- Create task via modal (any column → task appears in TODO)
+- View task details (click TaskCard → panel slides in)
+- Edit task inline (modify title/description/priority → save)
+- Delete with confirmation (two-step: Delete → Confirm)
+- Keyboard/UX (ESC closes, backdrop click closes)
 
 ---
 

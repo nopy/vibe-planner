@@ -14,12 +14,12 @@ import {
 import { listTasks, moveTask } from '@/services/api'
 import { KanbanColumn } from '@/components/Kanban/KanbanColumn'
 import { TaskCard } from '@/components/Kanban/TaskCard'
+import { CreateTaskModal } from '@/components/Kanban/CreateTaskModal'
+import { TaskDetailPanel } from '@/components/Kanban/TaskDetailPanel'
 import type { Task, TaskStatus } from '@/types'
 
 interface KanbanBoardProps {
   projectId: string
-  onTaskClick?: (taskId: string) => void
-  onAddTask?: (status: TaskStatus) => void
 }
 
 const COLUMNS: { id: TaskStatus; title: string }[] = [
@@ -30,11 +30,13 @@ const COLUMNS: { id: TaskStatus; title: string }[] = [
   { id: 'done', title: 'Done' },
 ]
 
-export function KanbanBoard({ projectId, onTaskClick, onAddTask }: KanbanBoardProps) {
+export function KanbanBoard({ projectId }: KanbanBoardProps) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTask, setActiveTask] = useState<Task | null>(null)
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -100,6 +102,28 @@ export function KanbanBoard({ projectId, onTaskClick, onAddTask }: KanbanBoardPr
     }
   }
 
+  const handleAddTask = () => {
+    setIsCreateModalOpen(true)
+  }
+
+  const handleTaskCreated = (newTask: Task) => {
+    setTasks(currentTasks => [newTask, ...currentTasks])
+    setIsCreateModalOpen(false)
+  }
+
+  const handleTaskClick = (taskId: string) => {
+    setSelectedTaskId(taskId)
+  }
+
+  const handleTaskUpdated = (updatedTask: Task) => {
+    setTasks(currentTasks => currentTasks.map(t => (t.id === updatedTask.id ? updatedTask : t)))
+  }
+
+  const handleTaskDeleted = (deletedTaskId: string) => {
+    setTasks(currentTasks => currentTasks.filter(t => t.id !== deletedTaskId))
+    setSelectedTaskId(null)
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -161,23 +185,41 @@ export function KanbanBoard({ projectId, onTaskClick, onAddTask }: KanbanBoardPr
   }
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 h-full min-h-[calc(100vh-200px)]">
-        {COLUMNS.map(column => (
-          <KanbanColumn
-            key={column.id}
-            title={column.title}
-            status={column.id}
-            tasks={tasks.filter(t => t.status === column.id)}
-            onAddTask={() => onAddTask?.(column.id)}
-            onTaskClick={taskId => onTaskClick?.(taskId)}
-          />
-        ))}
-      </div>
+    <>
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 h-full min-h-[calc(100vh-200px)]">
+          {COLUMNS.map(column => (
+            <KanbanColumn
+              key={column.id}
+              title={column.title}
+              status={column.id}
+              tasks={tasks.filter(t => t.status === column.id)}
+              onAddTask={handleAddTask}
+              onTaskClick={handleTaskClick}
+            />
+          ))}
+        </div>
 
-      <DragOverlay>
-        {activeTask ? <TaskCard task={activeTask} onClick={() => {}} /> : null}
-      </DragOverlay>
-    </DndContext>
+        <DragOverlay>
+          {activeTask ? <TaskCard task={activeTask} onClick={() => {}} /> : null}
+        </DragOverlay>
+      </DndContext>
+
+      <CreateTaskModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onTaskCreated={handleTaskCreated}
+        projectId={projectId}
+      />
+
+      <TaskDetailPanel
+        isOpen={!!selectedTaskId}
+        taskId={selectedTaskId}
+        projectId={projectId}
+        onClose={() => setSelectedTaskId(null)}
+        onTaskUpdated={handleTaskUpdated}
+        onTaskDeleted={handleTaskDeleted}
+      />
+    </>
   )
 }
