@@ -17,7 +17,7 @@ const (
 )
 
 type Project struct {
-	ID          uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	ID          uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
 	UserID      uuid.UUID `gorm:"type:uuid;column:user_id;not null;index" json:"user_id"`
 	Name        string    `gorm:"column:name;not null" json:"name"`
 	Slug        string    `gorm:"column:slug;not null;index" json:"slug"`

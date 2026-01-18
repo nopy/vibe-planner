@@ -127,10 +127,7 @@ kind-create:
 
 kind-deploy:
 	@echo "Deploying to kind..."
-	@kubectl create namespace opencode --dry-run=client -o yaml | kubectl apply -f -
-	@kubectl apply -k k8s/base/
-	@echo "Waiting for pods to be ready..."
-	@kubectl wait --for=condition=ready pod -l app=opencode-controller -n opencode --timeout=300s
+	@./scripts/deploy-kind.sh
 
 kind-logs:
 	@kubectl logs -n opencode -l app=opencode-controller -f

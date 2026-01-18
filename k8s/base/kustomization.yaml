@@ -8,6 +8,7 @@ resources:
   - rbac.yaml
   - configmap.yaml
   - secrets.yaml
+  - postgres.yaml
   - deployment.yaml
   - service.yaml
 

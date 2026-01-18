@@ -54,7 +54,8 @@ func main() {
 
 	authService, err := service.NewAuthService(cfg, userRepo)
 	if err != nil {
-		log.Fatalf("Failed to create auth service: %v", err)
+		log.Printf("Warning: Failed to create auth service: %v", err)
+		log.Println("Authentication features will be disabled")
 	}
 
 	authMiddleware := middleware.NewAuthMiddleware(cfg, userRepo)
