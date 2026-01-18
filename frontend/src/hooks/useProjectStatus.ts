@@ -9,8 +9,7 @@ interface UseProjectStatusReturn {
   reconnect: () => void
 }
 
-const WS_BASE_URL =
-  import.meta.env.VITE_WS_URL || 'ws://localhost:8090/api/projects'
+const WS_BASE_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8090/api/projects'
 const RECONNECT_DELAY = 3000
 const MAX_RECONNECT_ATTEMPTS = 5
 
@@ -40,7 +39,7 @@ export function useProjectStatus(projectId: string): UseProjectStatusReturn {
         reconnectAttempts.current = 0
       }
 
-      ws.onmessage = (event) => {
+      ws.onmessage = event => {
         try {
           const data = JSON.parse(event.data)
 
@@ -52,12 +51,12 @@ export function useProjectStatus(projectId: string): UseProjectStatusReturn {
         }
       }
 
-      ws.onerror = (event) => {
+      ws.onerror = event => {
         console.error('[useProjectStatus] WebSocket error:', event)
         setError('WebSocket connection error')
       }
 
-      ws.onclose = (event) => {
+      ws.onclose = event => {
         console.log(
           `[useProjectStatus] Connection closed: code=${event.code}, reason=${event.reason}`
         )

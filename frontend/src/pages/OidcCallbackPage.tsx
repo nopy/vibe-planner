@@ -47,9 +47,7 @@ export function OidcCallbackPage() {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full">
-          <h2 className="text-2xl font-bold mb-4 text-red-600">
-            Authentication Failed
-          </h2>
+          <h2 className="text-2xl font-bold mb-4 text-red-600">Authentication Failed</h2>
           <p className="text-gray-700 mb-6">{error}</p>
           <button
             onClick={() => navigate('/login')}

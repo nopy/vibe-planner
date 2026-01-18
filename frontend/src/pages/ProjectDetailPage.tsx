@@ -14,12 +14,7 @@ export function ProjectDetailPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  const {
-    status: liveStatus,
-    isConnected,
-    error: wsError,
-    reconnect,
-  } = useProjectStatus(id || '')
+  const { status: liveStatus, isConnected, error: wsError, reconnect } = useProjectStatus(id || '')
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -48,7 +43,7 @@ export function ProjectDetailPage() {
 
   useEffect(() => {
     if (liveStatus && project) {
-      setProject((prev) => (prev ? { ...prev, pod_status: liveStatus } : null))
+      setProject(prev => (prev ? { ...prev, pod_status: liveStatus } : null))
     }
   }, [liveStatus, project])
 

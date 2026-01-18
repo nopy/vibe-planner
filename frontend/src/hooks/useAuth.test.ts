@@ -21,8 +21,7 @@ describe('useAuth Hook', () => {
     }
 
     const { result } = renderHook(() => useAuth(), {
-      wrapper: ({ children }) =>
-        createElement(TestProviders, { authValue }, children),
+      wrapper: ({ children }) => createElement(TestProviders, { authValue }, children),
     })
 
     expect(result.current.user).toEqual(mockUser)
@@ -40,8 +39,7 @@ describe('useAuth Hook', () => {
     }
 
     const { result } = renderHook(() => useAuth(), {
-      wrapper: ({ children }) =>
-        createElement(TestProviders, { authValue }, children),
+      wrapper: ({ children }) => createElement(TestProviders, { authValue }, children),
     })
 
     expect(result.current.user).toBeNull()

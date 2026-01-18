@@ -7,9 +7,7 @@ import { render } from '@/tests/test-utils'
 const mockNavigate = vi.fn()
 
 vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual<typeof import('react-router-dom')>(
-    'react-router-dom'
-  )
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom')
   return {
     ...actual,
     useNavigate: () => mockNavigate,
@@ -26,13 +24,9 @@ describe('LoginPage', () => {
       authValue: { isAuthenticated: false },
     })
 
+    expect(screen.getByText('OpenCode Project Manager')).toBeInTheDocument()
     expect(
-      screen.getByText('OpenCode Project Manager')
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText(
-        /Sign in to manage your projects with AI-powered coding assistance/i
-      )
+      screen.getByText(/Sign in to manage your projects with AI-powered coding assistance/i)
     ).toBeInTheDocument()
     expect(screen.getByText('Login with Keycloak')).toBeInTheDocument()
   })
@@ -56,9 +50,7 @@ describe('LoginPage', () => {
 
   it('handles login errors gracefully', async () => {
     const user = userEvent.setup()
-    const consoleErrorSpy = vi
-      .spyOn(console, 'error')
-      .mockImplementation(() => {})
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const loginMock = vi.fn().mockRejectedValue(new Error('Login failed'))
 
     render(<LoginPage />, {
@@ -73,10 +65,7 @@ describe('LoginPage', () => {
 
     await waitFor(() => {
       expect(loginMock).toHaveBeenCalledTimes(1)
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Login failed:',
-        expect.any(Error)
-      )
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Login failed:', expect.any(Error))
     })
 
     consoleErrorSpy.mockRestore()

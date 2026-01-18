@@ -40,11 +40,7 @@ const defaultAuthValue: AuthContextValue = {
   logout: () => {},
 }
 
-export function TestProviders({
-  children,
-  authValue,
-  initialRoute = '/',
-}: TestProvidersProps) {
+export function TestProviders({ children, authValue, initialRoute = '/' }: TestProvidersProps) {
   const mergedAuthValue = { ...defaultAuthValue, ...authValue }
 
   return (

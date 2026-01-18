@@ -20,7 +20,7 @@ export const api = axios.create({
   withCredentials: true,
 })
 
-api.interceptors.request.use((config) => {
+api.interceptors.request.use(config => {
   const token = localStorage.getItem('token')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
@@ -29,8 +29,8 @@ api.interceptors.request.use((config) => {
 })
 
 api.interceptors.response.use(
-  (response) => response,
-  (error) => {
+  response => response,
+  error => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token')
       window.location.href = '/login'
@@ -39,9 +39,7 @@ api.interceptors.response.use(
   }
 )
 
-export async function createProject(
-  data: CreateProjectRequest
-): Promise<Project> {
+export async function createProject(data: CreateProjectRequest): Promise<Project> {
   const response = await api.post<Project>('/projects', data)
   return response.data
 }
@@ -56,10 +54,7 @@ export async function getProject(id: string): Promise<Project> {
   return response.data
 }
 
-export async function updateProject(
-  id: string,
-  data: UpdateProjectRequest
-): Promise<Project> {
+export async function updateProject(id: string, data: UpdateProjectRequest): Promise<Project> {
   const response = await api.patch<Project>(`/projects/${id}`, data)
   return response.data
 }
@@ -73,18 +68,12 @@ export async function listTasks(projectId: string): Promise<Task[]> {
   return response.data
 }
 
-export async function createTask(
-  projectId: string,
-  data: CreateTaskRequest
-): Promise<Task> {
+export async function createTask(projectId: string, data: CreateTaskRequest): Promise<Task> {
   const response = await api.post<Task>(`/projects/${projectId}/tasks`, data)
   return response.data
 }
 
-export async function getTask(
-  projectId: string,
-  taskId: string
-): Promise<Task> {
+export async function getTask(projectId: string, taskId: string): Promise<Task> {
   const response = await api.get<Task>(`/projects/${projectId}/tasks/${taskId}`)
   return response.data
 }
@@ -94,10 +83,7 @@ export async function updateTask(
   taskId: string,
   data: UpdateTaskRequest
 ): Promise<Task> {
-  const response = await api.patch<Task>(
-    `/projects/${projectId}/tasks/${taskId}`,
-    data
-  )
+  const response = await api.patch<Task>(`/projects/${projectId}/tasks/${taskId}`, data)
   return response.data
 }
 
@@ -106,16 +92,10 @@ export async function moveTask(
   taskId: string,
   data: MoveTaskRequest
 ): Promise<Task> {
-  const response = await api.patch<Task>(
-    `/projects/${projectId}/tasks/${taskId}/move`,
-    data
-  )
+  const response = await api.patch<Task>(`/projects/${projectId}/tasks/${taskId}/move`, data)
   return response.data
 }
 
-export async function deleteTask(
-  projectId: string,
-  taskId: string
-): Promise<void> {
+export async function deleteTask(projectId: string, taskId: string): Promise<void> {
   await api.delete(`/projects/${projectId}/tasks/${taskId}`)
 }

@@ -32,9 +32,7 @@ describe('ProtectedRoute', () => {
 
   it('renders children when authenticated', () => {
     render(
-      <AuthContext.Provider
-        value={{ ...defaultAuthValue, isAuthenticated: true }}
-      >
+      <AuthContext.Provider value={{ ...defaultAuthValue, isAuthenticated: true }}>
         <MemoryRouter>
           <ProtectedRoute>
             <div>Protected Content</div>
@@ -49,9 +47,7 @@ describe('ProtectedRoute', () => {
 
   it('redirects to /login when not authenticated', () => {
     render(
-      <AuthContext.Provider
-        value={{ ...defaultAuthValue, isAuthenticated: false }}
-      >
+      <AuthContext.Provider value={{ ...defaultAuthValue, isAuthenticated: false }}>
         <MemoryRouter initialEntries={['/protected']}>
           <Routes>
             <Route
@@ -74,9 +70,7 @@ describe('ProtectedRoute', () => {
 
   it('preserves location state for redirect', () => {
     render(
-      <AuthContext.Provider
-        value={{ ...defaultAuthValue, isAuthenticated: false }}
-      >
+      <AuthContext.Provider value={{ ...defaultAuthValue, isAuthenticated: false }}>
         <MemoryRouter initialEntries={['/protected/resource']}>
           <Routes>
             <Route
@@ -108,9 +102,7 @@ describe('ProtectedRoute', () => {
       </AuthContext.Provider>
     )
 
-    const spinner = screen
-      .getByText('Loading...')
-      .previousElementSibling as HTMLElement
+    const spinner = screen.getByText('Loading...').previousElementSibling as HTMLElement
     expect(spinner).toHaveClass('animate-spin')
     expect(spinner).toHaveClass('border-blue-600')
   })

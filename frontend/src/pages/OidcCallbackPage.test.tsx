@@ -7,9 +7,7 @@ import { AuthContext } from '@/contexts/AuthContext'
 const mockNavigate = vi.fn()
 
 vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual<typeof import('react-router-dom')>(
-    'react-router-dom'
-  )
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom')
   return {
     ...actual,
     useNavigate: () => mockNavigate,
@@ -77,9 +75,7 @@ describe('OidcCallbackPage', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Authentication Failed')).toBeInTheDocument()
-      expect(
-        screen.getByText('Authentication error: access_denied')
-      ).toBeInTheDocument()
+      expect(screen.getByText('Authentication error: access_denied')).toBeInTheDocument()
     })
 
     expect(mockHandleCallback).not.toHaveBeenCalled()
@@ -98,18 +94,14 @@ describe('OidcCallbackPage', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Authentication Failed')).toBeInTheDocument()
-      expect(
-        screen.getByText('No authorization code received')
-      ).toBeInTheDocument()
+      expect(screen.getByText('No authorization code received')).toBeInTheDocument()
     })
 
     expect(mockHandleCallback).not.toHaveBeenCalled()
   })
 
   it('shows error when handleCallback fails', async () => {
-    const consoleErrorSpy = vi
-      .spyOn(console, 'error')
-      .mockImplementation(() => {})
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     mockHandleCallback.mockRejectedValue(new Error('Callback failed'))
 
     render(
@@ -124,9 +116,7 @@ describe('OidcCallbackPage', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Authentication Failed')).toBeInTheDocument()
-      expect(
-        screen.getByText('Failed to complete authentication')
-      ).toBeInTheDocument()
+      expect(screen.getByText('Failed to complete authentication')).toBeInTheDocument()
     })
 
     expect(mockHandleCallback).toHaveBeenCalledWith('bad-code')

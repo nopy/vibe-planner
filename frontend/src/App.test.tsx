@@ -12,9 +12,7 @@ describe('App Integration', () => {
     render(<App />)
 
     await waitFor(() => {
-      expect(
-        screen.getByText('OpenCode Project Manager')
-      ).toBeInTheDocument()
+      expect(screen.getByText('OpenCode Project Manager')).toBeInTheDocument()
     })
   })
 
@@ -22,13 +20,9 @@ describe('App Integration', () => {
     render(<App />)
 
     await waitFor(() => {
+      expect(screen.getByText('OpenCode Project Manager')).toBeInTheDocument()
       expect(
-        screen.getByText('OpenCode Project Manager')
-      ).toBeInTheDocument()
-      expect(
-        screen.getByText(
-          'Manage your projects with AI-powered coding assistance'
-        )
+        screen.getByText('Manage your projects with AI-powered coding assistance')
       ).toBeInTheDocument()
       expect(screen.getByText('Get Started')).toBeInTheDocument()
     })
