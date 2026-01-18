@@ -39,6 +39,7 @@ func main() {
 
 	userRepo := repository.NewUserRepository(database)
 	projectRepo := repository.NewProjectRepository(database)
+	taskRepo := repository.NewTaskRepository(database)
 
 	k8sService, err := service.NewKubernetesService(
 		cfg.Kubeconfig,
@@ -51,6 +52,7 @@ func main() {
 	}
 
 	projectService := service.NewProjectService(projectRepo, k8sService)
+	taskService := service.NewTaskService(taskRepo, projectRepo)
 
 	authService, err := service.NewAuthService(cfg, userRepo)
 	if err != nil {
@@ -61,8 +63,9 @@ func main() {
 	authMiddleware := middleware.NewAuthMiddleware(cfg, userRepo)
 	authHandler := api.NewAuthHandler(authService)
 	projectHandler := api.NewProjectHandler(projectService)
+	taskHandler := api.NewTaskHandler(taskService)
 
-	router := setupRouter(cfg, authHandler, projectHandler, authMiddleware)
+	router := setupRouter(cfg, authHandler, projectHandler, taskHandler, authMiddleware)
 
 	// Setup static file serving for production (embedded frontend)
 	if cfg.Environment == "production" {
@@ -83,7 +86,7 @@ func main() {
 	}
 }
 
-func setupRouter(cfg *config.Config, authHandler *api.AuthHandler, projectHandler *api.ProjectHandler, authMiddleware *middleware.AuthMiddleware) *gin.Engine {
+func setupRouter(cfg *config.Config, authHandler *api.AuthHandler, projectHandler *api.ProjectHandler, taskHandler *api.TaskHandler, authMiddleware *middleware.AuthMiddleware) *gin.Engine {
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -128,24 +131,14 @@ func setupRouter(cfg *config.Config, authHandler *api.AuthHandler, projectHandle
 			projects.DELETE("/:id", projectHandler.DeleteProject)
 			projects.GET("/:id/status", projectHandler.ProjectStatus)
 
-			projects.GET("/:id/tasks", func(c *gin.Context) {
-				c.JSON(501, gin.H{"error": "Not implemented yet"})
-			})
-			projects.POST("/:id/tasks", func(c *gin.Context) {
-				c.JSON(501, gin.H{"error": "Not implemented yet"})
-			})
-			projects.GET("/:id/tasks/:taskId", func(c *gin.Context) {
-				c.JSON(501, gin.H{"error": "Not implemented yet"})
-			})
-			projects.PATCH("/:id/tasks/:taskId", func(c *gin.Context) {
-				c.JSON(501, gin.H{"error": "Not implemented yet"})
-			})
-			projects.DELETE("/:id/tasks/:taskId", func(c *gin.Context) {
-				c.JSON(501, gin.H{"error": "Not implemented yet"})
-			})
-			projects.POST("/:id/tasks/:taskId/execute", func(c *gin.Context) {
-				c.JSON(501, gin.H{"error": "Not implemented yet"})
-			})
+			// Task management routes
+			projects.GET("/:id/tasks", taskHandler.ListTasks)
+			projects.POST("/:id/tasks", taskHandler.CreateTask)
+			projects.GET("/:id/tasks/:taskId", taskHandler.GetTask)
+			projects.PATCH("/:id/tasks/:taskId", taskHandler.UpdateTask)
+			projects.PATCH("/:id/tasks/:taskId/move", taskHandler.MoveTask)
+			projects.DELETE("/:id/tasks/:taskId", taskHandler.DeleteTask)
+			projects.POST("/:id/tasks/:taskId/execute", taskHandler.ExecuteTask)
 		}
 	}
 

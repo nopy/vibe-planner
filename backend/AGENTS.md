@@ -5,17 +5,17 @@ Go 1.24 API server using Gin (HTTP), GORM (PostgreSQL), and Keycloak (OIDC).
 
 **Phase 1 Status**: ✅ OIDC Authentication Complete  
 **Phase 2 Status**: ✅ Project Management Complete  
-**Phase 3 Status**: 🔄 In Progress (3.1 Database & Models Complete)
+**Phase 3 Status**: 🔄 In Progress (3.1-3.4 Complete - Backend API Layer)
 
 ## STRUCTURE
 ```
 .
-├── cmd/api/           # Entry point (main.go) - wired with auth + projects + static serving
+├── cmd/api/           # Entry point (main.go) - wired with auth + projects + tasks + static serving
 ├── internal/
-│   ├── api/           # HTTP Handlers - auth.go, projects.go fully implemented
+│   ├── api/           # HTTP Handlers - auth.go, projects.go, tasks.go ✅ Phase 3.4
 │   ├── model/         # GORM structs (User, Project ✅ Phase 2, Task ✅ Phase 3.1)
-│   ├── service/       # ✅ auth_service.go, project_service.go, kubernetes_service.go
-│   ├── repository/    # ✅ user_repository.go, project_repository.go
+│   ├── service/       # ✅ auth_service.go, project_service.go, task_service.go, kubernetes_service.go
+│   ├── repository/    # ✅ user_repository.go, project_repository.go, task_repository.go
 │   ├── middleware/    # ✅ auth.go - JWT validation, security.go - Security headers
 │   ├── static/        # ✅ embed.go - Embedded frontend serving (production only)
 │   ├── config/        # Environment & App configuration
@@ -46,6 +46,13 @@ Go 1.24 API server using Gin (HTTP), GORM (PostgreSQL), and Keycloak (OIDC).
 | `/api/projects/:id` | PATCH | JWT | Update project |
 | `/api/projects/:id` | DELETE | JWT | Soft delete project |
 | `/api/projects/:id/status` | GET (WS) | JWT | WebSocket for real-time pod status |
+| `/api/projects/:id/tasks` | GET | JWT | List project's tasks ✅ Phase 3.4 |
+| `/api/projects/:id/tasks` | POST | JWT | Create task ✅ Phase 3.4 |
+| `/api/projects/:id/tasks/:taskId` | GET | JWT | Get task details ✅ Phase 3.4 |
+| `/api/projects/:id/tasks/:taskId` | PATCH | JWT | Update task ✅ Phase 3.4 |
+| `/api/projects/:id/tasks/:taskId/move` | PATCH | JWT | Move task (state + position) ✅ Phase 3.4 |
+| `/api/projects/:id/tasks/:taskId` | DELETE | JWT | Delete task ✅ Phase 3.4 |
+| `/api/projects/:id/tasks/:taskId/execute` | POST | JWT | Execute task (stub for Phase 5) ✅ Phase 3.4 |
 
 ### Key Components (Phase 2)
 
@@ -65,7 +72,15 @@ Go 1.24 API server using Gin (HTTP), GORM (PostgreSQL), and Keycloak (OIDC).
 - Pod status monitoring
 - Cleanup on project deletion
 
-## PHASE 3.1 IMPLEMENTATION (COMPLETE - 2026-01-18 22:01)
+## PHASE 3.1-3.4 IMPLEMENTATION (COMPLETE - 2026-01-18)
+
+### Task Management Stack
+- **Task CRUD**: Full lifecycle management with state machine validation
+- **Repository Layer**: TaskRepository with 7 methods (30 tests)
+- **Service Layer**: TaskService with 6 methods + state machine (35 tests)
+- **API Layer**: TaskHandler with 7 REST endpoints (35 tests)
+- **Database**: PostgreSQL with soft deletes and position ordering
+- **Total Tests**: 100 task-related tests (all passing)
 
 ### Task Model Updates
 - **Added Fields:**
@@ -85,6 +100,46 @@ Go 1.24 API server using Gin (HTTP), GORM (PostgreSQL), and Keycloak (OIDC).
   - TaskPriority enum: low, medium, high
   - Full GORM tags with explicit column names
   - Soft delete via gorm.DeletedAt
+
+### Key Components (Phase 3)
+
+**TaskRepository** (`internal/repository/task_repository.go`):
+- CRUD operations for Task model
+- 7 methods: Create, FindByID, FindByProjectID, Update, UpdateStatus, UpdatePosition, SoftDelete
+- Context-aware, returns errors for handling
+- 30 unit tests (all passing)
+
+**TaskService** (`internal/service/task_service.go`):
+- Business logic layer with state machine validation
+- 6 methods: CreateTask, GetTask, ListProjectTasks, UpdateTask, MoveTask, DeleteTask
+- State machine enforces valid transitions between task states
+- Authorization via project ownership check
+- Input validation helpers (validateTaskTitle, validateTaskPriority)
+- 35 unit tests (all passing)
+
+**TaskHandler** (`internal/api/tasks.go`):
+- HTTP handlers for task CRUD operations
+- 7 endpoints: List, Create, Get, Update, Move, Delete, Execute (stub)
+- Request/Response DTOs with JSON binding validation
+- Error mapping to HTTP status codes (400, 401, 403, 404, 500)
+- Authorization checks via middleware.GetCurrentUser
+- 35 unit tests (all passing)
+
+**State Machine:**
+```go
+var validTransitions = map[model.TaskStatus][]model.TaskStatus{
+    TaskStatusTodo:        {TaskStatusInProgress},
+    TaskStatusInProgress:  {TaskStatusAIReview, TaskStatusTodo},
+    TaskStatusAIReview:    {TaskStatusHumanReview, TaskStatusInProgress},
+    TaskStatusHumanReview: {TaskStatusDone, TaskStatusInProgress},
+    TaskStatusDone:        {TaskStatusTodo}, // Allow reopening
+}
+```
+
+**Routes (wired in cmd/api/main.go):**
+- All routes under `/api/projects/:id/tasks` with JWT auth middleware
+- TaskService initialized with TaskRepository + ProjectRepository
+- TaskHandler created with dependency injection
 
 ## PHASE 1 IMPLEMENTATION (COMPLETE)
 
