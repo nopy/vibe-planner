@@ -7,7 +7,9 @@ import { OidcCallbackPage } from '@/pages/OidcCallbackPage'
 import { ProjectDetailPage } from '@/pages/ProjectDetailPage'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { ProjectList } from '@/components/Projects/ProjectList'
+import { KanbanBoard } from '@/components/Kanban/KanbanBoard'
 import { useAuth } from '@/hooks/useAuth'
+import { useParams } from 'react-router-dom'
 
 function App() {
   return (
@@ -33,6 +35,16 @@ function App() {
               <ProtectedRoute>
                 <AppLayout>
                   <ProjectDetailPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/projects/:id/tasks"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <KanbanBoardPage />
                 </AppLayout>
               </ProtectedRoute>
             }
@@ -74,6 +86,20 @@ function HomePage() {
       </div>
     </div>
   )
+}
+
+function KanbanBoardPage() {
+  const { id } = useParams<{ id: string }>()
+
+  if (!id) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-red-600">Project ID is missing</div>
+      </div>
+    )
+  }
+
+  return <KanbanBoard projectId={id} />
 }
 
 export default App
