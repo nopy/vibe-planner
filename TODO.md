@@ -1,7 +1,7 @@
 # OpenCode Project Manager - TODO List
 
-**Last Updated:** 2026-01-18 22:01 CET  
-**Current Phase:** Phase 3 - Task Management & Kanban Board (In Progress - 3.1 Complete)  
+**Last Updated:** 2026-01-18 22:21 CET  
+**Current Phase:** Phase 3 - Task Management & Kanban Board (In Progress - 3.1-3.2 Complete)  
 **Branch:** main
 
 ---
@@ -41,7 +41,7 @@ See [PHASE2.md](./PHASE2.md) for complete archive of Phase 2 tasks and implement
 
 **Objective:** Implement task CRUD operations with state machine and drag-and-drop Kanban board UI.
 
-**Status:** 🔄 IN PROGRESS (3.1 Complete - Database & Models)
+**Status:** 🔄 IN PROGRESS (3.1-3.2 Complete - Database, Models & Repository Layer)
 
 ### Overview
 
@@ -124,19 +124,19 @@ CREATE INDEX idx_tasks_project_position ON tasks(project_id, position);
 CREATE INDEX idx_tasks_deleted_at ON tasks(deleted_at);
 ```
 
-#### 3.2 Repository Layer
-- [ ] **Task Repository**: Implement data access layer
-  - `Create(ctx, task *Task) error` - Create new task
-  - `FindByID(ctx, id uuid.UUID) (*Task, error)` - Get task by ID
-  - `FindByProjectID(ctx, projectID uuid.UUID) ([]Task, error)` - List project's tasks
-  - `Update(ctx, task *Task) error` - Update task
-  - `UpdateState(ctx, id uuid.UUID, newState string) error` - Update task state
-  - `UpdatePosition(ctx, id uuid.UUID, newPosition int) error` - Update task position
-  - `SoftDelete(ctx, id uuid.UUID) error` - Soft delete task
-  - Interface-based design for testability
-  - Context-aware methods
-  - **Location:** `backend/internal/repository/task_repository.go`
-  - **Tests:** `backend/internal/repository/task_repository_test.go` (target: 10+ tests)
+#### 3.2 Repository Layer ✅ **COMPLETE** (2026-01-18 22:21 CET)
+- [x] **Task Repository**: Implement data access layer
+  - ✅ `Create(ctx, task *Task) error` - Create new task
+  - ✅ `FindByID(ctx, id uuid.UUID) (*Task, error)` - Get task by ID
+  - ✅ `FindByProjectID(ctx, projectID uuid.UUID) ([]Task, error)` - List project's tasks (ordered by position)
+  - ✅ `Update(ctx, task *Task) error` - Update task
+  - ✅ `UpdateStatus(ctx, id uuid.UUID, newStatus TaskStatus) error` - Update task status
+  - ✅ `UpdatePosition(ctx, id uuid.UUID, newPosition int) error` - Update task position
+  - ✅ `SoftDelete(ctx, id uuid.UUID) error` - Soft delete task
+  - ✅ Interface-based design for testability
+  - ✅ Context-aware methods
+  - ✅ **Location:** `backend/internal/repository/task_repository.go` (110 lines)
+  - ✅ **Tests:** `backend/internal/repository/task_repository_test.go` (30 tests, all passing)
 
 #### 3.3 Business Logic Layer
 - [ ] **Task Service**: Implement business logic
@@ -326,10 +326,14 @@ func isValidTransition(currentState, newState string) bool {
   - [x] Soft delete support via gorm.DeletedAt
   - [x] Model compiles successfully (`go build ./internal/model/...`)
 
-- [ ] **3.2 Repository Layer Complete**
-  - [ ] TaskRepository interface with 7 methods
-  - [ ] 10+ unit tests (all passing)
-  - [ ] Context-aware methods for cancellation/timeout
+- [x] **3.2 Repository Layer Complete** ✅ **(2026-01-18 22:21 CET)**
+  - [x] TaskRepository interface with 7 methods (Create, FindByID, FindByProjectID, Update, UpdateStatus, UpdatePosition, SoftDelete)
+  - [x] 30 unit tests (all passing) - **Exceeded target of 10+**
+  - [x] Context-aware methods for cancellation/timeout
+  - [x] GORM-based implementation following ProjectRepository patterns
+  - [x] Comprehensive test coverage including edge cases and soft deletes
+  - [x] Location: `backend/internal/repository/task_repository.go` (110 lines)
+  - [x] Tests: `backend/internal/repository/task_repository_test.go` (569 lines)
 
 - [ ] **3.3 Business Logic Layer Complete**
   - [ ] TaskService with 6 core methods
@@ -458,4 +462,4 @@ func isValidTransition(currentState, newState string) bool {
 
 ---
 
-**Last Updated:** 2026-01-18 22:01 CET
+**Last Updated:** 2026-01-18 22:21 CET
