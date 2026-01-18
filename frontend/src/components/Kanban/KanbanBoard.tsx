@@ -11,7 +11,8 @@ import {
   useSensors,
 } from '@dnd-kit/core'
 
-import { listTasks, moveTask } from '@/services/api'
+import { moveTask } from '@/services/api'
+import { useTaskUpdates } from '@/hooks/useTaskUpdates'
 import { KanbanColumn } from '@/components/Kanban/KanbanColumn'
 import { TaskCard } from '@/components/Kanban/TaskCard'
 import { CreateTaskModal } from '@/components/Kanban/CreateTaskModal'
@@ -31,12 +32,18 @@ const COLUMNS: { id: TaskStatus; title: string }[] = [
 ]
 
 export function KanbanBoard({ projectId }: KanbanBoardProps) {
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [localTasks, setLocalTasks] = useState<Task[]>([])
   const [activeTask, setActiveTask] = useState<Task | null>(null)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
+  const [moveError, setMoveError] = useState<string | null>(null)
+
+  const {
+    tasks: wsTasks,
+    isConnected,
+    error: wsError,
+    reconnect,
+  } = useTaskUpdates(projectId)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -48,24 +55,15 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
     useSensor(KeyboardSensor)
   )
 
-  const fetchTasks = async () => {
-    setIsLoading(true)
-    setError(null)
-    try {
-      const data = await listTasks(projectId)
-      setTasks(data)
-    } catch (err) {
-      console.error('Failed to fetch tasks:', err)
-      setError('Failed to load tasks. Please try again.')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
   useEffect(() => {
-    fetchTasks()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId])
+    if (wsTasks) {
+      setLocalTasks(wsTasks)
+    }
+  }, [wsTasks])
+
+  const tasks = localTasks.length > 0 ? localTasks : wsTasks || []
+  const isLoading = wsTasks === null && !wsError
+  const error = wsError || moveError
 
   const handleDragStart = (event: DragStartEvent) => {
     const task = tasks.find(t => t.id === event.active.id)
@@ -86,19 +84,21 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
 
     const previousTasks = [...tasks]
 
-    setTasks(currentTasks =>
+    setLocalTasks(currentTasks =>
       currentTasks.map(t => (t.id === taskId ? { ...t, status: newStatus } : t))
     )
 
     try {
+      setMoveError(null)
       await moveTask(projectId, taskId, {
         status: newStatus,
         position: 0,
       })
     } catch (err) {
       console.error('Failed to move task:', err)
-      setTasks(previousTasks)
-      setError('Failed to update task status. Please try again.')
+      setLocalTasks(previousTasks)
+      setMoveError('Failed to update task status. Changes reverted.')
+      setTimeout(() => setMoveError(null), 5000)
     }
   }
 
@@ -106,8 +106,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
     setIsCreateModalOpen(true)
   }
 
-  const handleTaskCreated = (newTask: Task) => {
-    setTasks(currentTasks => [newTask, ...currentTasks])
+  const handleTaskCreated = () => {
     setIsCreateModalOpen(false)
   }
 
@@ -116,11 +115,11 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
   }
 
   const handleTaskUpdated = (updatedTask: Task) => {
-    setTasks(currentTasks => currentTasks.map(t => (t.id === updatedTask.id ? updatedTask : t)))
+    setLocalTasks(currentTasks => currentTasks.map(t => (t.id === updatedTask.id ? updatedTask : t)))
   }
 
   const handleTaskDeleted = (deletedTaskId: string) => {
-    setTasks(currentTasks => currentTasks.filter(t => t.id !== deletedTaskId))
+    setLocalTasks(currentTasks => currentTasks.filter(t => t.id !== deletedTaskId))
     setSelectedTaskId(null)
   }
 
@@ -164,20 +163,28 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
               />
             </svg>
           </div>
-          <div className="ml-3">
-            <h3 className="text-sm font-medium text-red-800">Error loading tasks</h3>
+          <div className="ml-3 flex-1">
+            <h3 className="text-sm font-medium text-red-800">
+              {wsError ? 'WebSocket connection error' : 'Error updating task'}
+            </h3>
             <div className="mt-2 text-sm text-red-700">
               <p>{error}</p>
             </div>
-            <div className="mt-4">
-              <button
-                type="button"
-                onClick={fetchTasks}
-                className="bg-red-100 text-red-800 px-3 py-2 rounded-md text-sm font-medium hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-              >
-                Try Again
-              </button>
-            </div>
+            {wsError && (
+              <div className="mt-4">
+                <button
+                  type="button"
+                  onClick={reconnect}
+                  className="bg-red-100 text-red-800 px-3 py-2 rounded-md text-sm font-medium hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                >
+                  Reconnect
+                </button>
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+            {isConnected ? 'Live' : 'Offline'}
           </div>
         </div>
       </div>
@@ -186,6 +193,40 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
 
   return (
     <>
+      {moveError && !wsError && (
+        <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm text-yellow-800">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fillRule="evenodd"
+                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                clipRule="evenodd"
+              />
+            </svg>
+            {moveError}
+          </div>
+          <button
+            onClick={() => setMoveError(null)}
+            className="text-yellow-600 hover:text-yellow-800"
+          >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fillRule="evenodd"
+                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {!isConnected && !wsError && (
+        <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-center gap-2 text-sm text-yellow-800">
+          <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
+          Reconnecting to live updates...
+        </div>
+      )}
+
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 h-full min-h-[calc(100vh-200px)]">
           {COLUMNS.map(column => (

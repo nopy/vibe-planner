@@ -131,9 +131,9 @@ func setupRouter(cfg *config.Config, authHandler *api.AuthHandler, projectHandle
 			projects.DELETE("/:id", projectHandler.DeleteProject)
 			projects.GET("/:id/status", projectHandler.ProjectStatus)
 
-			// Task management routes
 			projects.GET("/:id/tasks", taskHandler.ListTasks)
 			projects.POST("/:id/tasks", taskHandler.CreateTask)
+			projects.GET("/:id/tasks/stream", taskHandler.TaskUpdatesStream)
 			projects.GET("/:id/tasks/:taskId", taskHandler.GetTask)
 			projects.PATCH("/:id/tasks/:taskId", taskHandler.UpdateTask)
 			projects.PATCH("/:id/tasks/:taskId/move", taskHandler.MoveTask)
