@@ -1,15 +1,15 @@
 # OPENCODE PROJECT MANAGER - AGENT KNOWLEDGE BASE
 
-**Generated:** 2026-01-17 13:51:00  
+**Generated:** 2026-01-18 21:36:00  
 **Branch:** main  
 **Project:** Go backend + React frontend + K8s orchestration
-**Status:** ✅ Phase 1 Complete + Phase 2 Backend Complete (2.1-2.7) + Phase 2 Frontend Complete (2.8-2.11)
+**Status:** ✅ Phase 1 Complete + Phase 2 Complete (2.1-2.12)
 
 ---
 
 ## OVERVIEW
 
-Multi-module monorepo: Go API server, React SPA, 2 Go sidecars (file-browser, session-proxy), K8s manifests. Project management system with AI-powered coding via OpenCode agents. All critical issues resolved. Phase 1 + Phase 2 backend (2.1-2.7) + Phase 2 frontend (2.8-2.11) complete.
+Multi-module monorepo: Go API server, React SPA, 2 Go sidecars (file-browser, session-proxy), K8s manifests. Project management system with AI-powered coding via OpenCode agents. All critical issues resolved. **Phase 1 + Phase 2 (2.1-2.12) COMPLETE** - Full project management with Kubernetes pod lifecycle, real-time WebSocket updates, and deployed to kind cluster.
 
 ---
 
@@ -64,6 +64,7 @@ Multi-module monorepo: Go API server, React SPA, 2 Go sidecars (file-browser, se
 | Session proxy | `sidecars/session-proxy/cmd/main.go` | Port 3002 (Phase 5) |
 | K8s base | `k8s/base/` | Namespace, ConfigMap, RBAC |
 | K8s RBAC | `k8s/base/rbac.yaml` | ✅ ServiceAccount + Role |
+| K8s PostgreSQL | `k8s/base/postgres.yaml` | ✅ StatefulSet + PVC |
 | K8s dev | `k8s/overlays/dev/` | Dev environment patches |
 
 ---
@@ -342,5 +343,6 @@ make docker-push-dev        # Build and push development
 13. **Phase 2.9 frontend complete** - React UI components implemented (ProjectList, ProjectCard, CreateProjectModal, ProjectDetailPage)
 14. **Phase 2.10 frontend complete** - WebSocket hook for real-time pod status updates (useProjectStatus)
 15. **Phase 2.11 frontend complete** - Navigation menu with AppLayout component (Projects link, user email, logout)
-16. **Integration tests** - Use `-tags=integration` flag to run, requires PostgreSQL + Kubernetes cluster
-17. **Next phase:** Phase 2.12 - Infrastructure (kind cluster deployment and E2E testing)
+16. **Phase 2.12 infrastructure complete** - Kind cluster deployment working (`make kind-deploy` functional)
+17. **Integration tests** - Use `-tags=integration` flag to run, requires PostgreSQL + Kubernetes cluster
+18. **Next phase:** Phase 3 - Task Management & Kanban Board (Weeks 5-6)

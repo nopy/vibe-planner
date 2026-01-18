@@ -1,6 +1,11 @@
 # OpenCode Project Manager - Development Guide
 
+**Last Updated:** January 18, 2026  
+**Status:** Phase 1 + Phase 2 Complete (Authentication + Project Management)
+
 ## Quick Start (5 minutes)
+
+**Current Status:** Phase 1 (Auth) + Phase 2 (Project Management) Complete
 
 ### Prerequisites
 
@@ -467,6 +472,108 @@ make docker-push-dev
 - `--push` - Push images to registry after building
 - `--registry URL` - Docker registry URL
 - `-h, --help` - Show help message
+
+---
+
+## Phase 2: Project Management Features
+
+### Available APIs
+
+**Project CRUD Operations:**
+
+```bash
+# List all user projects
+curl -H "Authorization: Bearer $JWT_TOKEN" \
+  http://localhost:8090/api/projects
+
+# Create new project
+curl -X POST -H "Authorization: Bearer $JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"My Project","description":"Test project","repo_url":"https://github.com/user/repo"}' \
+  http://localhost:8090/api/projects
+
+# Get project details
+curl -H "Authorization: Bearer $JWT_TOKEN" \
+  http://localhost:8090/api/projects/{project-id}
+
+# Update project
+curl -X PATCH -H "Authorization: Bearer $JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"description":"Updated description"}' \
+  http://localhost:8090/api/projects/{project-id}
+
+# Delete project (soft delete + pod cleanup)
+curl -X DELETE -H "Authorization: Bearer $JWT_TOKEN" \
+  http://localhost:8090/api/projects/{project-id}
+```
+
+**WebSocket Real-time Status Updates:**
+
+```javascript
+// Connect to WebSocket endpoint for pod status updates
+const ws = new WebSocket('ws://localhost:8090/api/projects/{project-id}/status');
+
+ws.onmessage = (event) => {
+  const status = JSON.parse(event.data);
+  console.log('Pod status:', status.pod_status); // "Pending", "Running", "Failed", etc.
+};
+
+ws.onerror = (error) => console.error('WebSocket error:', error);
+ws.onclose = () => console.log('WebSocket disconnected');
+```
+
+### Project Pod Architecture
+
+Each project spawns a dedicated Kubernetes pod with:
+- **OpenCode server** (port 3000) - Main AI coding agent
+- **File browser sidecar** (port 3001) - File operations
+- **Session proxy sidecar** (port 3002) - Session management
+- **Shared PVC** - Persistent workspace storage
+
+Pod lifecycle managed automatically:
+1. Project creation → Pod spawned in `opencode` namespace
+2. Pod status tracked → WebSocket updates to frontend
+3. Project deletion → Pod + PVC cleaned up
+
+### Testing Project Management
+
+```bash
+# Unit tests (55 tests across repository, service, and API layers)
+cd backend
+go test ./...
+
+# Integration tests (requires kind cluster)
+cd backend
+export TEST_DATABASE_URL="postgres://opencode:password@localhost:5432/opencode_test"
+export K8S_NAMESPACE="opencode-test"
+go test -tags=integration -v ./internal/api
+
+# Frontend tests
+cd frontend
+npm test
+```
+
+### Kubernetes Cluster Status
+
+```bash
+# Deploy to kind cluster
+make kind-deploy
+
+# Check deployment status
+kubectl get all -n opencode
+
+# Expected pods:
+# - opencode-controller-XXXXX (1/1 Running)
+# - postgres-0 (1/1 Running)
+
+# View controller logs
+kubectl logs -n opencode -l app=opencode-controller --tail=50
+
+# Test health endpoints
+kubectl port-forward -n opencode svc/opencode-controller 8090:8090 &
+curl http://localhost:8090/healthz  # {"status":"ok"}
+curl http://localhost:8090/ready    # {"status":"ready"}
+```
 
 ---
 

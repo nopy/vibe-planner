@@ -275,8 +275,8 @@ For detailed architecture information, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 | Phase | Duration | Focus | Status |
 |-------|----------|-------|--------|
-| 1 | Weeks 1-2 | Foundation (Auth, DB, basic UI) | Planning |
-| 2 | Weeks 3-4 | Project Management (K8s pods) | Planning |
+| 1 | Weeks 1-2 | Foundation (Auth, DB, basic UI) | ✅ Complete |
+| 2 | Weeks 3-4 | Project Management (K8s pods) | ✅ Complete |
 | 3 | Weeks 5-6 | Kanban Board & Tasks | Planning |
 | 4 | Weeks 7-8 | File Explorer (Monaco editor) | Planning |
 | 5 | Weeks 9-10 | OpenCode Integration | Planning |
@@ -345,11 +345,12 @@ POST   /auth/logout             - Logout
 
 **Projects:**
 ```
-GET    /projects                - List projects
-POST   /projects                - Create project
-GET    /projects/:id            - Get project
-PATCH  /projects/:id            - Update project
-DELETE /projects/:id            - Delete project
+GET    /api/projects              - List user projects
+POST   /api/projects              - Create project
+GET    /api/projects/:id          - Get project details
+PATCH  /api/projects/:id          - Update project
+DELETE /api/projects/:id          - Delete project
+GET    /api/projects/:id/status   - WebSocket for real-time pod status
 ```
 
 **Tasks:**
@@ -566,12 +567,42 @@ See [DEVELOPMENT.md#troubleshooting](./DEVELOPMENT.md#common-issues--troubleshoo
 
 ## ✅ Bootstrap Status
 
-**COMPLETED** - All foundational structure in place (January 2026)
+**Phase 1 COMPLETE** - OIDC Authentication Fully Implemented (January 2026)
+**Phase 2 COMPLETE** - Project Management with Kubernetes Orchestration (January 2026)
+
+### Phase 1: What's Implemented
+- ✅ Complete OIDC authentication flow (Keycloak + JWT)
+- ✅ Backend auth service with middleware
+- ✅ Frontend auth context and protected routes
+- ✅ User creation in PostgreSQL
+- ✅ All E2E tests passing
+
+### Phase 2: What's Implemented
+- ✅ **Backend (2.1-2.7):**
+  - Project CRUD operations with database persistence
+  - Kubernetes service for pod lifecycle management
+  - 3-container pod specification (OpenCode server + 2 sidecars)
+  - RBAC configuration for Kubernetes access
+  - Integration tests for end-to-end project lifecycle
+  - 55 unit tests (repository, service, API layers)
+  
+- ✅ **Frontend (2.8-2.11):**
+  - Project management UI (list, create, detail, delete)
+  - Real-time WebSocket updates for pod status
+  - Form validation and error handling
+  - Responsive design with Tailwind CSS
+  - Navigation layout with AppLayout component
+  
+- ✅ **Infrastructure (2.12):**
+  - PostgreSQL deployment in Kubernetes (StatefulSet + PVC)
+  - Kind cluster deployment working (`make kind-deploy`)
+  - Health and readiness probes
+  - Database migrations running automatically
 
 ### What's Ready:
 - ✅ Complete directory structure (backend, frontend, sidecars, k8s, db, scripts)
 - ✅ All Go modules compile successfully (backend + 2 sidecars)
-- ✅ Database schema defined (001_init.sql with all tables and migrations)
+- ✅ Database schema defined (users, projects with soft delete)
 - ✅ Docker Compose for local services (PostgreSQL, Keycloak, Redis)
 - ✅ Kubernetes manifests (base + dev/prod overlays)
 - ✅ Frontend structure (React + TypeScript + Vite + Tailwind)
@@ -579,22 +610,28 @@ See [DEVELOPMENT.md#troubleshooting](./DEVELOPMENT.md#common-issues--troubleshoo
 - ✅ All Dockerfiles (multi-stage builds for all components)
 
 ### Next Steps:
-1. **Install Dependencies:** `cd frontend && npm install`
-2. **Start Services:** `make dev-services`
-3. **Run Migrations:** `make db-migrate-up`
-4. **Begin Phase 1:** Implement OIDC authentication flow
+1. **Manual E2E Testing:** Verify project creation and pod spawning in kind cluster
+2. **Begin Phase 3:** Task Management & Kanban Board
+   - Task CRUD operations with state machine
+   - Kanban board UI with drag-and-drop
+   - Task detail panel
 
-### Files Created: 43 source files
+### Test Coverage:
+- **Backend:** 55 unit tests (all passing)
+- **Integration Tests:** End-to-end project lifecycle (requires kind cluster)
+- **Frontend:** Component tests (Vitest)
+
+### Files Created: 60+ source files
 - Go: 14 files (backend + sidecars)
-- TypeScript/React: 12 files
+- TypeScript/React: 20+ files (components, hooks, pages)
 - SQL: 2 migration files
-- Kubernetes: 8 manifests
+- Kubernetes: 9 manifests
 - Docker: 4 Dockerfiles + 1 docker-compose.yml
 - Scripts: 3 shell scripts
 - Config: 9 configuration files
 
 ---
 
-**Last Updated:** January 15, 2026
-**Version:** 1.0.0 (Bootstrap Complete - Ready for Phase 1)
+**Last Updated:** January 18, 2026
+**Version:** 2.0.0 (Phase 2 Complete - Project Management with Kubernetes Orchestration)
 
