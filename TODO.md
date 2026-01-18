@@ -1,7 +1,7 @@
 # OpenCode Project Manager - TODO List
 
-**Last Updated:** 2026-01-18 21:42 CET  
-**Current Phase:** Phase 3 - Task Management & Kanban Board (Planning)  
+**Last Updated:** 2026-01-18 22:01 CET  
+**Current Phase:** Phase 3 - Task Management & Kanban Board (In Progress - 3.1 Complete)  
 **Branch:** main
 
 ---
@@ -41,7 +41,7 @@ See [PHASE2.md](./PHASE2.md) for complete archive of Phase 2 tasks and implement
 
 **Objective:** Implement task CRUD operations with state machine and drag-and-drop Kanban board UI.
 
-**Status:** 📋 PLANNING
+**Status:** 🔄 IN PROGRESS (3.1 Complete - Database & Models)
 
 ### Overview
 
@@ -75,24 +75,31 @@ Phase 3 introduces task management functionality:
 
 ### Backend Tasks (7 tasks)
 
-#### 3.1 Database & Models
-- [ ] **DB Migration**: Create `003_tasks.sql` migration
-  - Add tasks table with all required fields
-  - Foreign key to projects table (project_id)
-  - State field with enum constraint
-  - Index on (project_id, state) for filtering
-  - Index on (project_id, position) for ordering
-  - **Location:** `db/migrations/003_tasks.up.sql` + `003_tasks.down.sql`
+#### 3.1 Database & Models ✅ **COMPLETE** (2026-01-18 22:01 CET)
+- [x] **DB Migration**: Create `003_add_task_kanban_fields.sql` migration
+  - ✅ Added `position INTEGER NOT NULL DEFAULT 0` for Kanban ordering
+  - ✅ Added `priority VARCHAR(20) DEFAULT 'medium'` for task prioritization
+  - ✅ Added `assigned_to UUID REFERENCES users(id)` for future assignment (Phase 7)
+  - ✅ Added `deleted_at TIMESTAMP` for soft deletes
+  - ✅ Index on (project_id, position) for efficient ordering
+  - ✅ Index on deleted_at for soft delete queries
+  - ✅ Column comment documenting position field
+  - **Location:** `db/migrations/003_add_task_kanban_fields.up.sql` + `003_add_task_kanban_fields.down.sql`
   
-- [ ] **Task Model**: Implement GORM model
-  - UUID primary key
-  - Belongs to Project (foreign key)
-  - State field (TODO, IN_PROGRESS, AI_REVIEW, HUMAN_REVIEW, DONE)
-  - Position field (integer, for ordering within columns)
-  - Title, description, priority
-  - Timestamps (created_at, updated_at)
-  - Soft delete support (deleted_at)
+- [x] **Task Model**: Updated GORM model
+  - ✅ UUID primary key (existing, fixed `primaryKey` tag)
+  - ✅ Belongs to Project (foreign key, existing)
+  - ✅ Status field (existing: todo, in_progress, ai_review, human_review, done)
+  - ✅ Position field (NEW: integer, for ordering within columns)
+  - ✅ Priority field (NEW: TaskPriority enum - low/medium/high)
+  - ✅ AssignedTo field (NEW: optional UUID pointer)
+  - ✅ DeletedAt field (NEW: gorm.DeletedAt for soft deletes)
+  - ✅ Assignee relationship pointer (NEW: *User)
+  - ✅ Explicit column names in all GORM tags (consistency with Project model)
+  - ✅ Timestamps (created_at, updated_at - existing)
   - **Location:** `backend/internal/model/task.go`
+
+**Note:** Tasks table already existed from 001_init.sql. Migration 003 adds missing Kanban-specific fields (position, priority, assigned_to, deleted_at) to support Phase 3 requirements.
 
 **Schema:**
 ```sql
@@ -311,10 +318,13 @@ func isValidTransition(currentState, newState string) bool {
 
 ## Success Criteria (Phase 3 Complete When...)
 
-- [ ] **3.1 Database & Models Complete**
-  - [ ] Migration `003_tasks.sql` created and applied
-  - [ ] Task GORM model with state machine validation
-  - [ ] Indexes on project_id, state, position, deleted_at
+- [x] **3.1 Database & Models Complete** ✅ **(2026-01-18 22:01 CET)**
+  - [x] Migration `003_add_task_kanban_fields.sql` created and ready to apply
+  - [x] Task GORM model updated with Kanban fields (position, priority, assigned_to, deleted_at)
+  - [x] TaskPriority enum added (low/medium/high)
+  - [x] Indexes on (project_id, position) and deleted_at
+  - [x] Soft delete support via gorm.DeletedAt
+  - [x] Model compiles successfully (`go build ./internal/model/...`)
 
 - [ ] **3.2 Repository Layer Complete**
   - [ ] TaskRepository interface with 7 methods
@@ -448,4 +458,4 @@ func isValidTransition(currentState, newState string) bool {
 
 ---
 
-**Last Updated:** 2026-01-18 21:42 CET
+**Last Updated:** 2026-01-18 22:01 CET

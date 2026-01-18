@@ -1,15 +1,15 @@
 # OPENCODE PROJECT MANAGER - AGENT KNOWLEDGE BASE
 
-**Generated:** 2026-01-18 21:42:00  
+**Generated:** 2026-01-18 22:01:00  
 **Branch:** main  
 **Project:** Go backend + React frontend + K8s orchestration
-**Status:** ✅ Phase 1 Complete + ✅ Phase 2 Complete → Phase 3 Planning
+**Status:** ✅ Phase 1 Complete + ✅ Phase 2 Complete → ✅ Phase 3.1 Complete (Database & Models)
 
 ---
 
 ## OVERVIEW
 
-Multi-module monorepo: Go API server, React SPA, 2 Go sidecars (file-browser, session-proxy), K8s manifests. Project management system with AI-powered coding via OpenCode agents. All critical issues resolved. **Phase 1 + Phase 2 COMPLETE** - Full project management with Kubernetes pod lifecycle, real-time WebSocket updates, and deployed to kind cluster. **Phase 3 PLANNING** - Task Management & Kanban Board.
+Multi-module monorepo: Go API server, React SPA, 2 Go sidecars (file-browser, session-proxy), K8s manifests. Project management system with AI-powered coding via OpenCode agents. All critical issues resolved. **Phase 1 + Phase 2 COMPLETE** - Full project management with Kubernetes pod lifecycle, real-time WebSocket updates, and deployed to kind cluster. **Phase 3 IN PROGRESS** - Task Management & Kanban Board (3.1 Database & Models complete).
 
 ---
 
@@ -45,9 +45,11 @@ Multi-module monorepo: Go API server, React SPA, 2 Go sidecars (file-browser, se
 | K8s service | `backend/internal/service/kubernetes_service.go` | ✅ Pod lifecycle |
 | Integration tests | `backend/internal/api/projects_integration_test.go` | ✅ E2E project lifecycle |
 | Integration docs | `backend/INTEGRATION_TESTING.md` | ✅ Test setup guide |
-| Models | `backend/internal/model/` | GORM structs (User, Project) |
+| Models | `backend/internal/model/` | GORM structs (User, Project, Task) |
+| Task model | `backend/internal/model/task.go` | ✅ Updated with Kanban fields (Phase 3.1) |
 | DB schema | `db/migrations/001_init.up.sql` | All tables defined |
 | DB migrations | `db/migrations/002_add_project_fields.up.sql` | Project fields |
+| Task migration | `db/migrations/003_add_task_kanban_fields.up.sql` | ✅ Kanban fields (Phase 3.1) |
 | React auth | `frontend/src/contexts/AuthContext.tsx` | ✅ Global auth state |
 | React routes | `frontend/src/App.tsx` | ✅ Protected routes + Project pages |
 | Login page | `frontend/src/pages/LoginPage.tsx` | ✅ OIDC flow |
@@ -346,5 +348,6 @@ make docker-push-dev        # Build and push development
 16. **Phase 2.12 infrastructure complete** - Kind cluster deployment working (`make kind-deploy` functional)
 17. **Integration tests** - Use `-tags=integration` flag to run, requires PostgreSQL + Kubernetes cluster
 18. **Phase 2 archived** - Complete implementation summary in PHASE2.md (2026-01-18)
-19. **Current phase:** Phase 3 - Task Management & Kanban Board (Planning)
+19. **Current phase:** Phase 3 - Task Management & Kanban Board (3.1 Complete)
 20. **Test coverage (Phase 2):** 55 backend unit tests + integration tests (all passing)
+21. **Phase 3.1 complete (2026-01-18 22:01)** - Task model updated with Kanban fields (position, priority, assigned_to, deleted_at), migration 003 created

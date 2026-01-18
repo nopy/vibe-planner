@@ -3,23 +3,88 @@
 ## OVERVIEW
 Go 1.24 API server using Gin (HTTP), GORM (PostgreSQL), and Keycloak (OIDC).
 
-**Phase 1 Status**: ✅ OIDC Authentication Complete
+**Phase 1 Status**: ✅ OIDC Authentication Complete  
+**Phase 2 Status**: ✅ Project Management Complete  
+**Phase 3 Status**: 🔄 In Progress (3.1 Database & Models Complete)
 
 ## STRUCTURE
 ```
 .
-├── cmd/api/           # Entry point (main.go) - wired with auth dependencies + static serving
+├── cmd/api/           # Entry point (main.go) - wired with auth + projects + static serving
 ├── internal/
-│   ├── api/           # HTTP Handlers - auth.go fully implemented
-│   ├── model/         # GORM structs (User model with OIDC fields)
-│   ├── service/       # ✅ auth_service.go - OIDC provider, token exchange, JWT
-│   ├── repository/    # ✅ user_repository.go - User CRUD with OIDC upsert
+│   ├── api/           # HTTP Handlers - auth.go, projects.go fully implemented
+│   ├── model/         # GORM structs (User, Project ✅ Phase 2, Task ✅ Phase 3.1)
+│   ├── service/       # ✅ auth_service.go, project_service.go, kubernetes_service.go
+│   ├── repository/    # ✅ user_repository.go, project_repository.go
 │   ├── middleware/    # ✅ auth.go - JWT validation, security.go - Security headers
 │   ├── static/        # ✅ embed.go - Embedded frontend serving (production only)
 │   ├── config/        # Environment & App configuration
-│   └── db/            # Connection & Migration logic (User auto-migrate added)
+│   └── db/            # Connection & Migration logic
 └── go.mod             # Module path: github.com/npinot/vibe/backend
 ```
+
+## PHASE 2 IMPLEMENTATION (COMPLETE)
+
+### Project Management Stack
+- **Project CRUD**: Full lifecycle management with K8s pod orchestration
+- **Kubernetes Integration**: Pod creation, monitoring, lifecycle management
+- **Real-time Updates**: WebSocket for pod status changes
+- **Database**: PostgreSQL with soft deletes (DeletedAt)
+
+### Implemented Endpoints
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/healthz` | GET | None | Health check |
+| `/ready` | GET | None | Readiness check |
+| `/api/auth/oidc/login` | GET | None | Get Keycloak authorization URL |
+| `/api/auth/oidc/callback` | GET | None | Exchange code for JWT |
+| `/api/auth/me` | GET | JWT | Get current authenticated user |
+| `/api/auth/logout` | POST | None | Client-side logout helper |
+| `/api/projects` | GET | JWT | List user's projects |
+| `/api/projects` | POST | JWT | Create new project |
+| `/api/projects/:id` | GET | JWT | Get project details |
+| `/api/projects/:id` | PATCH | JWT | Update project |
+| `/api/projects/:id` | DELETE | JWT | Soft delete project |
+| `/api/projects/:id/status` | GET (WS) | JWT | WebSocket for real-time pod status |
+
+### Key Components (Phase 2)
+
+**ProjectService** (`internal/service/project_service.go`):
+- CRUD operations with authorization checks
+- Kubernetes pod lifecycle integration
+- Slug generation and uniqueness validation
+
+**ProjectRepository** (`internal/repository/project_repository.go`):
+- Database CRUD operations
+- Soft delete support
+- Query methods with user filtering
+
+**KubernetesService** (`internal/service/kubernetes_service.go`):
+- Pod creation with 3-container spec (OpenCode + 2 sidecars)
+- PVC creation for workspace persistence
+- Pod status monitoring
+- Cleanup on project deletion
+
+## PHASE 3.1 IMPLEMENTATION (COMPLETE - 2026-01-18 22:01)
+
+### Task Model Updates
+- **Added Fields:**
+  - `Position int` - Kanban column ordering (0-indexed)
+  - `Priority TaskPriority` - Enum: low/medium/high
+  - `AssignedTo *uuid.UUID` - Optional user assignment (Phase 7)
+  - `DeletedAt gorm.DeletedAt` - Soft delete support
+  - `Assignee *User` - Relationship pointer
+
+- **Migration:** `003_add_task_kanban_fields.up.sql`
+  - Adds 4 new columns to existing tasks table
+  - Creates indexes on (project_id, position) and deleted_at
+  - Includes column comment for position field
+
+- **Model Location:** `backend/internal/model/task.go`
+  - TaskStatus enum: todo, in_progress, ai_review, human_review, done
+  - TaskPriority enum: low, medium, high
+  - Full GORM tags with explicit column names
+  - Soft delete via gorm.DeletedAt
 
 ## PHASE 1 IMPLEMENTATION (COMPLETE)
 
