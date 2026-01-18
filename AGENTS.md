@@ -1,15 +1,15 @@
 # OPENCODE PROJECT MANAGER - AGENT KNOWLEDGE BASE
 
-**Generated:** 2026-01-18 22:01:00  
+**Generated:** 2026-01-18 23:10:00  
 **Branch:** main  
 **Project:** Go backend + React frontend + K8s orchestration
-**Status:** ✅ Phase 1 Complete + ✅ Phase 2 Complete → ✅ Phase 3.1 Complete (Database & Models)
+**Status:** ✅ Phase 1 Complete + ✅ Phase 2 Complete → ✅ Phase 3.1-3.8 Complete (Task Management Backend + Frontend Kanban UI)
 
 ---
 
 ## OVERVIEW
 
-Multi-module monorepo: Go API server, React SPA, 2 Go sidecars (file-browser, session-proxy), K8s manifests. Project management system with AI-powered coding via OpenCode agents. All critical issues resolved. **Phase 1 + Phase 2 COMPLETE** - Full project management with Kubernetes pod lifecycle, real-time WebSocket updates, and deployed to kind cluster. **Phase 3 IN PROGRESS** - Task Management & Kanban Board (3.1 Database & Models complete).
+Multi-module monorepo: Go API server, React SPA, 2 Go sidecars (file-browser, session-proxy), K8s manifests. Project management system with AI-powered coding via OpenCode agents. All critical issues resolved. **Phase 1 + Phase 2 COMPLETE** - Full project management with Kubernetes pod lifecycle, real-time WebSocket updates, and deployed to kind cluster. **Phase 3 IN PROGRESS** - Task Management & Kanban Board (3.1-3.8 Complete: Backend API + Frontend Kanban UI).
 
 ---
 
@@ -43,6 +43,9 @@ Multi-module monorepo: Go API server, React SPA, 2 Go sidecars (file-browser, se
 | Project service | `backend/internal/service/project_service.go` | ✅ Business logic |
 | Project repository | `backend/internal/repository/project_repository.go` | ✅ CRUD operations |
 | K8s service | `backend/internal/service/kubernetes_service.go` | ✅ Pod lifecycle |
+| Task handlers | `backend/internal/api/tasks.go` | ✅ CRUD + move (Phase 3.4) |
+| Task service | `backend/internal/service/task_service.go` | ✅ State machine + validation (Phase 3.3) |
+| Task repository | `backend/internal/repository/task_repository.go` | ✅ CRUD + position (Phase 3.2) |
 | Integration tests | `backend/internal/api/projects_integration_test.go` | ✅ E2E project lifecycle |
 | Integration docs | `backend/INTEGRATION_TESTING.md` | ✅ Test setup guide |
 | Models | `backend/internal/model/` | GORM structs (User, Project, Task) |
@@ -58,10 +61,13 @@ Multi-module monorepo: Go API server, React SPA, 2 Go sidecars (file-browser, se
 | Project list | `frontend/src/components/Projects/ProjectList.tsx` | ✅ Grid layout with CRUD |
 | Project card | `frontend/src/components/Projects/ProjectCard.tsx` | ✅ Status badges + delete |
 | Create modal | `frontend/src/components/Projects/CreateProjectModal.tsx` | ✅ Form validation |
+| Kanban board | `frontend/src/components/Kanban/KanbanBoard.tsx` | ✅ Drag-drop + optimistic updates (Phase 3.8) |
+| Kanban column | `frontend/src/components/Kanban/KanbanColumn.tsx` | ✅ Droppable zones (Phase 3.8) |
+| Task card | `frontend/src/components/Kanban/TaskCard.tsx` | ✅ Draggable with priority colors (Phase 3.8) |
 | WebSocket hook | `frontend/src/hooks/useProjectStatus.ts` | ✅ Real-time pod status updates |
 | App layout | `frontend/src/components/AppLayout.tsx` | ✅ Navigation header + menu |
 | Types | `frontend/src/types/index.ts` | ✅ TS interfaces (User, Project, Task, etc.) |
-| API client | `frontend/src/services/api.ts` | ✅ Axios client with JWT + Project APIs |
+| API client | `frontend/src/services/api.ts` | ✅ Axios client with JWT + Project & Task APIs |
 | File browser | `sidecars/file-browser/cmd/main.go` | Port 3001 (Phase 4) |
 | Session proxy | `sidecars/session-proxy/cmd/main.go` | Port 3002 (Phase 5) |
 | K8s base | `k8s/base/` | Namespace, ConfigMap, RBAC |
@@ -348,6 +354,10 @@ make docker-push-dev        # Build and push development
 16. **Phase 2.12 infrastructure complete** - Kind cluster deployment working (`make kind-deploy` functional)
 17. **Integration tests** - Use `-tags=integration` flag to run, requires PostgreSQL + Kubernetes cluster
 18. **Phase 2 archived** - Complete implementation summary in PHASE2.md (2026-01-18)
-19. **Current phase:** Phase 3 - Task Management & Kanban Board (3.1 Complete)
-20. **Test coverage (Phase 2):** 55 backend unit tests + integration tests (all passing)
-21. **Phase 3.1 complete (2026-01-18 22:01)** - Task model updated with Kanban fields (position, priority, assigned_to, deleted_at), migration 003 created
+19. **Current phase:** Phase 3 - Task Management & Kanban Board (3.1-3.8 Complete)
+20. **Test coverage (Phase 3):** 100 backend unit tests (repository: 30, service: 35, handlers: 35) - all passing
+21. **Phase 3.1-3.8 complete (2026-01-18 23:10)** - Full task management backend + Kanban UI:
+    - Backend: Task model, repository, service, API handlers (100 tests)
+    - Frontend: Task types, API client, Kanban board with drag-drop (@dnd-kit)
+    - Components: KanbanBoard (183 lines), KanbanColumn (59 lines), TaskCard (58 lines)
+    - Features: Optimistic updates, error rollback, priority colors, responsive layout

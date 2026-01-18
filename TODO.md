@@ -41,7 +41,7 @@ See [PHASE2.md](./PHASE2.md) for complete archive of Phase 2 tasks and implement
 
 **Objective:** Implement task CRUD operations with state machine and drag-and-drop Kanban board UI.
 
-**Status:** 🔄 IN PROGRESS (3.1-3.7 Complete - Backend API Layer + Frontend Types & API Client)
+**Status:** 🔄 IN PROGRESS (3.1-3.8 Complete - Backend + Frontend Types/API + Kanban UI Components)
 
 ### Overview
 
@@ -312,29 +312,48 @@ projects.POST("/:id/tasks/:taskId/execute", taskHandler.ExecuteTask)
   - ✅ Proper TypeScript typing matching backend API responses
   - ✅ **Location:** `frontend/src/services/api.ts` (lines 71-121)
 
-#### 3.8 Kanban Board Components
-- [ ] **KanbanBoard Component**: Main board container
-  - Fetch tasks on mount using `getTasks()` API
-  - Group tasks by state (5 columns: TODO, IN_PROGRESS, AI_REVIEW, HUMAN_REVIEW, DONE)
-  - Drag-and-drop context provider (`@dnd-kit/core`)
-  - Handle drag end → call `moveTask()` API
-  - Optimistic updates
-  - Loading and error states
-  - **Location:** `frontend/src/components/Kanban/KanbanBoard.tsx`
+#### 3.8 Kanban Board Components ✅ **COMPLETE** (2026-01-18 23:10 CET)
+- [x] **KanbanBoard Component**: Main board container
+  - ✅ Fetch tasks on mount using `listTasks()` API
+  - ✅ Group tasks by status (5 columns: TODO, IN_PROGRESS, AI_REVIEW, HUMAN_REVIEW, DONE)
+  - ✅ Drag-and-drop context provider (@dnd-kit/core with PointerSensor, TouchSensor, KeyboardSensor)
+  - ✅ Handle drag end → call `moveTask()` API with optimistic updates
+  - ✅ Rollback on API errors with error banner
+  - ✅ Loading spinner and error states (matches ProjectList pattern)
+  - ✅ Responsive grid layout (1/3/5 columns)
+  - ✅ DragOverlay for smooth drag visual
+  - ✅ **Location:** `frontend/src/components/Kanban/KanbanBoard.tsx` (183 lines)
 
-- [ ] **KanbanColumn Component**: Single column (e.g., "TODO")
-  - Display column title and task count
-  - Droppable zone for tasks
-  - Vertical scrolling for many tasks
-  - "Add Task" button (opens CreateTaskModal)
-  - **Location:** `frontend/src/components/Kanban/KanbanColumn.tsx`
+- [x] **KanbanColumn Component**: Single column (e.g., "TODO")
+  - ✅ Display column title with task count badge
+  - ✅ Droppable zone using `useDroppable` with visual feedback (blue tint when dragging over)
+  - ✅ Vertical scrolling for many tasks (min-height 500px, max-height calc(100vh-200px))
+  - ✅ "Add Task" button with + icon (opens CreateTaskModal - Phase 3.9)
+  - ✅ Empty state: "No tasks" with dashed border
+  - ✅ Sticky header
+  - ✅ **Location:** `frontend/src/components/Kanban/KanbanColumn.tsx` (59 lines)
 
-- [ ] **TaskCard Component**: Single task display
-  - Draggable card with task title
-  - Priority indicator (color-coded: high=red, medium=yellow, low=green)
-  - Click card → open TaskDetailPanel
-  - Compact design for board view
-  - **Location:** `frontend/src/components/Kanban/TaskCard.tsx`
+- [x] **TaskCard Component**: Single task display
+  - ✅ Draggable card with task title using `useDraggable`
+  - ✅ Priority indicator color-coded (high=red, medium=yellow, low=green)
+  - ✅ Click card → triggers `onClick` callback (opens TaskDetailPanel - Phase 3.9)
+  - ✅ Drag animations (rotate 2deg, opacity 50%, ring on drag)
+  - ✅ Keyboard accessible (Tab + Space/Enter)
+  - ✅ Position indicator (#position)
+  - ✅ Compact card design with hover shadow
+  - ✅ **Location:** `frontend/src/components/Kanban/TaskCard.tsx` (58 lines)
+
+**Implementation Summary:**
+- ✅ 3 production-ready components (300 total lines)
+- ✅ Full @dnd-kit integration with multi-sensor support
+- ✅ Optimistic UI updates with error rollback
+- ✅ Pattern compliance verified (CreateProjectModal, ProjectList, ProjectCard)
+- ✅ TypeScript strict mode (no `any`, all types explicit)
+- ✅ ESLint passes (--max-warnings 0 for Kanban components)
+- ✅ Prettier formatted
+- ✅ Build succeeds (`npm run build` passes)
+- ✅ Uses existing API client (listTasks, moveTask from api.ts)
+- ✅ Uses existing types (Task, TaskStatus, TaskPriority from types/index.ts)
 
 #### 3.9 Task Detail & Forms
 - [ ] **TaskDetailPanel Component**: Sliding panel for task details
@@ -409,27 +428,30 @@ projects.POST("/:id/tasks/:taskId/execute", taskHandler.ExecuteTask)
   - [x] Location: `backend/internal/service/task_service.go` (290 lines)
   - [x] Tests: `backend/internal/service/task_service_test.go` (683 lines)
 
-- [ ] **3.4 API Handlers Complete**
-  - [ ] 6 CRUD endpoints + WebSocket endpoint
-  - [ ] Request/Response DTOs with validation
-  - [ ] 15+ unit tests (all passing)
+- [x] **3.4 API Handlers Complete** ✅ **(2026-01-18 22:45 CET)**
+  - [x] 6 CRUD endpoints + WebSocket endpoint
+  - [x] Request/Response DTOs with validation
+  - [x] 35 unit tests (all passing) - **Exceeded target of 15+**
 
-- [ ] **3.5 Integration Complete**
-  - [ ] Routes wired up in main.go
-  - [ ] TaskService initialized with dependencies
+- [x] **3.5 Integration Complete** ✅ **(2026-01-18 22:45 CET)**
+  - [x] Routes wired up in main.go
+  - [x] TaskService initialized with dependencies
 
-- [ ] **3.6 Testing Complete**
-  - [x] 65 task-related unit tests (repository: 30, service: 35) - **Already exceeds target of 45+**
-  - [ ] Integration test for complete task lifecycle
+- [x] **3.6 Testing Complete** ✅ **(2026-01-18 22:45 CET)**
+  - [x] 100 task-related unit tests (repository: 30, service: 35, handlers: 35) - **Exceeded target of 45+ by 122%**
+  - [ ] Integration test for complete task lifecycle (deferred)
 
-- [ ] **3.7 Types & API Client Complete**
-  - [ ] TypeScript interfaces for tasks
-  - [ ] 6 API client methods implemented
+- [x] **3.7 Types & API Client Complete** ✅ **(2026-01-18 23:05 CET)**
+  - [x] TypeScript interfaces for tasks
+  - [x] 6 API client methods implemented
 
-- [ ] **3.8 Kanban Board Components Complete**
-  - [ ] KanbanBoard with drag-and-drop
-  - [ ] KanbanColumn component
-  - [ ] TaskCard component
+- [x] **3.8 Kanban Board Components Complete** ✅ **(2026-01-18 23:10 CET)**
+  - [x] KanbanBoard with drag-and-drop (183 lines)
+  - [x] KanbanColumn component (59 lines)
+  - [x] TaskCard component (58 lines)
+  - [x] Full @dnd-kit integration with optimistic updates
+  - [x] Pattern compliance verified (ESLint, Prettier, TypeScript strict mode)
+  - [x] Build succeeds (`npm run build` passes)
 
 - [ ] **3.9 Task Detail & Forms Complete**
   - [ ] TaskDetailPanel for viewing/editing
