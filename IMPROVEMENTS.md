@@ -1,9 +1,9 @@
 # Project Improvements & Future Enhancements
 
-**Last Updated**: 2026-01-16 23:45 CET  
+**Last Updated**: 2026-01-18 21:42 CET  
 **Project**: OpenCode Project Manager  
-**Current Phase**: Phase 2 (Project Management) - Starting  
-**Previous Phase**: Phase 1 (OIDC Authentication) - Complete ✅
+**Current Phase**: Phase 3 (Task Management & Kanban) - Planning  
+**Previous Phase**: Phase 2 (Project Management) - Complete ✅
 
 ---
 
@@ -14,7 +14,240 @@ This document tracks optional improvements and enhancements that could be implem
 **Sources:**
 - Original testing and infrastructure improvements
 - Phase 1 deferred improvements (from PHASE1.md)
+- Phase 2 deferred improvements (from PHASE2.md)
 - Ongoing quality enhancements
+
+---
+
+## 🚀 Phase 2 Deferred Improvements
+
+### P2.1 Full Kubernetes Watch Integration
+
+**Impact**: True real-time pod status updates without polling  
+**Effort**: Medium (4-6 hours)  
+**Priority**: Medium
+
+**Current Implementation**:
+- WebSocket endpoint sends current pod status on connect
+- No live updates when pod status changes in Kubernetes
+- Client must reconnect to get updated status
+
+**What to Implement**:
+```go
+// backend/internal/api/projects.go
+
+func (h *ProjectHandler) ProjectStatusWebSocket(c *gin.Context) {
+    // ... existing auth and upgrade code ...
+    
+    // Start Kubernetes watch
+    statusChan, err := h.projectService.WatchPodStatus(c.Request.Context(), projectID)
+    if err != nil {
+        ws.Close()
+        return
+    }
+    
+    // Stream updates to WebSocket
+    for {
+        select {
+        case status := <-statusChan:
+            if err := ws.WriteJSON(gin.H{"pod_status": status}); err != nil {
+                return
+            }
+        case <-c.Request.Context().Done():
+            return
+        }
+    }
+}
+```
+
+**Files to Modify**:
+- `backend/internal/api/projects.go` (enhance WebSocket handler)
+- `backend/internal/service/kubernetes_service.go` (already has WatchPodStatus, needs integration)
+
+**Referenced in**: PHASE2.md (Deferred Items - Medium Priority)
+
+---
+
+### P2.2 Pod Resource Limits Configuration UI
+
+**Impact**: Allow per-project resource customization  
+**Effort**: Low (2-3 hours)  
+**Priority**: Low
+
+**Current Implementation**:
+- Resource limits hardcoded in pod template (CPU: 1000m, Memory: 1Gi)
+- No way for users to customize per project
+
+**What to Implement**:
+```typescript
+// frontend/src/components/Projects/CreateProjectModal.tsx
+
+interface CreateProjectRequest {
+    name: string;
+    description?: string;
+    repo_url?: string;
+    resources?: {
+        cpu_limit?: string;    // e.g., "500m", "2"
+        memory_limit?: string; // e.g., "512Mi", "2Gi"
+        storage_size?: string; // e.g., "1Gi", "10Gi"
+    };
+}
+```
+
+```go
+// backend/internal/service/kubernetes_service.go
+
+type ResourceConfig struct {
+    CPULimit    string
+    MemoryLimit string
+    StorageSize string
+}
+
+func (s *KubernetesService) CreateProjectPod(ctx context.Context, project *model.Project, resources *ResourceConfig) error {
+    // Use custom resources if provided, otherwise use defaults
+    // ...
+}
+```
+
+**Files to Modify**:
+- `frontend/src/components/Projects/CreateProjectModal.tsx` (add resource fields)
+- `frontend/src/types/index.ts` (add ResourceConfig interface)
+- `backend/internal/service/kubernetes_service.go` (accept ResourceConfig parameter)
+- `backend/internal/service/pod_template.go` (use dynamic resources)
+- `backend/internal/model/project.go` (add resource fields)
+- `db/migrations/003_add_project_resources.sql` (new migration)
+
+**Referenced in**: PHASE2.md (Deferred Items - Low Priority)
+
+---
+
+### P2.3 Project Pagination
+
+**Impact**: Improve performance for users with many projects  
+**Effort**: Low (2-3 hours)  
+**Priority**: Medium
+
+**Current Implementation**:
+- `GET /api/projects` returns all projects for a user
+- No pagination support
+- Could be slow with 100+ projects
+
+**What to Implement**:
+```go
+// backend/internal/api/projects.go
+
+type ListProjectsQuery struct {
+    Page     int    `form:"page" binding:"min=1"`
+    PageSize int    `form:"page_size" binding:"min=1,max=100"`
+    SortBy   string `form:"sort_by" binding:"omitempty,oneof=name created_at updated_at"`
+    Order    string `form:"order" binding:"omitempty,oneof=asc desc"`
+}
+
+type ListProjectsResponse struct {
+    Projects   []model.Project `json:"projects"`
+    TotalCount int             `json:"total_count"`
+    Page       int             `json:"page"`
+    PageSize   int             `json:"page_size"`
+}
+
+func (h *ProjectHandler) ListProjects(c *gin.Context) {
+    var query ListProjectsQuery
+    if err := c.ShouldBindQuery(&query); err != nil {
+        c.JSON(400, gin.H{"error": err.Error()})
+        return
+    }
+    
+    // Default values
+    if query.Page == 0 {
+        query.Page = 1
+    }
+    if query.PageSize == 0 {
+        query.PageSize = 20
+    }
+    
+    projects, totalCount, err := h.projectService.ListProjectsPaginated(
+        userID, query.Page, query.PageSize, query.SortBy, query.Order,
+    )
+    // ...
+}
+```
+
+**Files to Modify**:
+- `backend/internal/repository/project_repository.go` (add FindByUserIDPaginated)
+- `backend/internal/service/project_service.go` (add ListProjectsPaginated)
+- `backend/internal/api/projects.go` (update ListProjects handler)
+- `frontend/src/services/api.ts` (accept pagination params)
+- `frontend/src/components/Projects/ProjectList.tsx` (add pagination UI)
+
+**Referenced in**: PHASE2.md (Deferred Items - Medium Priority)
+
+---
+
+### P2.4 Project Search and Filtering
+
+**Impact**: Easier project discovery for large project lists  
+**Effort**: Medium (3-4 hours)  
+**Priority**: Low
+
+**Current Implementation**:
+- No search or filter functionality
+- All projects displayed in grid (sorted by created_at DESC)
+
+**What to Implement**:
+```typescript
+// frontend/src/components/Projects/ProjectList.tsx
+
+const [searchTerm, setSearchTerm] = useState('');
+const [statusFilter, setStatusFilter] = useState<string | null>(null);
+
+// Search input
+<input
+  type="text"
+  placeholder="Search projects..."
+  value={searchTerm}
+  onChange={(e) => setSearchTerm(e.target.value)}
+/>
+
+// Status filter dropdown
+<select onChange={(e) => setStatusFilter(e.target.value || null)}>
+  <option value="">All Statuses</option>
+  <option value="ready">Ready</option>
+  <option value="initializing">Initializing</option>
+  <option value="error">Error</option>
+  <option value="archived">Archived</option>
+</select>
+```
+
+```go
+// backend/internal/repository/project_repository.go
+
+type ProjectFilter struct {
+    SearchTerm string
+    Status     string
+}
+
+func (r *ProjectRepository) FindByUserIDWithFilter(ctx context.Context, userID uuid.UUID, filter ProjectFilter) ([]model.Project, error) {
+    query := r.db.Where("user_id = ?", userID)
+    
+    if filter.SearchTerm != "" {
+        query = query.Where("name ILIKE ? OR description ILIKE ?", "%"+filter.SearchTerm+"%", "%"+filter.SearchTerm+"%")
+    }
+    
+    if filter.Status != "" {
+        query = query.Where("pod_status = ?", filter.Status)
+    }
+    
+    // ...
+}
+```
+
+**Files to Modify**:
+- `backend/internal/repository/project_repository.go` (add filtering logic)
+- `backend/internal/service/project_service.go` (accept filter params)
+- `backend/internal/api/projects.go` (parse filter query params)
+- `frontend/src/components/Projects/ProjectList.tsx` (add search/filter UI)
+
+**Referenced in**: PHASE2.md (Deferred Items - Low Priority)
 
 ---
 
@@ -1503,42 +1736,50 @@ The following sections preserve the original improvement tracking from before Ph
 
 ### 🟡 Medium Priority (Improve Quality)
 
+**Phase 2 Deferred**:
+1. **P2.1** - Full Kubernetes Watch Integration (real-time updates)
+2. **P2.3** - Project Pagination (performance)
+
 **Phase 1 Deferred**:
-1. **A3** - Enhanced Error Handling (UX)
-2. **A5** - Keycloak User Management (setup automation)
-3. **T2** - User Repository Tests (coverage)
-4. **T3** - Auth Middleware Tests (coverage)
-5. **T4** - Frontend Component Tests (coverage)
-6. **T5** - Integration Tests (e2e confidence)
-7. **M1** - Structured Logging (debugging)
-8. **D1** - API Documentation (developer experience)
-9. **D3** - Keycloak Deployment Guide (production setup)
+3. **A3** - Enhanced Error Handling (UX)
+4. **A5** - Keycloak User Management (setup automation)
+5. **T2** - User Repository Tests (coverage)
+6. **T3** - Auth Middleware Tests (coverage)
+7. **T4** - Frontend Component Tests (coverage)
+8. **T5** - Integration Tests (e2e confidence)
+9. **M1** - Structured Logging (debugging)
+10. **D1** - API Documentation (developer experience)
+11. **D3** - Keycloak Deployment Guide (production setup)
 
 **Original Medium Priority**:
-10. **Security Headers Middleware** (#15)
-11. **E2E Testing Setup** (#8 - deferred to Phase 9)
+12. **Security Headers Middleware** (#15)
+13. **E2E Testing Setup** (#8 - deferred to Phase 9)
 
 ### 🟢 Low Priority (Nice to Have)
 
+**Phase 2 Deferred**:
+1. **P2.2** - Pod Resource Limits Configuration UI (flexibility)
+2. **P2.4** - Project Search and Filtering (UX)
+
 **Phase 1 Deferred**:
-1. **M2** - Auth Metrics (monitoring)
-2. **D2** - Auth Flow Diagram (visual docs)
-3. **UI1** - Loading States (UX polish)
-4. **UI2** - Toast Notifications (UX polish)
-5. **UI3** - Remember Me (convenience)
-6. **DX1** - Docker Compose Profiles (flexibility)
-7. **DX2** - Hot Reload for Backend (dev speed)
-8. **DX3** - VS Code Debug Configs (debugging)
-9. **ALT1** - Social Login (alternative auth)
-10. **ALT2** - API Key Auth (CLI tools)
+3. **M2** - Auth Metrics (monitoring)
+4. **D2** - Auth Flow Diagram (visual docs)
+5. **UI1** - Loading States (UX polish)
+6. **UI2** - Toast Notifications (UX polish)
+7. **UI3** - Remember Me (convenience)
+8. **DX1** - Docker Compose Profiles (flexibility)
+9. **DX2** - Hot Reload for Backend (dev speed)
+10. **DX3** - VS Code Debug Configs (debugging)
+11. **ALT1** - Social Login (alternative auth)
+12. **ALT2** - API Key Auth (CLI tools)
 
 **Original Low Priority**:
-11. App.tsx Route Tests (#3)
-12. TypeScript Strict Mode Fixes (#9)
-13. Linter Configuration Enhancements (#10)
-14. Frontend Bundle Optimization (#11)
-15. Docker Image Optimization (#12)
-16. Architecture Decision Records (#14)
+13. App.tsx Route Tests (#3)
+14. TypeScript Strict Mode Fixes (#9)
+15. Linter Configuration Enhancements (#10)
+16. Frontend Bundle Optimization (#11)
+17. Docker Image Optimization (#12)
+18. Architecture Decision Records (#14)
 
 ---
 
@@ -1546,6 +1787,10 @@ The following sections preserve the original improvement tracking from before Ph
 
 | Category | Item | Status | Completion Date | Priority | Notes |
 |----------|------|--------|----------------|----------|-------|
+| **Phase 2** | Full K8s Watch (P2.1) | 📋 Planned | - | Medium | Real-time updates |
+| **Phase 2** | Pod Resources UI (P2.2) | 📋 Planned | - | Low | Custom limits |
+| **Phase 2** | Project Pagination (P2.3) | 📋 Planned | - | Medium | Performance |
+| **Phase 2** | Search/Filter (P2.4) | 📋 Planned | - | Low | UX improvement |
 | **Auth** | Token Refresh Logic (A1) | 📋 Planned | - | High | Phase 1 deferred |
 | **Auth** | Environment Config (A2) | 📋 Planned | - | High | Phase 1 deferred |
 | **Auth** | Error Handling (A3) | 📋 Planned | - | Medium | Phase 1 deferred |
@@ -1553,11 +1798,12 @@ The following sections preserve the original improvement tracking from before Ph
 | **Auth** | Keycloak User Mgmt (A5) | 📋 Planned | - | Medium | Phase 1 deferred |
 | **Testing** | Frontend Infrastructure | ✅ Complete | 2026-01-16 | - | 83.51% coverage |
 | **Testing** | ProtectedRoute Tests | ✅ Complete | 2026-01-16 | - | All tests passing |
+| **Testing** | Backend Unit Tests | ✅ Complete | 2026-01-18 | - | 55 tests (Phase 2) |
+| **Testing** | Integration Tests | ✅ Complete | 2026-01-18 | - | E2E lifecycle (Phase 2) |
 | **Testing** | Auth Service Tests (T1) | 📋 Planned | - | High | Phase 1 deferred |
 | **Testing** | User Repo Tests (T2) | 📋 Planned | - | Medium | Phase 1 deferred |
 | **Testing** | Auth Middleware (T3) | 📋 Planned | - | Medium | Phase 1 deferred |
 | **Testing** | Frontend Components (T4) | 📋 Planned | - | Medium | Phase 1 deferred |
-| **Testing** | Integration Tests (T5) | 📋 Planned | - | Medium | Phase 1 deferred |
 | **Infra** | CI/CD Pipeline (#7) | 📋 Planned | - | High | Deferred to Phase 9 |
 | **Infra** | E2E Testing (#8) | 📋 Planned | - | Medium | Deferred to Phase 9 |
 | **Logging** | Structured Logging (M1) | 📋 Planned | - | Medium | Phase 1 deferred |
@@ -1575,20 +1821,22 @@ The following sections preserve the original improvement tracking from before Ph
 
 ## 📝 Notes
 
-1. **Phase 1 Deferred Items**: All items marked as "Phase 1 deferred" were identified during Phase 1 implementation but deferred to maintain focus on core authentication functionality. These should be addressed before production deployment.
+1. **Phase 2 Deferred Items**: Items P2.1-P2.4 were identified during Phase 2 implementation but deferred to maintain focus on core functionality. Medium priority items (P2.1, P2.3) should be addressed before Phase 9.
 
-2. **Testing Strategy**: Focus on high-priority tests (T1, T2, T3) before Phase 2 begins to establish a solid testing baseline for new features.
+2. **Phase 1 Deferred Items**: All items marked as "Phase 1 deferred" were identified during Phase 1 implementation but deferred to maintain focus on core authentication functionality. These should be addressed before production deployment.
 
-3. **Security First**: Items A2, A4, and #16 should be addressed together as a security hardening sprint before production.
+3. **Testing Strategy**: Focus on high-priority tests (T1, T2, T3) before Phase 3 begins to establish a solid testing baseline for new features. Note: Phase 2 already has 55 backend unit tests and integration test suite.
 
-4. **Documentation**: Items D1, D2, D3 can be bundled together in a documentation sprint, likely during Phase 9 (Testing & Documentation).
+4. **Security First**: Items A2, A4, and #16 should be addressed together as a security hardening sprint before production.
 
-5. **UX Polish**: Items UI1, UI2, UI3 are low priority and can be addressed in Phase 10 (Polish & Optimization).
+5. **Documentation**: Items D1, D2, D3 can be bundled together in a documentation sprint, likely during Phase 9 (Testing & Documentation).
+
+6. **UX Polish**: Items UI1, UI2, UI3, P2.4 are low priority and can be addressed in Phase 10 (Polish & Optimization).
 
 ---
 
-**Last Updated**: 2026-01-16 23:45 CET  
-**Next Review**: Before Phase 2 kickoff  
-**Source Documents**: PHASE1.md (deferred improvements) + original IMPROVEMENTS.md
+**Last Updated**: 2026-01-18 21:42 CET  
+**Next Review**: Before Phase 3 kickoff  
+**Source Documents**: PHASE1.md + PHASE2.md (deferred improvements) + original IMPROVEMENTS.md
 
-**Note**: This document is a living guide. Prioritization should be revisited as project needs evolve. Items from Phase 1 are now centralized here to maintain a single source of truth for all improvements.
+**Note**: This document is a living guide. Prioritization should be revisited as project needs evolve. Items from Phase 1 and Phase 2 are now centralized here to maintain a single source of truth for all improvements.
