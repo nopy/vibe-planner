@@ -41,7 +41,7 @@ func NewAuthService(cfg *config.Config, userRepo repository.UserRepository) (Aut
 	oauth2Config := &oauth2.Config{
 		ClientID:     cfg.OIDCClientID,
 		ClientSecret: cfg.OIDCClientSecret,
-		RedirectURL:  "http://localhost:5173/auth/callback",
+		RedirectURL:  cfg.OIDCRedirectURI,
 		Endpoint:     provider.Endpoint(),
 		Scopes:       []string{oidc.ScopeOpenID, "profile", "email"},
 	}

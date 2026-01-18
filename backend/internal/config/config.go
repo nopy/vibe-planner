@@ -17,6 +17,7 @@ type Config struct {
 	OIDCIssuer       string
 	OIDCClientID     string
 	OIDCClientSecret string
+	OIDCRedirectURI  string
 
 	// JWT
 	JWTSecret string
@@ -39,6 +40,7 @@ func Load() *Config {
 		OIDCIssuer:          getEnv("OIDC_ISSUER", ""),
 		OIDCClientID:        getEnv("OIDC_CLIENT_ID", ""),
 		OIDCClientSecret:    getEnv("OIDC_CLIENT_SECRET", ""),
+		OIDCRedirectURI:     getEnv("OIDC_REDIRECT_URI", "http://localhost:5173/auth/callback"),
 		JWTSecret:           getEnv("JWT_SECRET", ""),
 		JWTExpiry:           3600,
 		Kubeconfig:          getEnv("KUBECONFIG", ""),
