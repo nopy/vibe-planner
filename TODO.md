@@ -583,11 +583,15 @@ interface EditorState {
   - [x] 80 total sidecar tests passing (10 new tests for Phase 4.4)
   - [x] Path validation comprehensive (absolute paths, traversal, sanitization)
 
-- [ ] **4.5 Dockerfile & Deployment**
-  - [x] Docker image builds successfully (20.8MB - acceptable vs <15MB target)
-  - [x] HEALTHCHECK implemented (30s interval, wget-based)
-  - [ ] Sidecar added to pod template (k8s/base/deployment.yaml)
-  - [ ] Deployed to kind cluster and accessible
+- [x] **4.5 Dockerfile & Deployment** ✅ **(2026-01-19 09:38 CET)**
+  - [x] Docker image builds successfully (21.1MB - acceptable vs <15MB target)
+  - [x] HEALTHCHECK implemented (30s interval, wget-based, verified in docker inspect)
+  - [x] Sidecar added to pod template with health probes (backend/internal/service/pod_template.go)
+  - [x] Resource limits configured (50Mi/100Mi memory, 50m/100m CPU requests/limits)
+  - [x] Liveness probe: HTTP GET /healthz:3001 (5s initial, 10s period)
+  - [x] Readiness probe: HTTP GET /healthz:3001 (3s initial, 5s period)
+  - [x] All backend tests passing (no regressions)
+  - [ ] Deployed to kind cluster and accessible (deferred to Phase 4.12 - E2E testing)
 
 - [x] **4.6 Testing** ✅ **(2026-01-19 08:50 CET)**
   - [x] 74+ unit tests passing (24 service file + 11 service watcher + 34 handler files + 5 handler watch)

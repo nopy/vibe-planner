@@ -103,7 +103,16 @@ func buildProjectPodSpec(podName, namespace, pvcName string, projectID uuid.UUID
 						},
 					},
 					VolumeMounts: []corev1.VolumeMount{volumeMount},
-					Resources:    resources,
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("50m"),
+							corev1.ResourceMemory: resource.MustParse("50Mi"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("100m"),
+							corev1.ResourceMemory: resource.MustParse("100Mi"),
+						},
+					},
 					Env: []corev1.EnvVar{
 						{
 							Name:  "WORKSPACE_DIR",
@@ -113,6 +122,30 @@ func buildProjectPodSpec(podName, namespace, pvcName string, projectID uuid.UUID
 							Name:  "PORT",
 							Value: "3001",
 						},
+					},
+					LivenessProbe: &corev1.Probe{
+						ProbeHandler: corev1.ProbeHandler{
+							HTTPGet: &corev1.HTTPGetAction{
+								Path: "/healthz",
+								Port: intstr.FromInt(3001),
+							},
+						},
+						InitialDelaySeconds: 5,
+						PeriodSeconds:       10,
+						TimeoutSeconds:      3,
+						FailureThreshold:    3,
+					},
+					ReadinessProbe: &corev1.Probe{
+						ProbeHandler: corev1.ProbeHandler{
+							HTTPGet: &corev1.HTTPGetAction{
+								Path: "/healthz",
+								Port: intstr.FromInt(3001),
+							},
+						},
+						InitialDelaySeconds: 3,
+						PeriodSeconds:       5,
+						TimeoutSeconds:      3,
+						FailureThreshold:    3,
 					},
 				},
 				// Container 3: Session Proxy Sidecar

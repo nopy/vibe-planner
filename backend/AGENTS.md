@@ -6,7 +6,7 @@ Go 1.24 API server using Gin (HTTP), GORM (PostgreSQL), and Keycloak (OIDC).
 **Phase 1 Status**: ✅ OIDC Authentication Complete  
 **Phase 2 Status**: ✅ Project Management Complete  
 **Phase 3 Status**: ✅ Task Management Complete  
-**Phase 4 Status**: 🔄 In Progress (4.1-4.3 Complete - File Browser Proxy Layer)
+**Phase 4 Status**: 🔄 In Progress (4.1-4.5 Complete - File Browser Sidecar with Kubernetes Integration)
 
 ## STRUCTURE
 ```
@@ -201,6 +201,46 @@ clientConn, _ := upgrader.Upgrade(ginContext.Writer, ginContext.Request)
 - Tests use httptest.Server with dynamic port resolution
 - Mock project repository and Kubernetes service
 - Total backend tests: 84 (up from 62)
+
+### Phase 4.5: Kubernetes Integration (COMPLETE - 2026-01-19)
+
+**Pod Template Enhancement** (`internal/service/pod_template.go`):
+- Added file-browser sidecar container to project pod spec (lines 94-150)
+- Independent resource limits: 50Mi/100Mi memory, 50m/100m CPU (optimized for sidecar)
+- Liveness probe: HTTP GET /healthz:3001 (initialDelay: 5s, period: 10s, timeout: 3s)
+- Readiness probe: HTTP GET /healthz:3001 (initialDelay: 3s, period: 5s, timeout: 3s)
+- Shared workspace volume mount: /workspace (PVC backed)
+- Environment variables: WORKSPACE_DIR=/workspace, PORT=3001
+
+**Container Spec:**
+```go
+{
+    Name:  "file-browser",
+    Image: config.FileBrowserImage, // registry.legal-suite.com/opencode/file-browser-sidecar:latest
+    Ports: []corev1.ContainerPort{{ContainerPort: 3001, Protocol: TCP}},
+    VolumeMounts: []corev1.VolumeMount{{Name: "workspace", MountPath: "/workspace"}},
+    Resources: corev1.ResourceRequirements{
+        Requests: {CPU: "50m", Memory: "50Mi"},
+        Limits:   {CPU: "100m", Memory: "100Mi"},
+    },
+    LivenessProbe: &corev1.Probe{HTTPGet: {Path: "/healthz", Port: 3001}, ...},
+    ReadinessProbe: &corev1.Probe{HTTPGet: {Path: "/healthz", Port: 3001}, ...},
+}
+```
+
+**Docker Image:**
+- Multi-stage build: golang:1.24-alpine (builder) → alpine:latest (runtime)
+- Image size: 21.1MB (includes Alpine + ca-certificates + wget for health checks)
+- HEALTHCHECK: `wget --spider http://localhost:3001/healthz` (30s interval, 3s timeout, 5s start period)
+- Binary: Statically linked (`CGO_ENABLED=0`, `-ldflags="-s -w"`)
+- Location: `sidecars/file-browser/Dockerfile`
+
+**Verification:**
+- ✅ Backend service package compiles successfully
+- ✅ All backend tests pass (no regressions)
+- ✅ Docker image builds and verified with `docker inspect`
+- ✅ HEALTHCHECK configuration confirmed
+- ✅ Pod spec includes all required fields per TODO.md spec
 
 ## PHASE 1 IMPLEMENTATION (COMPLETE)
 

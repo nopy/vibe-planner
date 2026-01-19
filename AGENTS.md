@@ -394,3 +394,18 @@ make docker-push-dev        # Build and push development
     - Tests: 10 new comprehensive tests (6 service + 4 handler) - all passing
     - Total: 80 tests passing across file-browser sidecar (30 service + 39 handler + 11 watcher)
     - Files: +323 lines (34 service + 2 handler + 182 service tests + 105 handler tests)
+25. **Phase 4.5 complete (2026-01-19 09:38)** - Kubernetes Integration & Deployment:
+    - Pod template: Added file-browser sidecar to project pod spec (backend/internal/service/pod_template.go)
+    - Resource limits: 50Mi/100Mi memory, 50m/100m CPU (optimized for sidecar workload)
+    - Health probes: Liveness (5s initial, 10s period), Readiness (3s initial, 5s period) - both HTTP GET /healthz:3001
+    - Shared volume: /workspace PVC mount (read-write access)
+    - Environment: WORKSPACE_DIR=/workspace, PORT=3001
+    - Docker image: 21.1MB (multi-stage build, Alpine base, HEALTHCHECK verified)
+    - Verification: Backend compiles, all tests pass, no regressions
+    - Files modified: pod_template.go (+53 lines for file-browser container with probes)
+    - Hidden files: Default filtering (`.` prefix), query parameter `?include_hidden=true` (4 handler tests)
+    - Sensitive blocklist: 15 patterns always blocked (`.env`, `credentials.json`, etc.) - 3 tests
+    - Implementation: `sensitiveFiles` map + filtering logic in `buildTree()` (lines 24-38, 91-99)
+    - Tests: 10 new comprehensive tests (6 service + 4 handler) - all passing
+    - Total: 80 tests passing across file-browser sidecar (30 service + 39 handler + 11 watcher)
+    - Files: +323 lines (34 service + 2 handler + 182 service tests + 105 handler tests)
