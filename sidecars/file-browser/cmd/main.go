@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/npinot/vibe/sidecars/file-browser/internal/handler"
+	"github.com/npinot/vibe/sidecars/file-browser/internal/service"
 )
 
 func main() {
@@ -45,6 +46,20 @@ func main() {
 
 	fileHandler := handler.NewFileHandler(workspaceDir)
 
+	// Initialize file watcher for real-time change notifications
+	fileWatcher, err := service.NewFileWatcher(workspaceDir)
+	if err != nil {
+		slog.Error("Failed to create file watcher", "error", err)
+		os.Exit(1)
+	}
+	if err := fileWatcher.Start(); err != nil {
+		slog.Error("Failed to start file watcher", "error", err)
+		os.Exit(1)
+	}
+	defer fileWatcher.Close()
+
+	watchHandler := handler.NewWatchHandler(fileWatcher)
+
 	router.GET("/healthz", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
@@ -70,6 +85,7 @@ func main() {
 		files.POST("/write", fileHandler.WriteFile)
 		files.DELETE("", fileHandler.DeleteFile)
 		files.POST("/mkdir", fileHandler.CreateDirectory)
+		files.GET("/watch", watchHandler.FileChangesStream)
 	}
 
 	srv := &http.Server{

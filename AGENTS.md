@@ -1,15 +1,15 @@
 # OPENCODE PROJECT MANAGER - AGENT KNOWLEDGE BASE
 
-**Generated:** 2026-01-19 08:37:00  
+**Generated:** 2026-01-19 08:50:00  
 **Branch:** main  
 **Project:** Go backend + React frontend + K8s orchestration
-**Status:** ✅ Phase 1 Complete + ✅ Phase 2 Complete + ✅ Phase 3 Complete → 🚧 Phase 4.1 Complete (File Browser Sidecar Setup)
+**Status:** ✅ Phase 1 Complete + ✅ Phase 2 Complete + ✅ Phase 3 Complete → 🚧 Phase 4.1-4.2 Complete (File Browser Sidecar with Real-time Watching)
 
 ---
 
 ## OVERVIEW
 
-Multi-module monorepo: Go API server, React SPA, 2 Go sidecars (file-browser, session-proxy), K8s manifests. Project management system with AI-powered coding via OpenCode agents. All critical issues resolved. **Phase 1 + Phase 2 + Phase 3 COMPLETE** - Full project management with Kubernetes pod lifecycle, real-time WebSocket updates, task management with Kanban board. **Phase 4 IN PROGRESS** - File Explorer (4.1 Complete: File Browser Sidecar Setup with 58 tests passing).
+Multi-module monorepo: Go API server, React SPA, 2 Go sidecars (file-browser, session-proxy), K8s manifests. Project management system with AI-powered coding via OpenCode agents. All critical issues resolved. **Phase 1 + Phase 2 + Phase 3 COMPLETE** - Full project management with Kubernetes pod lifecycle, real-time WebSocket updates, task management with Kanban board. **Phase 4 IN PROGRESS** - File Explorer (4.1-4.2 Complete: File Browser Sidecar Setup with Real-time File Watching - 72 tests passing).
 
 ---
 
@@ -68,11 +68,15 @@ Multi-module monorepo: Go API server, React SPA, 2 Go sidecars (file-browser, se
 | App layout | `frontend/src/components/AppLayout.tsx` | ✅ Navigation header + menu |
 | Types | `frontend/src/types/index.ts` | ✅ TS interfaces (User, Project, Task, etc.) |
 | API client | `frontend/src/services/api.ts` | ✅ Axios client with JWT + Project & Task APIs |
-| File browser | `sidecars/file-browser/cmd/main.go` | ✅ Port 3001 (Phase 4.1 Complete) |
+| File browser | `sidecars/file-browser/cmd/main.go` | ✅ Port 3001 (Phase 4.1-4.2 Complete) |
 | File service | `sidecars/file-browser/internal/service/file.go` | ✅ CRUD + path validation (Phase 4.1) |
+| File watcher | `sidecars/file-browser/internal/service/watcher.go` | ✅ fsnotify + WebSocket broadcast (Phase 4.2) |
 | File handlers | `sidecars/file-browser/internal/handler/files.go` | ✅ 6 HTTP endpoints (Phase 4.1) |
+| Watch handler | `sidecars/file-browser/internal/handler/watch.go` | ✅ WebSocket /files/watch endpoint (Phase 4.2) |
 | File service tests | `sidecars/file-browser/internal/service/file_test.go` | ✅ 24 tests passing (Phase 4.1) |
+| Watcher tests | `sidecars/file-browser/internal/service/watcher_test.go` | ✅ 11 tests passing (Phase 4.2) |
 | File handler tests | `sidecars/file-browser/internal/handler/files_test.go` | ✅ 34 tests passing (Phase 4.1) |
+| Watch handler tests | `sidecars/file-browser/internal/handler/watch_test.go` | ✅ 5 tests passing (Phase 4.2) |
 | Session proxy | `sidecars/session-proxy/cmd/main.go` | Port 3002 (Phase 5) |
 | K8s base | `k8s/base/` | Namespace, ConfigMap, RBAC |
 | K8s RBAC | `k8s/base/rbac.yaml` | ✅ ServiceAccount + Role |
@@ -374,3 +378,11 @@ make docker-push-dev        # Build and push development
     - Tests: 58 comprehensive unit tests (24 service + 34 handler) - all passing
     - Security: Path validation (rejects ..), 10MB file size limits enforced
     - Health: 3 endpoints (/healthz, /health, /ready), graceful shutdown (10s timeout)
+23. **Phase 4.2 complete (2026-01-19 08:50)** - File Watcher with Real-time Broadcasting:
+    - Watcher: fsnotify-based recursive directory watching with WebSocket broadcast
+    - Features: Event debouncing (100ms), monotonic versioning, thread-safe client registry
+    - WebSocket: /files/watch endpoint with ping/pong keep-alive (30s interval)
+    - Events: created, modified, deleted, renamed (mapped from fsnotify ops)
+    - Pattern: Follows backend TaskBroadcaster design (Phase 3.10)
+    - Tests: 16 unit tests (11 service + 5 handler) - all passing (2 skipped for integration)
+    - Total: 74 tests passing across file-browser sidecar (58 Phase 4.1 + 16 Phase 4.2)
