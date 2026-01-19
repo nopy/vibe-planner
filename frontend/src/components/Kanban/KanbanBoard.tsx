@@ -314,6 +314,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
         onTaskDeleted={handleTaskDeleted}
         onExecute={handleExecuteTask}
         isExecuting={selectedTaskId ? executionStates[selectedTaskId]?.isExecuting || false : false}
+        sessionId={selectedTaskId ? executionStates[selectedTaskId]?.sessionId || null : null}
       />
     </>
   )

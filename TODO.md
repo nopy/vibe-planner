@@ -390,6 +390,49 @@ Phase 5 integrates the OpenCode AI agent server into project pods for automated 
 ---
 
 #### 5.5 Real-time Output Streaming
+**Status:** ✅ COMPLETE (2026-01-19 14:07)
+
+**Implementation Summary:**
+- ✅ Created `useTaskExecution` hook for SSE connection
+- ✅ Created `ExecutionOutputPanel` component with terminal UI
+- ✅ Integrated into `TaskDetailPanel`
+- ✅ Auto-scroll behavior implemented
+- ✅ Event color coding (output=gray, error=red, status=blue, done=green)
+
+**Files Created:**
+- `frontend/src/hooks/useTaskExecution.ts` (144 lines)
+- `frontend/src/components/Kanban/ExecutionOutputPanel.tsx` (104 lines)
+
+**Files Modified:**
+- `frontend/src/components/Kanban/TaskDetailPanel.tsx` (added ExecutionOutputPanel integration)
+- `frontend/src/components/Kanban/KanbanBoard.tsx` (pass sessionId to TaskDetailPanel)
+
+**Features:**
+- SSE connection to `/api/projects/:id/tasks/:taskId/output?session_id=...`
+- EventSource API for real-time streaming
+- 4 event types: `output`, `error`, `status`, `done`
+- Auto-scroll to bottom on new output
+- Terminal-like UI with macOS-style window controls
+- Connection status indicator (LIVE badge when streaming)
+- Timestamps for each event
+- Color-coded output by event type
+- Auto-start when sessionId becomes available
+- Graceful cleanup on unmount
+
+**Success Criteria:**
+- [x] SSE connection established successfully ✅
+- [x] Output streams in real-time ✅
+- [x] Auto-scroll works smoothly ✅
+- [x] Connection cleanup on component unmount ✅
+- [x] Graceful error handling with retry ✅
+- [x] TypeScript compilation passes ✅
+- [x] ESLint passes with zero warnings ✅
+
+**Next Steps:** Phase 5.6 - Execution History
+
+---
+
+#### 5.6 Execution History
 **Status:** 📋 Planned
 
 **Objectives:**
@@ -461,6 +504,8 @@ Phase 5 integrates the OpenCode AI agent server into project pods for automated 
 - [ ] Session metadata displayed correctly
 - [ ] Can expand/collapse full logs
 - [ ] Sorted by most recent first
+
+**Note:** Terminal UI with dark theme already implemented in ExecutionOutputPanel (Phase 5.5)
 
 ---
 

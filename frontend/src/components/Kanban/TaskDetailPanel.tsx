@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 
+import { ExecutionOutputPanel } from '@/components/Kanban/ExecutionOutputPanel'
 import { getTask, updateTask, deleteTask } from '@/services/api'
 import type { Task, UpdateTaskRequest, TaskPriority } from '@/types'
 
@@ -12,6 +13,7 @@ interface TaskDetailPanelProps {
   onTaskDeleted: (taskId: string) => void
   onExecute?: (taskId: string) => void
   isExecuting?: boolean
+  sessionId?: string | null
 }
 
 export function TaskDetailPanel({
@@ -23,6 +25,7 @@ export function TaskDetailPanel({
   onTaskDeleted,
   onExecute,
   isExecuting = false,
+  sessionId = null,
 }: TaskDetailPanelProps) {
   const [task, setTask] = useState<Task | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -483,6 +486,15 @@ export function TaskDetailPanel({
                     </div>
                   </div>
                 </div>
+              )}
+
+              {taskId && (
+                <ExecutionOutputPanel
+                  projectId={projectId}
+                  taskId={taskId}
+                  sessionId={sessionId}
+                  isExecuting={isExecuting}
+                />
               )}
             </div>
           )}
