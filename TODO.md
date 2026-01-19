@@ -1162,13 +1162,115 @@ Phase 6 adds configuration management for customizing OpenCode agent behavior pe
 
 ---
 
-#### 6.7 ModelSelector Component
+#### 6.7 ModelSelector, ProviderConfig, ToolsManagement Components
 
-**Status:** 📋 Planned
+**Status:** ✅ Complete (2026-01-19)
 
-**Objective:** Dropdown component for selecting AI model provider and model name.
+**Objective:** Three UI components for configuring AI model, provider settings, and enabled tools.
 
-**Tasks:**
+**Implementation Summary:**
+
+All three components were implemented by the frontend-ui-ux-engineer agent as part of Phase 6.6. They are production-ready and fully integrated with ConfigPanel.
+
+**1. ModelSelector Component** (`frontend/src/components/Config/ModelSelector.tsx` - 123 lines):
+   - Two-column responsive grid layout (provider + model selection)
+   - Provider dropdown: OpenAI, Anthropic, Custom/Self-Hosted
+   - Smart model switching: Auto-selects default model when provider changes
+   - OpenAI models: GPT-4o Mini (recommended), GPT-4o, GPT-4, GPT-3.5 Turbo
+   - Anthropic models: Claude 3.5 Sonnet (recommended), Claude 3 Opus, Claude 3 Sonnet, Claude 3 Haiku
+   - Custom provider: Text input for model name (e.g., llama-3-70b)
+   - Pricing information in dropdown labels (per 1M tokens)
+   - Context window sizes displayed (8k-200k)
+   - Icon: Gear/cog symbol
+   - Disabled state support
+
+**2. ProviderConfig Component** (`frontend/src/components/Config/ProviderConfig.tsx` - 130 lines):
+   - Two-column responsive grid layout
+   - API Key field:
+     - Password input with show/hide toggle (eye icon)
+     - Monospace font for better readability
+     - Security note: "API key is encrypted and never shown in responses. Leave blank to keep existing key."
+     - Placeholder: `sk-...` (when enabled) or `••••••••••••••••` (when disabled)
+   - API Endpoint field (custom provider only):
+     - Text input with URL validation
+     - Placeholder: `https://api.openai.com/v1`
+   - Temperature slider:
+     - Range: 0-2 (step: 0.1)
+     - Live value display: "Temperature: 0.7"
+     - Labels: Focused (0), Balanced (1), Creative (2)
+   - Max Tokens input:
+     - Number input (range: 1-128,000)
+     - Helper text: "Maximum number of tokens to generate (1-128,000)"
+   - Icon: Settings/config symbol
+   - Disabled state support
+
+**3. ToolsManagement Component** (`frontend/src/components/Config/ToolsManagement.tsx` - 122 lines):
+   - Two-column responsive grid layout
+   - 4 available tools with descriptions:
+     1. **File Operations**: Read, write, and modify files in the workspace
+     2. **Web Search**: Search the web for information
+     3. **Code Execution**: Execute code snippets (Python, JavaScript, etc.)
+     4. **Terminal Access**: Run shell commands in the workspace
+   - Each tool card:
+     - Checkbox + icon + name + description
+     - Hover effect on card
+     - Blue border + background when selected
+     - Click anywhere on card to toggle
+   - Icon: Lightning bolt symbol
+   - Tip: "Disabling unused tools can reduce token usage and improve agent focus."
+   - Disabled state support
+
+**Key Features Across All Components:**
+- Consistent visual design with Tailwind CSS
+- Section headers with descriptive icons
+- Responsive layouts (mobile-first, grid on md+)
+- Full disabled state support (gray background, cursor-not-allowed)
+- Clean separation of concerns (local state + onChange callbacks)
+- TypeScript strict mode compliance
+- Accessible form controls
+
+**Integration:**
+- All three components are used in `ConfigPanel.tsx`
+- Props passed from ConfigPanel's form state
+- onChange callbacks update parent state
+- Disabled when not in edit mode
+
+**Files Created:**
+- `frontend/src/components/Config/ModelSelector.tsx` (123 lines)
+- `frontend/src/components/Config/ProviderConfig.tsx` (130 lines)
+- `frontend/src/components/Config/ToolsManagement.tsx` (122 lines)
+- **Total:** 375 lines of production code
+
+**Success Criteria:**
+- [x] Provider dropdown works correctly (auto-selects default model)
+- [x] Model options update when provider changes
+- [x] Recommended badge shows for gpt-4o-mini and Claude 3.5 Sonnet
+- [x] Custom endpoint shows text input for custom provider
+- [x] API key input with show/hide toggle
+- [x] Temperature slider with labels
+- [x] Max tokens numeric input with validation
+- [x] Custom endpoint shows only for custom provider
+- [x] Tool checkboxes toggle correctly
+- [x] Tool descriptions clear
+- [x] Disabled state works across all components
+- [x] Frontend builds successfully (TypeScript compilation clean)
+- [x] All components integrated with ConfigPanel
+- [x] Responsive layout works on mobile/tablet/desktop
+
+**Technical Notes:**
+- Components follow existing patterns (CreateProjectModal, ProjectCard)
+- Use React hooks (useState, useEffect) for local state management
+- onChange callbacks use consistent signatures:
+  - ModelSelector: `(provider: string, name: string) => void`
+  - ProviderConfig: `(field: string, value: string | number) => void`
+  - ToolsManagement: `(enabledTools: string[], toolsConfig?: Record<string, unknown>) => void`
+- All validation happens in backend (frontend is display-only)
+
+---
+
+#### 6.8 ProviderConfig Component
+
+**Status:** ✅ Complete (implemented as part of 6.7, see above)
 1. **Create ModelSelector Component (`frontend/src/components/Config/ModelSelector.tsx`):**
    ```typescript
    import React from 'react';
@@ -1272,217 +1374,13 @@ Phase 6 adds configuration management for customizing OpenCode agent behavior pe
 
 #### 6.8 ProviderConfig Component
 
-**Status:** 📋 Planned
-
-**Objective:** Configuration fields for API keys, endpoints, temperature, and max_tokens.
-
-**Tasks:**
-1. **Create ProviderConfig Component (`frontend/src/components/Config/ProviderConfig.tsx`):**
-   ```typescript
-   import React, { useState } from 'react';
-   
-   interface ProviderConfigProps {
-     provider: string;
-     apiKey?: string;
-     apiEndpoint?: string;
-     temperature: number;
-     maxTokens: number;
-     onChange: (field: string, value: any) => void;
-     disabled?: boolean;
-   }
-   
-   export const ProviderConfig: React.FC<ProviderConfigProps> = ({
-     provider,
-     apiKey,
-     apiEndpoint,
-     temperature,
-     maxTokens,
-     onChange,
-     disabled,
-   }) => {
-     const [showApiKey, setShowApiKey] = useState(false);
-     
-     return (
-       <div className="space-y-4 border-t border-gray-200 pt-4">
-         <h3 className="text-lg font-semibold text-gray-800">Provider Settings</h3>
-         
-         {/* API Key */}
-         <div>
-           <label className="block text-sm font-medium text-gray-700 mb-2">
-             API Key {provider === 'openai' && '(OpenAI)'}
-             {provider === 'anthropic' && '(Anthropic)'}
-           </label>
-           <div className="relative">
-             <input
-               type={showApiKey ? 'text' : 'password'}
-               value={apiKey || ''}
-               onChange={(e) => onChange('api_key', e.target.value)}
-               placeholder={provider === 'custom' ? 'Custom API key' : `sk-...`}
-               disabled={disabled}
-               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-             />
-             <button
-               type="button"
-               onClick={() => setShowApiKey(!showApiKey)}
-               className="absolute right-2 top-2 text-gray-500 hover:text-gray-700"
-             >
-               {showApiKey ? '🙈' : '👁️'}
-             </button>
-           </div>
-           <p className="text-xs text-gray-500 mt-1">
-             API key is encrypted and never shown in responses
-           </p>
-         </div>
-         
-         {/* Custom Endpoint (only for custom provider) */}
-         {provider === 'custom' && (
-           <div>
-             <label className="block text-sm font-medium text-gray-700 mb-2">
-               API Endpoint
-             </label>
-             <input
-               type="url"
-               value={apiEndpoint || ''}
-               onChange={(e) => onChange('api_endpoint', e.target.value)}
-               placeholder="https://api.example.com/v1/chat/completions"
-               disabled={disabled}
-               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-             />
-           </div>
-         )}
-         
-         {/* Temperature */}
-         <div>
-           <label className="block text-sm font-medium text-gray-700 mb-2">
-             Temperature: {temperature}
-           </label>
-           <input
-             type="range"
-             min="0"
-             max="2"
-             step="0.1"
-             value={temperature}
-             onChange={(e) => onChange('temperature', parseFloat(e.target.value))}
-             disabled={disabled}
-             className="w-full"
-           />
-           <div className="flex justify-between text-xs text-gray-500">
-             <span>Focused (0)</span>
-             <span>Balanced (1)</span>
-             <span>Creative (2)</span>
-           </div>
-         </div>
-         
-         {/* Max Tokens */}
-         <div>
-           <label className="block text-sm font-medium text-gray-700 mb-2">
-             Max Tokens
-           </label>
-           <input
-             type="number"
-             value={maxTokens}
-             onChange={(e) => onChange('max_tokens', parseInt(e.target.value))}
-             min="1"
-             max="128000"
-             disabled={disabled}
-             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-           />
-           <p className="text-xs text-gray-500 mt-1">
-             Maximum tokens to generate (higher = more expensive)
-           </p>
-         </div>
-       </div>
-     );
-   };
-   ```
-
-**Files to Create:**
-- `frontend/src/components/Config/ProviderConfig.tsx`
-
-**Success Criteria:**
-- [ ] API key input with show/hide toggle
-- [ ] Temperature slider with labels
-- [ ] Max tokens numeric input with validation
-- [ ] Custom endpoint shows only for custom provider
+**Status:** ✅ Complete (implemented as part of 6.7, see above)
 
 ---
 
 #### 6.9 ToolsManagement Component
 
-**Status:** 📋 Planned
-
-**Objective:** Toggle switches for enabling/disabling OpenCode tools (file_ops, web_search, code_exec, etc.).
-
-**Tasks:**
-1. **Create ToolsManagement Component (`frontend/src/components/Config/ToolsManagement.tsx`):**
-   ```typescript
-   import React from 'react';
-   
-   interface ToolsManagementProps {
-     enabledTools: string[];
-     toolsConfig?: Record<string, any>;
-     onChange: (tools: string[], config: Record<string, any>) => void;
-     disabled?: boolean;
-   }
-   
-   const AVAILABLE_TOOLS = [
-     { id: 'file_ops', name: 'File Operations', description: 'Read, write, and modify files in the workspace' },
-     { id: 'web_search', name: 'Web Search', description: 'Search the web for information' },
-     { id: 'code_exec', name: 'Code Execution', description: 'Execute code snippets (Python, JavaScript, etc.)' },
-     { id: 'terminal', name: 'Terminal Access', description: 'Run shell commands in the workspace' },
-   ];
-   
-   export const ToolsManagement: React.FC<ToolsManagementProps> = ({
-     enabledTools,
-     toolsConfig = {},
-     onChange,
-     disabled,
-   }) => {
-     const toggleTool = (toolId: string) => {
-       const newTools = enabledTools.includes(toolId)
-         ? enabledTools.filter((t) => t !== toolId)
-         : [...enabledTools, toolId];
-       onChange(newTools, toolsConfig);
-     };
-     
-     return (
-       <div className="space-y-4 border-t border-gray-200 pt-4">
-         <h3 className="text-lg font-semibold text-gray-800">Enabled Tools</h3>
-         
-         <div className="space-y-3">
-           {AVAILABLE_TOOLS.map((tool) => (
-             <div key={tool.id} className="flex items-start space-x-3">
-               <input
-                 type="checkbox"
-                 id={tool.id}
-                 checked={enabledTools.includes(tool.id)}
-                 onChange={() => toggleTool(tool.id)}
-                 disabled={disabled}
-                 className="mt-1 h-5 w-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
-               />
-               <label htmlFor={tool.id} className="flex-1 cursor-pointer">
-                 <div className="font-medium text-gray-800">{tool.name}</div>
-                 <div className="text-sm text-gray-500">{tool.description}</div>
-               </label>
-             </div>
-           ))}
-         </div>
-         
-         <div className="text-xs text-gray-500 mt-4">
-           💡 Tip: Disabling unused tools can reduce token usage and improve response times
-         </div>
-       </div>
-     );
-   };
-   ```
-
-**Files to Create:**
-- `frontend/src/components/Config/ToolsManagement.tsx`
-
-**Success Criteria:**
-- [ ] Checkboxes toggle correctly
-- [ ] Tool descriptions clear
-- [ ] Disabled state works
+**Status:** ✅ Complete (implemented as part of 6.7, see above)
 
 ---
 

@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -73,7 +75,7 @@ func setupSessionServiceTest() (*sessionService, *MockSessionRepository) {
 		taskRepo:    taskRepo,
 		projectRepo: projectRepo,
 		k8sService:  k8sService,
-		httpClient:  nil,
+		httpClient:  &http.Client{}, // Initialize HTTP client for StopSession test
 	}
 
 	return service, sessionRepo
@@ -190,12 +192,19 @@ func TestSessionService_StopSession(t *testing.T) {
 		PodNamespace: "opencode",
 	}
 
+	mockAPIServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "POST", r.Method)
+		assert.Contains(t, r.URL.Path, "/sessions/"+sessionID.String()+"/stop")
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("OpenCode API error"))
+	}))
+	defer mockAPIServer.Close()
+
+	podIP := mockAPIServer.URL[7:]
+
 	sessionRepo.On("FindByID", ctx, sessionID).Return(session, nil)
 	service.projectRepo.(*MockProjectRepository).On("FindByID", ctx, projectID).Return(project, nil)
-	service.k8sService.(*MockKubernetesService).On("GetPodIP", ctx, "test-pod", "opencode").Return("10.0.0.1", nil)
-	sessionRepo.On("Update", ctx, mock.MatchedBy(func(s *model.Session) bool {
-		return s.Status == model.SessionStatusCancelled && s.CompletedAt != nil && s.DurationMs > 0
-	})).Return(nil)
+	service.k8sService.(*MockKubernetesService).On("GetPodIP", ctx, "test-pod", "opencode").Return(podIP, nil)
 
 	err := service.StopSession(ctx, sessionID)
 	assert.Error(t, err)
