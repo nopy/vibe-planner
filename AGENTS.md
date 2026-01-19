@@ -1,15 +1,15 @@
 # OPENCODE PROJECT MANAGER - AGENT KNOWLEDGE BASE
 
-**Generated:** 2026-01-19 12:33:00  
+**Generated:** 2026-01-19 14:15:00  
 **Branch:** main  
 **Project:** Go backend + React frontend + K8s orchestration
-**Status:** ✅ Phase 1-4 Complete → 🚧 Phase 5 Planning (OpenCode Integration)
+**Status:** ✅ Phase 1-4 Complete → 🚧 Phase 6 (Configuration UI) - 6.13 Complete
 
 ---
 
 ## OVERVIEW
 
-Multi-module monorepo: Go API server, React SPA, 2 Go sidecars (file-browser, session-proxy), K8s manifests. Project management system with AI-powered coding via OpenCode agents. All critical issues resolved. **Phase 1 + Phase 2 + Phase 3 + Phase 4 COMPLETE** - Full project management with Kubernetes pod lifecycle, real-time WebSocket updates, task management with Kanban board, and file explorer with Monaco editor. **Phase 5 PLANNING** - OpenCode Integration for AI-powered task execution.
+Multi-module monorepo: Go API server, React SPA, 2 Go sidecars (file-browser, session-proxy), K8s manifests. Project management system with AI-powered coding via OpenCode agents. All critical issues resolved. **Phase 1 + Phase 2 + Phase 3 + Phase 4 COMPLETE** - Full project management with Kubernetes pod lifecycle, real-time WebSocket updates, task management with Kanban board, and file explorer with Monaco editor. **Phase 6 IN PROGRESS (6.13 Complete)** - OpenCode Configuration UI with 98.18% test coverage.
 
 ---
 
@@ -77,6 +77,31 @@ Multi-module monorepo: Go API server, React SPA, 2 Go sidecars (file-browser, se
 | Watcher tests | `sidecars/file-browser/internal/service/watcher_test.go` | ✅ 11 tests passing (Phase 4.2) |
 | File handler tests | `sidecars/file-browser/internal/handler/files_test.go` | ✅ 39 tests passing (Phase 4.1+4.4) |
 | Watch handler tests | `sidecars/file-browser/internal/handler/watch_test.go` | ✅ 5 tests passing (Phase 4.2) |
+| Config handlers | `backend/internal/api/config.go` | ✅ CRUD + history + rollback (Phase 6.1) |
+| Config service | `backend/internal/service/config_service.go` | ✅ Business logic + validation (Phase 6.2) |
+| Config repository | `backend/internal/repository/config_repository.go` | ✅ CRUD + versioning (Phase 6.3) |
+| Config model | `backend/internal/model/opencode_config.go` | ✅ OpenCodeConfig struct with tools (Phase 6.4) |
+| Config migration | `db/migrations/005_add_opencode_configs.up.sql` | ✅ opencode_configs table (Phase 6.4) |
+| Config tests | `backend/internal/api/config_test.go` | ✅ 30 handler tests (Phase 6.12) |
+| Config service tests | `backend/internal/service/config_service_test.go` | ✅ 30 service tests (Phase 6.12) |
+| Config repo tests | `backend/internal/repository/config_repository_test.go` | ✅ 30 repo tests (Phase 6.12) |
+| Config integration tests | `backend/internal/api/config_integration_test.go` | ✅ E2E lifecycle tests (Phase 6.5) |
+| Config types | `frontend/src/types/index.ts` | ✅ OpenCodeConfig interfaces (Phase 6.6) |
+| Config API client | `frontend/src/services/api.ts` | ✅ Axios methods for config (Phase 6.6) |
+| Config hook | `frontend/src/hooks/useConfig.ts` | ✅ React hook for config CRUD (Phase 6.6) |
+| ConfigPanel | `frontend/src/components/Config/ConfigPanel.tsx` | ✅ Main config UI (Phase 6.6) |
+| ModelSelector | `frontend/src/components/Config/ModelSelector.tsx` | ✅ Provider + model selection (Phase 6.7) |
+| ProviderConfig | `frontend/src/components/Config/ProviderConfig.tsx` | ✅ API key + params (Phase 6.7) |
+| ToolsManagement | `frontend/src/components/Config/ToolsManagement.tsx` | ✅ Tool selection UI (Phase 6.7) |
+| ConfigHistory | `frontend/src/components/Config/ConfigHistory.tsx` | ✅ Version history + rollback (Phase 6.9) |
+| ConfigPage | `frontend/src/pages/ConfigPage.tsx` | ✅ Config route page (Phase 6.10) |
+| Config tests (mock factory) | `frontend/src/tests/factories/opencodeConfig.ts` | ✅ Test data builders (Phase 6.13) |
+| Config hook tests | `frontend/src/hooks/__tests__/useConfig.test.ts` | ✅ 12 tests (Phase 6.13) |
+| ModelSelector tests | `frontend/src/components/Config/__tests__/ModelSelector.test.tsx` | ✅ 10 tests (Phase 6.13) |
+| ProviderConfig tests | `frontend/src/components/Config/__tests__/ProviderConfig.test.tsx` | ✅ 10 tests (Phase 6.13) |
+| ToolsManagement tests | `frontend/src/components/Config/__tests__/ToolsManagement.test.tsx` | ✅ 8 tests (Phase 6.13) |
+| ConfigHistory tests | `frontend/src/components/Config/__tests__/ConfigHistory.test.tsx` | ✅ 10 tests (Phase 6.13) |
+| ConfigPanel tests | `frontend/src/components/Config/__tests__/ConfigPanel.test.tsx` | ✅ 12 tests (Phase 6.13) |
 | Session proxy | `sidecars/session-proxy/cmd/main.go` | Port 3002 (Phase 5) |
 | K8s base | `k8s/base/` | Namespace, ConfigMap, RBAC |
 | K8s RBAC | `k8s/base/rbac.yaml` | ✅ ServiceAccount + Role |
@@ -379,4 +404,11 @@ make docker-push-dev        # Build and push development
     - Real-time: WebSocket file watching with fsnotify, exponential backoff reconnection
     - Total: 106 backend tests passing, 2,100 lines of production code
     - Archived to: PHASE4.md (complete implementation summary)
-23. **Current phase:** Phase 5 - OpenCode Integration (Planning)
+23. **Phase 6 in progress (2026-01-19 14:15)** - OpenCode Configuration UI:
+    - Backend (6.1-6.5): Config CRUD, versioning, rollback (90 unit tests + E2E integration tests)
+    - Frontend (6.6-6.13): ConfigPanel, ModelSelector, ProviderConfig, ToolsManagement, ConfigHistory
+    - Testing (6.13 Complete): 62 frontend tests, 98.18% coverage for Config components
+    - Mock Factory: opencodeConfig test data builders (111 lines)
+    - Components: Full test suites (useConfig hook: 12, ModelSelector: 10, ProviderConfig: 10, ToolsManagement: 8, ConfigHistory: 10, ConfigPanel: 12)
+    - Total Phase 6: 152 tests (90 backend + 62 frontend), all passing
+24. **Current phase:** Phase 6.14 - Integration tests for configuration workflow
