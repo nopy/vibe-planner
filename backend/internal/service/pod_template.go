@@ -65,6 +65,17 @@ func buildProjectPodSpec(podName, namespace, pvcName string, projectID uuid.UUID
 							Name:  "PROJECT_ID",
 							Value: projectID.String(),
 						},
+						{
+							Name: "OPENCODE_SHARED_SECRET",
+							ValueFrom: &corev1.EnvVarSource{
+								SecretKeyRef: &corev1.SecretKeySelector{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: "app-secrets",
+									},
+									Key: "OPENCODE_SHARED_SECRET",
+								},
+							},
+						},
 					},
 					LivenessProbe: &corev1.Probe{
 						ProbeHandler: corev1.ProbeHandler{

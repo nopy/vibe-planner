@@ -33,6 +33,7 @@ type SessionService interface {
 	GetAllActiveSessions(ctx context.Context) ([]model.Session, error)
 	UpdateSessionOutput(ctx context.Context, sessionID uuid.UUID, output string) error
 	UpdateSessionStatus(ctx context.Context, sessionID uuid.UUID, status string, errorMsg string) error
+	UpdateLastEventID(ctx context.Context, sessionID uuid.UUID, lastEventID string) error
 }
 
 type sessionService struct {
@@ -41,6 +42,7 @@ type sessionService struct {
 	projectRepo   repository.ProjectRepository
 	k8sService    KubernetesService
 	configService ConfigServiceInterface
+	sharedSecret  string
 	httpClient    *http.Client
 }
 
@@ -50,6 +52,7 @@ func NewSessionService(
 	projectRepo repository.ProjectRepository,
 	k8sService KubernetesService,
 	configService ConfigServiceInterface,
+	sharedSecret string,
 ) SessionService {
 	return &sessionService{
 		sessionRepo:   sessionRepo,
@@ -57,6 +60,7 @@ func NewSessionService(
 		projectRepo:   projectRepo,
 		k8sService:    k8sService,
 		configService: configService,
+		sharedSecret:  sharedSecret,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -267,6 +271,10 @@ func (s *sessionService) callOpenCodeStart(ctx context.Context, podIP string, se
 
 	req.Header.Set("Content-Type", "application/json")
 
+	if s.sharedSecret != "" {
+		req.Header.Set("Authorization", "Bearer "+s.sharedSecret)
+	}
+
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to call OpenCode API: %w", err)
@@ -299,6 +307,10 @@ func (s *sessionService) callOpenCodeStop(ctx context.Context, podIP string, ses
 	req, err := http.NewRequestWithContext(ctx, "POST", url, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	if s.sharedSecret != "" {
+		req.Header.Set("Authorization", "Bearer "+s.sharedSecret)
 	}
 
 	resp, err := s.httpClient.Do(req)
@@ -335,6 +347,17 @@ func (s *sessionService) UpdateSessionStatus(ctx context.Context, sessionID uuid
 
 	if err := s.sessionRepo.Update(ctx, session); err != nil {
 		return fmt.Errorf("failed to update session: %w", err)
+	}
+
+	return nil
+}
+
+func (s *sessionService) UpdateLastEventID(ctx context.Context, sessionID uuid.UUID, lastEventID string) error {
+	if err := s.sessionRepo.UpdateLastEventID(ctx, sessionID, lastEventID); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrSessionNotFound
+		}
+		return fmt.Errorf("failed to update last event ID: %w", err)
 	}
 
 	return nil

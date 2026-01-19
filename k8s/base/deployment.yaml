@@ -70,6 +70,11 @@ spec:
             secretKeyRef:
               name: app-secrets
               key: ENCRYPTION_KEY
+        - name: OPENCODE_SHARED_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: OPENCODE_SHARED_SECRET
         - name: JWT_EXPIRY
           value: "3600"
         - name: LOG_LEVEL

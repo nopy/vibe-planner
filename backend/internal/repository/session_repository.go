@@ -20,6 +20,7 @@ type SessionRepository interface {
 	Update(ctx context.Context, session *model.Session) error
 	UpdateStatus(ctx context.Context, id uuid.UUID, status model.SessionStatus) error
 	UpdateOutput(ctx context.Context, id uuid.UUID, output string) error
+	UpdateLastEventID(ctx context.Context, id uuid.UUID, lastEventID string) error
 	SoftDelete(ctx context.Context, id uuid.UUID) error
 }
 
@@ -115,6 +116,21 @@ func (r *sessionRepository) UpdateOutput(ctx context.Context, id uuid.UUID, outp
 		Where("id = ?", id).
 		Updates(updates).Error; err != nil {
 		return fmt.Errorf("failed to update session output: %w", err)
+	}
+
+	return nil
+}
+
+func (r *sessionRepository) UpdateLastEventID(ctx context.Context, id uuid.UUID, lastEventID string) error {
+	updates := map[string]interface{}{
+		"last_event_id": lastEventID,
+	}
+
+	if err := r.db.WithContext(ctx).
+		Model(&model.Session{}).
+		Where("id = ?", id).
+		Updates(updates).Error; err != nil {
+		return fmt.Errorf("failed to update last event ID: %w", err)
 	}
 
 	return nil

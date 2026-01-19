@@ -23,6 +23,9 @@ const LOG_LEVEL = process.env.LOG_LEVEL || "info";
 const SESSION_TIMEOUT = parseInt(process.env.SESSION_TIMEOUT || "3600", 10);
 const MAX_CONCURRENT_SESSIONS = parseInt(process.env.MAX_CONCURRENT_SESSIONS || "5", 10);
 const BACKEND_API_URL = process.env.BACKEND_API_URL || "http://localhost:8090";
+const OPENCODE_SHARED_SECRET = process.env.OPENCODE_SHARED_SECRET;
+const MAX_PROMPT_LENGTH = parseInt(process.env.MAX_PROMPT_LENGTH || "50000", 10);
+const MAX_SESSION_ID_LENGTH = 200;
 
 // Logger utility
 const logLevels: Record<string, number> = { debug: 0, info: 1, warn: 2, error: 3 };
@@ -48,10 +51,11 @@ interface SessionState {
   progress: number;
   currentTool?: string;
   controller?: AbortController;
-  opencodeSessionId?: string; // OpenCode SDK session ID
-  error?: string; // Error message if failed
-  lastEventId?: string; // Last processed OpenCode event ID for replay
-  eventBuffer: Array<{ eventId: string; eventType: string; data: object }>; // Event buffer for reconnection
+  opencodeSessionId?: string;
+  error?: string;
+  lastEventId?: string;
+  eventBuffer: Array<{ eventId: string; eventType: string; data: object }>;
+  sseSubscribers: Set<ReadableStreamDefaultController>;
 }
 
 interface ModelConfig {
@@ -66,8 +70,154 @@ interface ModelConfig {
 }
 
 const sessions = new Map<string, SessionState>();
+const SESSION_CLEANUP_GRACE_PERIOD = 300000;
 
 let opencodeClient: ReturnType<typeof createOpencodeClient> | null = null;
+
+function cleanupSession(sessionId: string) {
+  const session = sessions.get(sessionId);
+  if (!session) return;
+  
+  log("info", "Cleaning up session", { sessionId, status: session.status });
+  
+  for (const controller of session.sseSubscribers) {
+    try {
+      controller.close();
+    } catch (error) {
+      log("debug", "Error closing SSE subscriber", { sessionId, error });
+    }
+  }
+  session.sseSubscribers.clear();
+  
+  sessions.delete(sessionId);
+}
+
+function broadcastEvent(session: SessionState, eventId: string, eventType: string, data: object) {
+  const encoder = new TextEncoder();
+  const message = `event: ${eventType}\nid: ${eventId}\ndata: ${JSON.stringify(data)}\n\n`;
+  const encoded = encoder.encode(message);
+  
+  session.eventBuffer.push({ eventId, eventType, data });
+  if (session.eventBuffer.length > 100) {
+    session.eventBuffer.shift();
+  }
+  session.lastEventId = eventId;
+  
+  if (session.eventBuffer.length % 10 === 0) {
+    persistLastEventId(session.sessionId, eventId);
+  }
+  
+  for (const controller of session.sseSubscribers) {
+    try {
+      controller.enqueue(encoded);
+    } catch (error) {
+      log("debug", "Failed to send event to subscriber", { 
+        sessionId: session.sessionId, 
+        eventType,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }
+}
+
+async function startOpenCodeEventStream(session: SessionState) {
+  if (!session.opencodeSessionId) {
+    log("error", "Cannot start event stream without remote session ID", { sessionId: session.sessionId });
+    return;
+  }
+  
+  try {
+    const client = await getOpencodeClient();
+    const eventsResult = await client.event.subscribe();
+    
+    if (!eventsResult.data) {
+      throw new Error("Failed to subscribe to OpenCode events");
+    }
+
+    log("info", "Started OpenCode event stream", { 
+      sessionId: session.sessionId,
+      opencodeSessionId: session.opencodeSessionId
+    });
+
+    const heartbeatInterval = setInterval(() => {
+      if (session.status === "completed" || session.status === "failed" || session.status === "cancelled") {
+        clearInterval(heartbeatInterval);
+      } else {
+        const heartbeatEventId = `${session.opencodeSessionId}-heartbeat-${Date.now()}`;
+        broadcastEvent(session, heartbeatEventId, "heartbeat", {});
+      }
+    }, 30000);
+
+    for await (const event of eventsResult.data.stream) {
+      if (session.controller?.signal.aborted) {
+        clearInterval(heartbeatInterval);
+        const cancelEventId = event.id || `${session.opencodeSessionId}-cancel-${Date.now()}`;
+        broadcastEvent(session, cancelEventId, "status", {
+          status: "cancelled",
+          timestamp: new Date().toISOString()
+        });
+        break;
+      }
+
+      const opencodeEventId = event.id || `${session.opencodeSessionId}-${event.type}-${Date.now()}`;
+
+      if (event.type === "tool_call") {
+        broadcastEvent(session, opencodeEventId, "tool_call", {
+          tool: event.properties.tool,
+          args: event.properties.args,
+          timestamp: new Date().toISOString()
+        });
+        session.currentTool = event.properties.tool;
+      } else if (event.type === "tool_result") {
+        broadcastEvent(session, opencodeEventId, "tool_result", {
+          tool: event.properties.tool,
+          result: event.properties.result,
+          timestamp: new Date().toISOString()
+        });
+        session.currentTool = undefined;
+      } else if (event.type === "output") {
+        broadcastEvent(session, opencodeEventId, "output", {
+          type: event.properties.stream || "stdout",
+          text: event.properties.text,
+          timestamp: new Date().toISOString()
+        });
+      } else if (event.type === "progress") {
+        session.progress = event.properties.percent || 0;
+        broadcastEvent(session, opencodeEventId, "status", {
+          status: session.status,
+          progress: session.progress,
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      if (session.status === "completed" || session.status === "failed") {
+        clearInterval(heartbeatInterval);
+        const completeEventId = event.id || `${session.opencodeSessionId}-complete-${Date.now()}`;
+        broadcastEvent(session, completeEventId, "complete", {
+          final_message: event.properties.message || "Task completed",
+          files_modified: event.properties.files || [],
+          timestamp: new Date().toISOString()
+        });
+        break;
+      }
+    }
+
+    clearInterval(heartbeatInterval);
+    
+  } catch (error) {
+    log("error", "OpenCode event stream error", { 
+      sessionId: session.sessionId,
+      opencodeSessionId: session.opencodeSessionId,
+      error: error instanceof Error ? error.message : String(error) 
+    });
+    const errorEventId = `${session.opencodeSessionId || session.sessionId}-error-${Date.now()}`;
+    broadcastEvent(session, errorEventId, "error", {
+      error: error instanceof Error ? error.message : String(error),
+      fatal: true,
+      timestamp: new Date().toISOString()
+    });
+  }
+}
 
 async function getOpencodeClient() {
   if (!opencodeClient) {
@@ -76,6 +226,119 @@ async function getOpencodeClient() {
     });
   }
   return opencodeClient;
+}
+
+function checkAuth(req: Request): Response | null {
+  if (!OPENCODE_SHARED_SECRET) {
+    return null;
+  }
+  
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader) {
+    return Response.json(
+      { 
+        error: "Unauthorized: missing Authorization header",
+        timestamp: new Date().toISOString()
+      },
+      { status: 401 }
+    );
+  }
+  
+  const [scheme, token] = authHeader.split(" ");
+  if (scheme !== "Bearer" || token !== OPENCODE_SHARED_SECRET) {
+    return Response.json(
+      { 
+        error: "Unauthorized: invalid credentials",
+        timestamp: new Date().toISOString()
+      },
+      { status: 401 }
+    );
+  }
+  
+  return null;
+}
+
+interface ValidationError {
+  field: string;
+  reason: string;
+}
+
+function validateSessionRequest(body: any): ValidationError | null {
+  if (!body.session_id || typeof body.session_id !== "string") {
+    return { field: "session_id", reason: "must be a non-empty string" };
+  }
+  
+  if (body.session_id.length > MAX_SESSION_ID_LENGTH) {
+    return { field: "session_id", reason: `must not exceed ${MAX_SESSION_ID_LENGTH} characters` };
+  }
+  
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidPattern.test(body.session_id)) {
+    return { field: "session_id", reason: "must be a valid UUID" };
+  }
+  
+  if (!body.prompt || typeof body.prompt !== "string") {
+    return { field: "prompt", reason: "must be a non-empty string" };
+  }
+  
+  if (body.prompt.length > MAX_PROMPT_LENGTH) {
+    return { field: "prompt", reason: `must not exceed ${MAX_PROMPT_LENGTH} characters` };
+  }
+  
+  if (!body.model_config || typeof body.model_config !== "object") {
+    return { field: "model_config", reason: "must be an object" };
+  }
+  
+  const mc = body.model_config;
+  
+  if (!mc.provider || typeof mc.provider !== "string") {
+    return { field: "model_config.provider", reason: "must be a non-empty string" };
+  }
+  
+  const validProviders = ["openai", "anthropic", "local"];
+  if (!validProviders.includes(mc.provider)) {
+    return { field: "model_config.provider", reason: `must be one of: ${validProviders.join(", ")}` };
+  }
+  
+  if (!mc.model || typeof mc.model !== "string") {
+    return { field: "model_config.model", reason: "must be a non-empty string" };
+  }
+  
+  if (!mc.api_key || typeof mc.api_key !== "string") {
+    return { field: "model_config.api_key", reason: "must be a non-empty string" };
+  }
+  
+  if (typeof mc.temperature !== "number" || mc.temperature < 0 || mc.temperature > 2) {
+    return { field: "model_config.temperature", reason: "must be a number between 0 and 2" };
+  }
+  
+  if (typeof mc.max_tokens !== "number" || mc.max_tokens < 1 || mc.max_tokens > 100000) {
+    return { field: "model_config.max_tokens", reason: "must be a number between 1 and 100000" };
+  }
+  
+  if (!Array.isArray(mc.enabled_tools)) {
+    return { field: "model_config.enabled_tools", reason: "must be an array" };
+  }
+  
+  if (mc.enabled_tools.length > 50) {
+    return { field: "model_config.enabled_tools", reason: "must not exceed 50 tools" };
+  }
+  
+  for (const tool of mc.enabled_tools) {
+    if (typeof tool !== "string") {
+      return { field: "model_config.enabled_tools", reason: "all tools must be strings" };
+    }
+  }
+  
+  if (body.system_prompt && typeof body.system_prompt !== "string") {
+    return { field: "system_prompt", reason: "must be a string" };
+  }
+  
+  if (body.system_prompt && body.system_prompt.length > MAX_PROMPT_LENGTH) {
+    return { field: "system_prompt", reason: `must not exceed ${MAX_PROMPT_LENGTH} characters` };
+  }
+  
+  return null;
 }
 
 // Health check endpoint
@@ -112,38 +375,18 @@ async function handleCreateSession(req: Request): Promise<Response> {
   try {
     const body = await req.json();
     
-    // Validate required fields
-    if (!body.session_id || typeof body.session_id !== "string") {
+    const validationError = validateSessionRequest(body);
+    if (validationError) {
       return Response.json(
         { 
-          error: "Invalid request: missing required field 'session_id'",
-          timestamp: new Date().toISOString()
-        },
-        { status: 400 }
-      );
-    }
-    
-    if (!body.prompt || typeof body.prompt !== "string") {
-      return Response.json(
-        { 
-          error: "Invalid request: missing required field 'prompt'",
+          error: "Invalid request",
+          details: validationError,
           timestamp: new Date().toISOString()
         },
         { status: 400 }
       );
     }
 
-    if (!body.model_config || typeof body.model_config !== "object") {
-      return Response.json(
-        { 
-          error: "Invalid request: missing required field 'model_config'",
-          timestamp: new Date().toISOString()
-        },
-        { status: 400 }
-      );
-    }
-
-    // Check if session already exists
     if (sessions.has(body.session_id)) {
       return Response.json(
         { 
@@ -154,7 +397,6 @@ async function handleCreateSession(req: Request): Promise<Response> {
       );
     }
 
-    // Check concurrent session limit
     const runningSessions = Array.from(sessions.values()).filter(
       s => s.status === "running" || s.status === "pending"
     );
@@ -167,7 +409,6 @@ async function handleCreateSession(req: Request): Promise<Response> {
         { status: 503 }
       );
     }
-
     const now = new Date().toISOString();
     const session: SessionState = {
       sessionId: body.session_id,
@@ -179,7 +420,8 @@ async function handleCreateSession(req: Request): Promise<Response> {
       lastActivity: now,
       progress: 0,
       controller: new AbortController(),
-      eventBuffer: []
+      eventBuffer: [],
+      sseSubscribers: new Set()
     };
 
     sessions.set(body.session_id, session);
@@ -213,7 +455,6 @@ async function handleCreateSession(req: Request): Promise<Response> {
         opencodeSessionId: session.opencodeSessionId
       });
 
-      // Start async execution in background
       executeSessionAsync(session).catch(err => {
         log("error", "Session execution failed", { 
           sessionId: session.sessionId, 
@@ -221,6 +462,13 @@ async function handleCreateSession(req: Request): Promise<Response> {
         });
         session.status = "failed";
         session.error = err.message;
+      });
+
+      startOpenCodeEventStream(session).catch(err => {
+        log("error", "Event stream failed to start", {
+          sessionId: session.sessionId,
+          error: err.message
+        });
       });
 
       return Response.json(
@@ -281,6 +529,8 @@ async function executeSessionAsync(session: SessionState): Promise<void> {
         sessionId: session.sessionId,
         timeout: SESSION_TIMEOUT 
       });
+      
+      cleanupSession(session.sessionId);
     }
   }, SESSION_TIMEOUT * 1000);
   
@@ -312,6 +562,7 @@ async function executeSessionAsync(session: SessionState): Promise<void> {
       session.status = "cancelled";
       log("info", "Session cancelled during execution", { sessionId: session.sessionId });
       clearTimeout(timeoutId);
+      cleanupSession(session.sessionId);
       return;
     }
     
@@ -325,12 +576,15 @@ async function executeSessionAsync(session: SessionState): Promise<void> {
       opencodeSessionId: session.opencodeSessionId
     });
     
+    setTimeout(() => cleanupSession(session.sessionId), SESSION_CLEANUP_GRACE_PERIOD);
+    
   } catch (error) {
     clearTimeout(timeoutId);
     
     if (session.controller?.signal.aborted) {
       session.status = "cancelled";
       log("info", "Session cancelled during execution", { sessionId: session.sessionId });
+      cleanupSession(session.sessionId);
     } else {
       session.status = "failed";
       session.error = error instanceof Error ? error.message : String(error);
@@ -341,6 +595,8 @@ async function executeSessionAsync(session: SessionState): Promise<void> {
         opencodeSessionId: session.opencodeSessionId,
         error: session.error
       });
+      
+      setTimeout(() => cleanupSession(session.sessionId), SESSION_CLEANUP_GRACE_PERIOD);
     }
   }
 }
@@ -361,140 +617,55 @@ function handleSessionStream(sessionId: string, req: Request): Response {
   const lastEventId = req.headers.get("Last-Event-ID");
   log("info", "SSE stream started", { sessionId, lastEventId });
 
+  let streamController: ReadableStreamDefaultController | null = null;
+
   const stream = new ReadableStream({
-    async start(controller) {
+    start(controller) {
+      streamController = controller;
       const encoder = new TextEncoder();
       
-      const sendEvent = (eventId: string, eventType: string, data: object) => {
-        const message = `event: ${eventType}\nid: ${eventId}\ndata: ${JSON.stringify(data)}\n\n`;
-        controller.enqueue(encoder.encode(message));
-        
-        session.eventBuffer.push({ eventId, eventType, data });
-        if (session.eventBuffer.length > 100) {
-          session.eventBuffer.shift();
-        }
-        session.lastEventId = eventId;
-      };
-
-      try {
-        if (lastEventId) {
-          const replayIndex = session.eventBuffer.findIndex(e => e.eventId === lastEventId);
-          if (replayIndex !== -1) {
-            const eventsToReplay = session.eventBuffer.slice(replayIndex + 1);
-            for (const event of eventsToReplay) {
-              controller.enqueue(encoder.encode(
-                `event: ${event.eventType}\nid: ${event.eventId}\ndata: ${JSON.stringify(event.data)}\n\n`
-              ));
-            }
-            log("info", "Replayed events from buffer", { 
-              sessionId, 
-              count: eventsToReplay.length 
-            });
+      session.sseSubscribers.add(controller);
+      
+      if (lastEventId) {
+        const replayIndex = session.eventBuffer.findIndex(e => e.eventId === lastEventId);
+        if (replayIndex !== -1) {
+          const eventsToReplay = session.eventBuffer.slice(replayIndex + 1);
+          for (const event of eventsToReplay) {
+            controller.enqueue(encoder.encode(
+              `event: ${event.eventType}\nid: ${event.eventId}\ndata: ${JSON.stringify(event.data)}\n\n`
+            ));
           }
-        }
-
-        const initialEventId = `${session.opencodeSessionId || sessionId}-init-${Date.now()}`;
-        sendEvent(initialEventId, "status", {
-          status: session.status,
-          timestamp: new Date().toISOString()
-        });
-
-        if (!session.opencodeSessionId) {
-          const errorEventId = `${sessionId}-error-${Date.now()}`;
-          sendEvent(errorEventId, "error", {
-            error: "OpenCode session not initialized",
-            fatal: true,
-            timestamp: new Date().toISOString()
+          log("info", "Replayed events from buffer", { 
+            sessionId, 
+            count: eventsToReplay.length 
           });
-          controller.close();
-          return;
         }
+      }
 
-        const client = await getOpencodeClient();
-        const eventsResult = await client.event.subscribe();
-        
-        if (!eventsResult.data) {
-          throw new Error("Failed to subscribe to OpenCode events");
-        }
+      const initialEventId = `${session.opencodeSessionId || sessionId}-init-${Date.now()}`;
+      const initialMessage = `event: status\nid: ${initialEventId}\ndata: ${JSON.stringify({
+        status: session.status,
+        timestamp: new Date().toISOString()
+      })}\n\n`;
+      controller.enqueue(encoder.encode(initialMessage));
 
-        const heartbeatInterval = setInterval(() => {
-          if (session.status === "completed" || session.status === "failed" || session.status === "cancelled") {
-            clearInterval(heartbeatInterval);
-          } else {
-            const heartbeatEventId = `${session.opencodeSessionId}-heartbeat-${Date.now()}`;
-            sendEvent(heartbeatEventId, "heartbeat", {});
-          }
-        }, 30000);
-
-        for await (const event of eventsResult.data.stream) {
-          if (session.controller?.signal.aborted) {
-            clearInterval(heartbeatInterval);
-            const cancelEventId = event.id || `${session.opencodeSessionId}-cancel-${Date.now()}`;
-            sendEvent(cancelEventId, "status", {
-              status: "cancelled",
-              timestamp: new Date().toISOString()
-            });
-            break;
-          }
-
-          const opencodeEventId = event.id || `${session.opencodeSessionId}-${event.type}-${Date.now()}`;
-
-          if (event.type === "tool_call") {
-            sendEvent(opencodeEventId, "tool_call", {
-              tool: event.properties.tool,
-              args: event.properties.args,
-              timestamp: new Date().toISOString()
-            });
-            session.currentTool = event.properties.tool;
-          } else if (event.type === "tool_result") {
-            sendEvent(opencodeEventId, "tool_result", {
-              tool: event.properties.tool,
-              result: event.properties.result,
-              timestamp: new Date().toISOString()
-            });
-            session.currentTool = undefined;
-          } else if (event.type === "output") {
-            sendEvent(opencodeEventId, "output", {
-              type: event.properties.stream || "stdout",
-              text: event.properties.text,
-              timestamp: new Date().toISOString()
-            });
-          } else if (event.type === "progress") {
-            session.progress = event.properties.percent || 0;
-            sendEvent(opencodeEventId, "status", {
-              status: session.status,
-              progress: session.progress,
-              timestamp: new Date().toISOString()
-            });
-          }
-
-          if (session.status === "completed" || session.status === "failed") {
-            clearInterval(heartbeatInterval);
-            const completeEventId = event.id || `${session.opencodeSessionId}-complete-${Date.now()}`;
-            sendEvent(completeEventId, "complete", {
-              final_message: event.properties.message || "Task completed",
-              files_modified: event.properties.files || [],
-              timestamp: new Date().toISOString()
-            });
-            break;
-          }
-        }
-
-        clearInterval(heartbeatInterval);
-        controller.close();
-        
-      } catch (error) {
-        log("error", "SSE stream error", { 
-          sessionId, 
-          error: error instanceof Error ? error.message : String(error) 
-        });
-        const errorEventId = `${session.opencodeSessionId || sessionId}-error-${Date.now()}`;
-        sendEvent(errorEventId, "error", {
-          error: error instanceof Error ? error.message : String(error),
+      if (!session.opencodeSessionId) {
+        const errorEventId = `${sessionId}-error-${Date.now()}`;
+        const errorMessage = `event: error\nid: ${errorEventId}\ndata: ${JSON.stringify({
+          error: "OpenCode session not initialized",
           fatal: true,
           timestamp: new Date().toISOString()
-        });
+        })}\n\n`;
+        controller.enqueue(encoder.encode(errorMessage));
+        session.sseSubscribers.delete(controller);
         controller.close();
+        return;
+      }
+    },
+    cancel() {
+      if (streamController) {
+        session.sseSubscribers.delete(streamController);
+        log("info", "SSE client disconnected", { sessionId });
       }
     }
   });
@@ -586,7 +757,6 @@ async function handleRequest(req: Request): Promise<Response> {
 
   log("debug", "Request received", { method, path });
 
-  // Health checks
   if (method === "GET" && (path === "/healthz" || path === "/health")) {
     return handleHealthz();
   }
@@ -595,30 +765,30 @@ async function handleRequest(req: Request): Promise<Response> {
     return handleReady();
   }
 
-  // Session management
+  const authError = checkAuth(req);
+  if (authError) {
+    return authError;
+  }
+
   if (method === "POST" && path === "/sessions") {
     return handleCreateSession(req);
   }
 
-  // Session streaming
   const streamMatch = path.match(/^\/sessions\/([^/]+)\/stream$/);
   if (method === "GET" && streamMatch) {
     return handleSessionStream(streamMatch[1], req);
   }
 
-  // Session cancellation
   const cancelMatch = path.match(/^\/sessions\/([^/]+)$/);
   if (method === "DELETE" && cancelMatch) {
     return handleCancelSession(cancelMatch[1]);
   }
 
-  // Session status
   const statusMatch = path.match(/^\/sessions\/([^/]+)\/status$/);
   if (method === "GET" && statusMatch) {
     return handleSessionStatus(statusMatch[1]);
   }
 
-  // 404 Not Found
   return Response.json(
     { 
       error: "Not found",
@@ -714,7 +884,8 @@ async function recoverActiveSessions() {
             controller: new AbortController(),
             opencodeSessionId: dbSession.remote_session_id,
             lastEventId: dbSession.last_event_id,
-            eventBuffer: []
+            eventBuffer: [],
+            sseSubscribers: new Set()
           };
 
           sessions.set(dbSession.id, recoveredSession);
@@ -776,6 +947,26 @@ async function markSessionFailed(sessionId: string, reason: string) {
   } catch (error) {
     log("error", "Failed to update session status in backend", {
       sessionId,
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
+}
+
+async function persistLastEventId(sessionId: string, lastEventId: string) {
+  try {
+    await fetch(`${BACKEND_API_URL}/api/sessions/${sessionId}/status`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        last_event_id: lastEventId
+      })
+    });
+  } catch (error) {
+    log("debug", "Failed to persist last_event_id to backend", {
+      sessionId,
+      lastEventId,
       error: error instanceof Error ? error.message : String(error)
     });
   }

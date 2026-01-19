@@ -69,7 +69,7 @@ func main() {
 		log.Fatalf("Failed to initialize config service: %v", err)
 	}
 
-	sessionService := service.NewSessionService(sessionRepo, taskRepo, projectRepo, k8sService, configService)
+	sessionService := service.NewSessionService(sessionRepo, taskRepo, projectRepo, k8sService, configService, cfg.OpenCodeSharedSecret)
 	projectService := service.NewProjectService(projectRepo, k8sService)
 	taskService := service.NewTaskService(taskRepo, projectRepo, sessionService)
 	interactionService := service.NewInteractionService(interactionRepo, taskRepo, projectRepo, sessionRepo)
@@ -150,6 +150,7 @@ func setupRouter(cfg *config.Config, authHandler *api.AuthHandler, projectHandle
 		{
 			sessions.GET("/active", sessionHandler.GetActiveSessions)
 			sessions.PATCH("/:id/status", sessionHandler.UpdateSessionStatus)
+			sessions.PATCH("/:id/event-id", sessionHandler.UpdateLastEventID)
 		}
 
 		projects := v1.Group("/projects", authMiddleware.JWTAuth())

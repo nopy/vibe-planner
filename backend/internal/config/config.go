@@ -37,27 +37,31 @@ type Config struct {
 
 	// Config Encryption
 	EncryptionKey string
+
+	// OpenCode Sidecar Authentication
+	OpenCodeSharedSecret string
 }
 
 func Load() *Config {
 	return &Config{
-		Port:                getEnv("PORT", "8080"),
-		Environment:         getEnv("ENVIRONMENT", "development"),
-		LogLevel:            getEnv("LOG_LEVEL", "info"),
-		DatabaseURL:         getEnv("DATABASE_URL", "postgres://opencode:password@localhost:5432/opencode_dev"),
-		OIDCIssuer:          getEnv("OIDC_ISSUER", ""),
-		OIDCClientID:        getEnv("OIDC_CLIENT_ID", ""),
-		OIDCClientSecret:    getEnv("OIDC_CLIENT_SECRET", ""),
-		OIDCRedirectURI:     getEnv("OIDC_REDIRECT_URI", "http://localhost:5173/auth/callback"),
-		JWTSecret:           getEnv("JWT_SECRET", ""),
-		JWTExpiry:           3600,
-		Kubeconfig:          getEnv("KUBECONFIG", ""),
-		K8SNamespace:        getEnv("K8S_NAMESPACE", "opencode"),
-		OpenCodeServerImage: getEnv("OPENCODE_SERVER_IMAGE", "registry.legal-suite.com/opencode/opencode-server-sidecar:latest"),
-		FileBrowserImage:    getEnv("FILE_BROWSER_IMAGE", "registry.legal-suite.com/opencode/file-browser-sidecar:latest"),
-		SessionProxyImage:   getEnv("SESSION_PROXY_IMAGE", "registry.legal-suite.com/opencode/session-proxy-sidecar:latest"),
-		OpenCodeInstallPath: getEnv("OPENCODE_INSTALL_PATH", "/usr/local/bin/opencode"),
-		EncryptionKey:       getEnv("CONFIG_ENCRYPTION_KEY", ""),
+		Port:                 getEnv("PORT", "8080"),
+		Environment:          getEnv("ENVIRONMENT", "development"),
+		LogLevel:             getEnv("LOG_LEVEL", "info"),
+		DatabaseURL:          getEnv("DATABASE_URL", "postgres://opencode:password@localhost:5432/opencode_dev"),
+		OIDCIssuer:           getEnv("OIDC_ISSUER", ""),
+		OIDCClientID:         getEnv("OIDC_CLIENT_ID", ""),
+		OIDCClientSecret:     getEnv("OIDC_CLIENT_SECRET", ""),
+		OIDCRedirectURI:      getEnv("OIDC_REDIRECT_URI", "http://localhost:5173/auth/callback"),
+		JWTSecret:            getEnv("JWT_SECRET", ""),
+		JWTExpiry:            3600,
+		Kubeconfig:           getEnv("KUBECONFIG", ""),
+		K8SNamespace:         getEnv("K8S_NAMESPACE", "opencode"),
+		OpenCodeServerImage:  getEnv("OPENCODE_SERVER_IMAGE", "registry.legal-suite.com/opencode/opencode-server-sidecar:latest"),
+		FileBrowserImage:     getEnv("FILE_BROWSER_IMAGE", "registry.legal-suite.com/opencode/file-browser-sidecar:latest"),
+		SessionProxyImage:    getEnv("SESSION_PROXY_IMAGE", "registry.legal-suite.com/opencode/session-proxy-sidecar:latest"),
+		OpenCodeInstallPath:  getEnv("OPENCODE_INSTALL_PATH", "/usr/local/bin/opencode"),
+		EncryptionKey:        getEnv("CONFIG_ENCRYPTION_KEY", ""),
+		OpenCodeSharedSecret: getEnv("OPENCODE_SHARED_SECRET", ""),
 	}
 }
 

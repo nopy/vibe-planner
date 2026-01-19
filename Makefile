@@ -1,4 +1,10 @@
-.PHONY: help dev dev-services backend-dev frontend-dev db-migrate-up db-migrate-down db-reset test backend-test frontend-test kind-create kind-deploy kind-delete docker-build-prod docker-build-dev docker-push-prod docker-push-dev clean
+.PHONY: help dev dev-services backend-dev frontend-dev db-migrate-up db-migrate-down db-reset test backend-test frontend-test kind-create kind-deploy kind-delete docker-build-prod docker-build-dev docker-push-prod docker-push-dev clean install-migrate
+
+# Load environment variables from .env if it exists
+ifneq (,$(wildcard ./.env))
+    include .env
+    export
+endif
 
 # Default target
 help:
@@ -108,19 +114,43 @@ frontend-lint:
 	@echo "Linting frontend..."
 	@cd frontend && npm run lint
 
+# Install golang-migrate CLI
+install-migrate:
+	@echo "Checking for migrate CLI..."
+	@which migrate > /dev/null 2>&1 || { \
+		echo "Installing golang-migrate..."; \
+		go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest; \
+	}
+	@echo "✓ migrate CLI ready"
+
+# Get migrate binary path (either in PATH or in GOPATH/bin)
+MIGRATE := $(shell which migrate 2>/dev/null || echo "$(shell go env GOPATH)/bin/migrate")
+
 # Database migrations
-db-migrate-up:
+db-migrate-up: install-migrate
+	@if [ -z "$(DATABASE_URL)" ]; then \
+		echo "Error: DATABASE_URL is not set. Please create a .env file or export DATABASE_URL"; \
+		exit 1; \
+	fi
 	@echo "Running database migrations..."
-	@migrate -path db/migrations -database "${DATABASE_URL}" up
+	@$(MIGRATE) -path db/migrations -database "$(DATABASE_URL)" up
 
-db-migrate-down:
+db-migrate-down: install-migrate
+	@if [ -z "$(DATABASE_URL)" ]; then \
+		echo "Error: DATABASE_URL is not set. Please create a .env file or export DATABASE_URL"; \
+		exit 1; \
+	fi
 	@echo "Rolling back database migrations..."
-	@migrate -path db/migrations -database "${DATABASE_URL}" down 1
+	@$(MIGRATE) -path db/migrations -database "$(DATABASE_URL)" down 1
 
-db-reset:
+db-reset: install-migrate
+	@if [ -z "$(DATABASE_URL)" ]; then \
+		echo "Error: DATABASE_URL is not set. Please create a .env file or export DATABASE_URL"; \
+		exit 1; \
+	fi
 	@echo "Resetting database..."
-	@migrate -path db/migrations -database "${DATABASE_URL}" drop -f
-	@migrate -path db/migrations -database "${DATABASE_URL}" up
+	@$(MIGRATE) -path db/migrations -database "$(DATABASE_URL)" drop -f
+	@$(MIGRATE) -path db/migrations -database "$(DATABASE_URL)" up
 
 # Testing
 test: backend-test frontend-test

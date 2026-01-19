@@ -102,3 +102,43 @@ func (h *SessionHandler) UpdateSessionStatus(c *gin.Context) {
 		"message": "Session status updated",
 	})
 }
+
+type UpdateLastEventIDRequest struct {
+	LastEventID string `json:"last_event_id" binding:"required"`
+}
+
+func (h *SessionHandler) UpdateLastEventID(c *gin.Context) {
+	sessionID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid session ID",
+		})
+		return
+	}
+
+	var req UpdateLastEventIDRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid request body",
+		})
+		return
+	}
+
+	if err := h.sessionService.UpdateLastEventID(c.Request.Context(), sessionID, req.LastEventID); err != nil {
+		if err == service.ErrSessionNotFound {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "Session not found",
+			})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to update last event ID",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Last event ID updated",
+	})
+}
