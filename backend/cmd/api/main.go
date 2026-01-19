@@ -41,6 +41,7 @@ func main() {
 	projectRepo := repository.NewProjectRepository(database)
 	taskRepo := repository.NewTaskRepository(database)
 	sessionRepo := repository.NewSessionRepository(database)
+	configRepo := repository.NewConfigRepository(database)
 
 	k8sService, err := service.NewKubernetesService(
 		cfg.Kubeconfig,
@@ -56,6 +57,11 @@ func main() {
 	projectService := service.NewProjectService(projectRepo, k8sService)
 	taskService := service.NewTaskService(taskRepo, projectRepo, sessionService)
 
+	configService, err := service.NewConfigService(configRepo, cfg.EncryptionKey)
+	if err != nil {
+		log.Fatalf("Failed to initialize config service: %v", err)
+	}
+
 	authService, err := service.NewAuthService(cfg, userRepo)
 	if err != nil {
 		log.Printf("Warning: Failed to create auth service: %v", err)
@@ -67,8 +73,9 @@ func main() {
 	projectHandler := api.NewProjectHandler(projectService)
 	taskHandler := api.NewTaskHandler(taskService, projectRepo, k8sService)
 	fileHandler := api.NewFileHandler(projectRepo, k8sService)
+	configHandler := api.NewConfigHandler(configService)
 
-	router := setupRouter(cfg, authHandler, projectHandler, taskHandler, fileHandler, authMiddleware)
+	router := setupRouter(cfg, authHandler, projectHandler, taskHandler, fileHandler, configHandler, authMiddleware)
 
 	// Setup static file serving for production (embedded frontend)
 	if cfg.Environment == "production" {
@@ -89,7 +96,7 @@ func main() {
 	}
 }
 
-func setupRouter(cfg *config.Config, authHandler *api.AuthHandler, projectHandler *api.ProjectHandler, taskHandler *api.TaskHandler, fileHandler *api.FileHandler, authMiddleware *middleware.AuthMiddleware) *gin.Engine {
+func setupRouter(cfg *config.Config, authHandler *api.AuthHandler, projectHandler *api.ProjectHandler, taskHandler *api.TaskHandler, fileHandler *api.FileHandler, configHandler *api.ConfigHandler, authMiddleware *middleware.AuthMiddleware) *gin.Engine {
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -153,6 +160,11 @@ func setupRouter(cfg *config.Config, authHandler *api.AuthHandler, projectHandle
 			projects.DELETE("/:id/files", fileHandler.DeleteFile)
 			projects.POST("/:id/files/mkdir", fileHandler.CreateDirectory)
 			projects.GET("/:id/files/watch", fileHandler.FileChangesStream)
+
+			projects.GET("/:id/config", configHandler.GetActiveConfig)
+			projects.POST("/:id/config", configHandler.CreateOrUpdateConfig)
+			projects.GET("/:id/config/versions", configHandler.GetConfigHistory)
+			projects.POST("/:id/config/rollback/:version", configHandler.RollbackConfig)
 		}
 	}
 

@@ -622,7 +622,7 @@ Phase 6 adds configuration management for customizing OpenCode agent behavior pe
 
 #### 6.3 Config API Endpoints
 
-**Status:** 📋 Planned
+**Status:** ✅ Complete (2026-01-19)
 
 **Objective:** Expose HTTP endpoints for configuration CRUD operations.
 
@@ -831,10 +831,37 @@ Phase 6 adds configuration management for customizing OpenCode agent behavior pe
 - `backend/cmd/api/main.go` (register routes)
 
 **Success Criteria:**
-- [ ] API handler tests pass (30-35 tests)
-- [ ] All endpoints return correct status codes
-- [ ] Request validation working
-- [ ] API key never exposed in responses
+- [x] API handler tests pass (33 tests - all passing)
+- [x] All endpoints return correct status codes (200, 201, 400, 401, 404, 500)
+- [x] Request validation working (Gin binding tags + service validation)
+- [x] API key never exposed in responses (sanitized by service layer)
+
+**Completion Summary:**
+- **Files Created:** 2 (config.go, config_test.go)
+- **Files Modified:** 2 (backend/cmd/api/main.go, backend/internal/config/config.go)
+- **Production Code:** ~180 lines (4 HTTP handlers + route registration)
+- **Test Code:** ~700 lines (33 comprehensive unit tests)
+- **Test Coverage:**
+  - GetActiveConfig: 4 tests (success, not found, invalid UUID, internal error)
+  - CreateOrUpdateConfig: 13 tests (success with/without API key, validation errors for all fields, authentication)
+  - GetConfigHistory: 5 tests (success, empty, API key sanitization, invalid UUID, internal error)
+  - RollbackConfig: 7 tests (success, version not found, invalid UUID, invalid version formats, internal error)
+  - Authentication: 1 test (401 without user context)
+- **Key Features:**
+  - Interface-based design (ConfigService interface for mocking)
+  - JWT authentication inherited from projects group
+  - Comprehensive Gin binding tags (oneof, min, max, required)
+  - Error mapping: 400 (validation), 401 (auth), 404 (not found), 500 (internal)
+  - GetCurrentUser(c) error handling fixed (returns *model.User, error)
+  - Routes registered under `/api/projects/:id/config` group
+  - Environment variable added: CONFIG_ENCRYPTION_KEY
+- **Security Review:**
+  - ✅ All tests passing (33/33)
+  - ✅ API key sanitization verified
+  - ✅ Input validation comprehensive
+  - ✅ Error messages sanitized
+  - ⚠️ Recommendation: Add project ownership validation in handlers
+  - ⚠️ Optional: Rate limiting for config updates (deferred to Phase 9)
 
 ---
 

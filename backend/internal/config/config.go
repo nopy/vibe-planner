@@ -29,6 +29,9 @@ type Config struct {
 
 	// OpenCode
 	OpenCodeInstallPath string
+
+	// Config Encryption
+	EncryptionKey string
 }
 
 func Load() *Config {
@@ -46,6 +49,7 @@ func Load() *Config {
 		Kubeconfig:          getEnv("KUBECONFIG", ""),
 		K8SNamespace:        getEnv("K8S_NAMESPACE", "opencode"),
 		OpenCodeInstallPath: getEnv("OPENCODE_INSTALL_PATH", "/usr/local/bin/opencode"),
+		EncryptionKey:       getEnv("CONFIG_ENCRYPTION_KEY", ""),
 	}
 }
 
