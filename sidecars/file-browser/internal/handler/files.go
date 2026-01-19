@@ -1,8 +1,8 @@
 package handler
 
 import (
-	"os"
-	"path/filepath"
+	"errors"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 
@@ -29,27 +29,43 @@ func (h *FileHandler) GetTree(c *gin.Context) {
 
 	tree, err := h.fileService.GetTree(path, maxDepth)
 	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		h.handleError(c, err)
 		return
 	}
 
-	c.JSON(200, tree)
+	c.JSON(http.StatusOK, tree)
 }
 
 func (h *FileHandler) GetContent(c *gin.Context) {
 	path := c.Query("path")
 	if path == "" {
-		c.JSON(400, gin.H{"error": "path parameter is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "path parameter is required"})
 		return
 	}
 
 	content, err := h.fileService.ReadFile(path)
 	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		h.handleError(c, err)
 		return
 	}
 
-	c.JSON(200, gin.H{"content": content, "path": path})
+	c.JSON(http.StatusOK, gin.H{"content": content, "path": path})
+}
+
+func (h *FileHandler) GetFileInfo(c *gin.Context) {
+	path := c.Query("path")
+	if path == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "path parameter is required"})
+		return
+	}
+
+	info, err := h.fileService.GetFileInfo(path)
+	if err != nil {
+		h.handleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, info)
 }
 
 func (h *FileHandler) WriteFile(c *gin.Context) {
@@ -59,31 +75,31 @@ func (h *FileHandler) WriteFile(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := h.fileService.WriteFile(req.Path, req.Content); err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		h.handleError(c, err)
 		return
 	}
 
-	c.JSON(200, gin.H{"message": "File written successfully", "path": req.Path})
+	c.JSON(http.StatusOK, gin.H{"message": "File written successfully", "path": req.Path})
 }
 
 func (h *FileHandler) DeleteFile(c *gin.Context) {
 	path := c.Query("path")
 	if path == "" {
-		c.JSON(400, gin.H{"error": "path parameter is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "path parameter is required"})
 		return
 	}
 
 	if err := h.fileService.DeleteFile(path); err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		h.handleError(c, err)
 		return
 	}
 
-	c.JSON(200, gin.H{"message": "File deleted successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "File deleted successfully"})
 }
 
 func (h *FileHandler) CreateDirectory(c *gin.Context) {
@@ -92,14 +108,33 @@ func (h *FileHandler) CreateDirectory(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if err := os.MkdirAll(filepath.Join(h.fileService.WorkspaceDir, req.Path), 0755); err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+	if err := h.fileService.CreateDirectory(req.Path); err != nil {
+		h.handleError(c, err)
 		return
 	}
 
-	c.JSON(200, gin.H{"message": "Directory created successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "Directory created successfully", "path": req.Path})
+}
+
+func (h *FileHandler) handleError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, service.ErrInvalidPath):
+		c.JSON(http.StatusForbidden, gin.H{"error": "Invalid path: directory traversal detected"})
+	case errors.Is(err, service.ErrPathRequired):
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Path is required"})
+	case errors.Is(err, service.ErrNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"error": "File or directory not found"})
+	case errors.Is(err, service.ErrNotDirectory):
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Path is not a directory"})
+	case errors.Is(err, service.ErrMaxDepthZero):
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Max depth must be greater than zero"})
+	case errors.Is(err, service.ErrFileTooLarge):
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "File exceeds maximum size limit (10MB)"})
+	default:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+	}
 }

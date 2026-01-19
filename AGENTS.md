@@ -1,15 +1,15 @@
 # OPENCODE PROJECT MANAGER - AGENT KNOWLEDGE BASE
 
-**Generated:** 2026-01-18 23:10:00  
+**Generated:** 2026-01-19 08:37:00  
 **Branch:** main  
 **Project:** Go backend + React frontend + K8s orchestration
-**Status:** ✅ Phase 1 Complete + ✅ Phase 2 Complete → ✅ Phase 3.1-3.8 Complete (Task Management Backend + Frontend Kanban UI)
+**Status:** ✅ Phase 1 Complete + ✅ Phase 2 Complete + ✅ Phase 3 Complete → 🚧 Phase 4.1 Complete (File Browser Sidecar Setup)
 
 ---
 
 ## OVERVIEW
 
-Multi-module monorepo: Go API server, React SPA, 2 Go sidecars (file-browser, session-proxy), K8s manifests. Project management system with AI-powered coding via OpenCode agents. All critical issues resolved. **Phase 1 + Phase 2 COMPLETE** - Full project management with Kubernetes pod lifecycle, real-time WebSocket updates, and deployed to kind cluster. **Phase 3 IN PROGRESS** - Task Management & Kanban Board (3.1-3.8 Complete: Backend API + Frontend Kanban UI).
+Multi-module monorepo: Go API server, React SPA, 2 Go sidecars (file-browser, session-proxy), K8s manifests. Project management system with AI-powered coding via OpenCode agents. All critical issues resolved. **Phase 1 + Phase 2 + Phase 3 COMPLETE** - Full project management with Kubernetes pod lifecycle, real-time WebSocket updates, task management with Kanban board. **Phase 4 IN PROGRESS** - File Explorer (4.1 Complete: File Browser Sidecar Setup with 58 tests passing).
 
 ---
 
@@ -68,7 +68,11 @@ Multi-module monorepo: Go API server, React SPA, 2 Go sidecars (file-browser, se
 | App layout | `frontend/src/components/AppLayout.tsx` | ✅ Navigation header + menu |
 | Types | `frontend/src/types/index.ts` | ✅ TS interfaces (User, Project, Task, etc.) |
 | API client | `frontend/src/services/api.ts` | ✅ Axios client with JWT + Project & Task APIs |
-| File browser | `sidecars/file-browser/cmd/main.go` | Port 3001 (Phase 4) |
+| File browser | `sidecars/file-browser/cmd/main.go` | ✅ Port 3001 (Phase 4.1 Complete) |
+| File service | `sidecars/file-browser/internal/service/file.go` | ✅ CRUD + path validation (Phase 4.1) |
+| File handlers | `sidecars/file-browser/internal/handler/files.go` | ✅ 6 HTTP endpoints (Phase 4.1) |
+| File service tests | `sidecars/file-browser/internal/service/file_test.go` | ✅ 24 tests passing (Phase 4.1) |
+| File handler tests | `sidecars/file-browser/internal/handler/files_test.go` | ✅ 34 tests passing (Phase 4.1) |
 | Session proxy | `sidecars/session-proxy/cmd/main.go` | Port 3002 (Phase 5) |
 | K8s base | `k8s/base/` | Namespace, ConfigMap, RBAC |
 | K8s RBAC | `k8s/base/rbac.yaml` | ✅ ServiceAccount + Role |
@@ -356,8 +360,17 @@ make docker-push-dev        # Build and push development
 18. **Phase 2 archived** - Complete implementation summary in PHASE2.md (2026-01-18)
 19. **Current phase:** Phase 3 - Task Management & Kanban Board (3.1-3.8 Complete)
 20. **Test coverage (Phase 3):** 100 backend unit tests (repository: 30, service: 35, handlers: 35) - all passing
-21. **Phase 3.1-3.8 complete (2026-01-18 23:10)** - Full task management backend + Kanban UI:
+21. **Phase 3 complete (2026-01-19 00:45)** - Full task management backend + Kanban UI:
     - Backend: Task model, repository, service, API handlers (100 tests)
     - Frontend: Task types, API client, Kanban board with drag-drop (@dnd-kit)
     - Components: KanbanBoard (183 lines), KanbanColumn (59 lines), TaskCard (58 lines)
     - Features: Optimistic updates, error rollback, priority colors, responsive layout
+    - Real-time: WebSocket streaming with exponential backoff, task detail panel, create modal
+22. **Phase 4.1 complete (2026-01-19 08:37)** - File Browser Sidecar Setup:
+    - Sidecar: Production-ready Go 1.24 service with structured logging (slog)
+    - Service layer: Complete CRUD operations with path traversal prevention
+    - API handlers: 6 HTTP endpoints with centralized error handling
+    - Docker: 20.8MB image with HEALTHCHECK (30s interval, wget-based)
+    - Tests: 58 comprehensive unit tests (24 service + 34 handler) - all passing
+    - Security: Path validation (rejects ..), 10MB file size limits enforced
+    - Health: 3 endpoints (/healthz, /health, /ready), graceful shutdown (10s timeout)
