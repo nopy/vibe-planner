@@ -79,14 +79,13 @@ func TestBuildProjectPodSpec(t *testing.T) {
 	namespace := "test-namespace"
 	pvcName := "test-pvc"
 	config := &KubernetesConfig{
-		OpenCodeImage:       "opencode:latest",
-		OpenCodeServerImage: "opencode-server:latest",
-		FileBrowserImage:    "file-browser:latest",
-		SessionProxyImage:   "session-proxy:latest",
-		CPULimit:            "1000m",
-		MemoryLimit:         "1Gi",
-		CPURequest:          "100m",
-		MemoryRequest:       "256Mi",
+		OpenCodeImage:     "opencode:latest",
+		FileBrowserImage:  "file-browser:latest",
+		SessionProxyImage: "session-proxy:latest",
+		CPULimit:          "1000m",
+		MemoryLimit:       "1Gi",
+		CPURequest:        "100m",
+		MemoryRequest:     "256Mi",
 	}
 
 	pod := buildProjectPodSpec(podName, namespace, pvcName, projectID, config)
@@ -105,16 +104,15 @@ func TestBuildProjectPodSpec(t *testing.T) {
 	}
 
 	// Check containers
-	if len(pod.Spec.Containers) != 4 {
-		t.Fatalf("Expected 4 containers, got %d", len(pod.Spec.Containers))
+	if len(pod.Spec.Containers) != 3 {
+		t.Fatalf("Expected 3 containers, got %d", len(pod.Spec.Containers))
 	}
 
 	// Check container names and images
 	expectedContainers := map[string]string{
-		"opencode-server":         config.OpenCodeImage,
-		"file-browser":            config.FileBrowserImage,
-		"session-proxy":           config.SessionProxyImage,
-		"opencode-server-sidecar": config.OpenCodeServerImage,
+		"opencode-server": config.OpenCodeImage,
+		"file-browser":    config.FileBrowserImage,
+		"session-proxy":   config.SessionProxyImage,
 	}
 
 	for i, container := range pod.Spec.Containers {
@@ -162,16 +160,15 @@ func TestCreateProjectPod(t *testing.T) {
 	clientset := fake.NewSimpleClientset()
 
 	config := &KubernetesConfig{
-		Namespace:           "test-namespace",
-		OpenCodeImage:       "opencode:latest",
-		OpenCodeServerImage: "opencode-server:latest",
-		FileBrowserImage:    "file-browser:latest",
-		SessionProxyImage:   "session-proxy:latest",
-		WorkspaceSize:       "1Gi",
-		CPULimit:            "1000m",
-		MemoryLimit:         "1Gi",
-		CPURequest:          "100m",
-		MemoryRequest:       "256Mi",
+		Namespace:         "test-namespace",
+		OpenCodeImage:     "opencode:latest",
+		FileBrowserImage:  "file-browser:latest",
+		SessionProxyImage: "session-proxy:latest",
+		WorkspaceSize:     "1Gi",
+		CPULimit:          "1000m",
+		MemoryLimit:       "1Gi",
+		CPURequest:        "100m",
+		MemoryRequest:     "256Mi",
 	}
 
 	service := &kubernetesService{
@@ -221,8 +218,8 @@ func TestCreateProjectPod(t *testing.T) {
 		t.Errorf("Expected pod project-id label %s, got %s", projectID.String(), pod.Labels["project-id"])
 	}
 
-	if len(pod.Spec.Containers) != 4 {
-		t.Errorf("Expected 4 containers, got %d", len(pod.Spec.Containers))
+	if len(pod.Spec.Containers) != 3 {
+		t.Errorf("Expected 3 containers, got %d", len(pod.Spec.Containers))
 	}
 
 	// Verify project metadata was updated

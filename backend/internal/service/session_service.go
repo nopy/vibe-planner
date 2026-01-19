@@ -34,11 +34,12 @@ type SessionService interface {
 }
 
 type sessionService struct {
-	sessionRepo repository.SessionRepository
-	taskRepo    repository.TaskRepository
-	projectRepo repository.ProjectRepository
-	k8sService  KubernetesService
-	httpClient  *http.Client
+	sessionRepo   repository.SessionRepository
+	taskRepo      repository.TaskRepository
+	projectRepo   repository.ProjectRepository
+	k8sService    KubernetesService
+	configService ConfigServiceInterface
+	httpClient    *http.Client
 }
 
 func NewSessionService(
@@ -46,12 +47,14 @@ func NewSessionService(
 	taskRepo repository.TaskRepository,
 	projectRepo repository.ProjectRepository,
 	k8sService KubernetesService,
+	configService ConfigServiceInterface,
 ) SessionService {
 	return &sessionService{
-		sessionRepo: sessionRepo,
-		taskRepo:    taskRepo,
-		projectRepo: projectRepo,
-		k8sService:  k8sService,
+		sessionRepo:   sessionRepo,
+		taskRepo:      taskRepo,
+		projectRepo:   projectRepo,
+		k8sService:    k8sService,
+		configService: configService,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -109,7 +112,7 @@ func (s *sessionService) StartSession(ctx context.Context, taskID uuid.UUID, pro
 
 	// Start OpenCode session on sidecar
 	startedAt := time.Now()
-	if err := s.callOpenCodeStart(ctx, podIP, session.ID, prompt); err != nil {
+	if err := s.callOpenCodeStart(ctx, podIP, session.ID, prompt, project.ID); err != nil {
 		// Update session status to failed
 		session.Status = model.SessionStatusFailed
 		session.Error = err.Error()
@@ -214,12 +217,40 @@ func (s *sessionService) UpdateSessionOutput(ctx context.Context, sessionID uuid
 }
 
 // callOpenCodeStart starts a new OpenCode session on the sidecar
-func (s *sessionService) callOpenCodeStart(ctx context.Context, podIP string, sessionID uuid.UUID, prompt string) error {
+func (s *sessionService) callOpenCodeStart(ctx context.Context, podIP string, sessionID uuid.UUID, prompt string, projectID uuid.UUID) error {
 	url := fmt.Sprintf("http://%s:3003/sessions", podIP)
+
+	config, err := s.configService.GetActiveConfig(ctx, projectID)
+	if err != nil {
+		return fmt.Errorf("failed to get project config: %w", err)
+	}
+
+	apiKey, err := s.configService.GetDecryptedAPIKey(ctx, projectID)
+	if err != nil {
+		return fmt.Errorf("failed to decrypt API key: %w", err)
+	}
 
 	requestBody := map[string]interface{}{
 		"session_id": sessionID.String(),
 		"prompt":     prompt,
+		"model_config": map[string]interface{}{
+			"provider":      config.ModelProvider,
+			"model":         config.ModelName,
+			"api_key":       apiKey,
+			"temperature":   config.Temperature,
+			"max_tokens":    config.MaxTokens,
+			"enabled_tools": config.EnabledTools,
+		},
+	}
+
+	if config.ModelVersion != nil {
+		requestBody["model_config"].(map[string]interface{})["model_version"] = *config.ModelVersion
+	}
+	if config.APIEndpoint != nil {
+		requestBody["model_config"].(map[string]interface{})["api_endpoint"] = *config.APIEndpoint
+	}
+	if config.SystemPrompt != nil {
+		requestBody["system_prompt"] = *config.SystemPrompt
 	}
 
 	jsonBody, err := json.Marshal(requestBody)

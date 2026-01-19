@@ -27,6 +27,11 @@ type Config struct {
 	Kubeconfig   string
 	K8SNamespace string
 
+	// Container Images
+	OpenCodeServerImage string
+	FileBrowserImage    string
+	SessionProxyImage   string
+
 	// OpenCode
 	OpenCodeInstallPath string
 
@@ -48,6 +53,9 @@ func Load() *Config {
 		JWTExpiry:           3600,
 		Kubeconfig:          getEnv("KUBECONFIG", ""),
 		K8SNamespace:        getEnv("K8S_NAMESPACE", "opencode"),
+		OpenCodeServerImage: getEnv("OPENCODE_SERVER_IMAGE", "registry.legal-suite.com/opencode/opencode-server-sidecar:latest"),
+		FileBrowserImage:    getEnv("FILE_BROWSER_IMAGE", "registry.legal-suite.com/opencode/file-browser-sidecar:latest"),
+		SessionProxyImage:   getEnv("SESSION_PROXY_IMAGE", "registry.legal-suite.com/opencode/session-proxy-sidecar:latest"),
 		OpenCodeInstallPath: getEnv("OPENCODE_INSTALL_PATH", "/usr/local/bin/opencode"),
 		EncryptionKey:       getEnv("CONFIG_ENCRYPTION_KEY", ""),
 	}

@@ -30,10 +30,16 @@ help:
 	@echo "  make kind-delete        - Delete kind cluster"
 	@echo ""
 	@echo "Docker:"
-	@echo "  make docker-build-prod  - Build production images (unified)"
-	@echo "  make docker-build-dev   - Build development images (separate)"
-	@echo "  make docker-push-prod   - Build and push production images"
-	@echo "  make docker-push-dev    - Build and push development images"
+	@echo "  make docker-build-prod    - Build production images (unified)"
+	@echo "  make docker-build-dev     - Build development images (separate)"
+	@echo "  make docker-push-prod     - Build and push production images"
+	@echo "  make docker-push-dev      - Build and push development images"
+	@echo ""
+	@echo "Sidecars:"
+	@echo "  make opencode-server-build  - Build opencode-server sidecar"
+	@echo "  make file-browser-build     - Build file-browser sidecar"
+	@echo "  make session-proxy-build    - Build session-proxy sidecar"
+	@echo "  make sidecars-build         - Build all sidecars"
 	@echo ""
 	@echo "Cleanup:"
 	@echo "  make clean              - Stop all services and cleanup"
@@ -148,6 +154,22 @@ docker-push-prod:
 
 docker-push-dev:
 	@./scripts/build-images.sh --mode dev --push
+
+# Sidecars
+opencode-server-build:
+	@echo "Building opencode-server sidecar..."
+	@docker build -t registry.legal-suite.com/opencode/opencode-server-sidecar:latest sidecars/opencode-server/
+
+file-browser-build:
+	@echo "Building file-browser sidecar..."
+	@docker build -t registry.legal-suite.com/opencode/file-browser-sidecar:latest sidecars/file-browser/
+
+session-proxy-build:
+	@echo "Building session-proxy sidecar..."
+	@docker build -t registry.legal-suite.com/opencode/session-proxy-sidecar:latest sidecars/session-proxy/
+
+sidecars-build: opencode-server-build file-browser-build session-proxy-build
+	@echo "All sidecars built successfully!"
 
 # Cleanup
 clean:

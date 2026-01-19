@@ -16,6 +16,14 @@ import (
 	"github.com/npinot/vibe/backend/internal/repository"
 )
 
+type ConfigServiceInterface interface {
+	GetActiveConfig(ctx context.Context, projectID uuid.UUID) (*model.OpenCodeConfig, error)
+	GetDecryptedAPIKey(ctx context.Context, projectID uuid.UUID) (string, error)
+	CreateOrUpdateConfig(ctx context.Context, config *model.OpenCodeConfig, apiKey string) error
+	RollbackToVersion(ctx context.Context, projectID uuid.UUID, version int) error
+	GetConfigHistory(ctx context.Context, projectID uuid.UUID) ([]model.OpenCodeConfig, error)
+}
+
 type ConfigService struct {
 	configRepo    repository.ConfigRepository
 	encryptionKey []byte // 32-byte AES-256 key

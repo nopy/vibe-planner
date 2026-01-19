@@ -65,18 +65,52 @@ func (m *MockSessionRepository) SoftDelete(ctx context.Context, id uuid.UUID) er
 	return args.Error(0)
 }
 
+type MockConfigService struct {
+	mock.Mock
+}
+
+func (m *MockConfigService) GetActiveConfig(ctx context.Context, projectID uuid.UUID) (*model.OpenCodeConfig, error) {
+	args := m.Called(ctx, projectID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.OpenCodeConfig), args.Error(1)
+}
+
+func (m *MockConfigService) GetDecryptedAPIKey(ctx context.Context, projectID uuid.UUID) (string, error) {
+	args := m.Called(ctx, projectID)
+	return args.String(0), args.Error(1)
+}
+
+func (m *MockConfigService) CreateOrUpdateConfig(ctx context.Context, config *model.OpenCodeConfig, apiKey string) error {
+	args := m.Called(ctx, config, apiKey)
+	return args.Error(0)
+}
+
+func (m *MockConfigService) RollbackToVersion(ctx context.Context, projectID uuid.UUID, version int) error {
+	args := m.Called(ctx, projectID, version)
+	return args.Error(0)
+}
+
+func (m *MockConfigService) GetConfigHistory(ctx context.Context, projectID uuid.UUID) ([]model.OpenCodeConfig, error) {
+	args := m.Called(ctx, projectID)
+	return args.Get(0).([]model.OpenCodeConfig), args.Error(1)
+}
+
 func setupSessionServiceTest() (*sessionService, *MockSessionRepository) {
 	sessionRepo := new(MockSessionRepository)
 	taskRepo := new(MockTaskRepository)
 	projectRepo := new(MockProjectRepository)
 	k8sService := new(MockKubernetesService)
+	configService := new(MockConfigService)
 
 	service := &sessionService{
-		sessionRepo: sessionRepo,
-		taskRepo:    taskRepo,
-		projectRepo: projectRepo,
-		k8sService:  k8sService,
-		httpClient:  &http.Client{}, // Initialize HTTP client for StopSession test
+		sessionRepo:   sessionRepo,
+		taskRepo:      taskRepo,
+		projectRepo:   projectRepo,
+		k8sService:    k8sService,
+		configService: configService,
+		httpClient:    &http.Client{},
 	}
 
 	return service, sessionRepo
@@ -332,11 +366,20 @@ func TestSessionService_callOpenCodeStart_ErrorHandling(t *testing.T) {
 		serverURL = serverURL[:colonIdx]
 	}
 
+	mockConfigService := &MockConfigService{}
+	mockConfigService.On("GetActiveConfig", mock.Anything, mock.Anything).Return(&model.OpenCodeConfig{
+		ModelProvider: "openai",
+		ModelName:     "gpt-4",
+	}, nil)
+	mockConfigService.On("GetDecryptedAPIKey", mock.Anything, mock.Anything).Return("test-api-key", nil)
+
 	service := &sessionService{
-		httpClient: &http.Client{},
+		httpClient:    &http.Client{},
+		configService: mockConfigService,
 	}
 
-	err := service.callOpenCodeStart(context.Background(), serverURL, uuid.New(), "test")
+	projectID := uuid.New()
+	err := service.callOpenCodeStart(context.Background(), serverURL, uuid.New(), "test", projectID)
 	assert.Error(t, err)
 }
 

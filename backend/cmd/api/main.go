@@ -47,22 +47,32 @@ func main() {
 	k8sService, err := service.NewKubernetesService(
 		cfg.Kubeconfig,
 		cfg.K8SNamespace,
-		nil,
+		&service.KubernetesConfig{
+			Namespace:         cfg.K8SNamespace,
+			OpenCodeImage:     cfg.OpenCodeServerImage,
+			FileBrowserImage:  cfg.FileBrowserImage,
+			SessionProxyImage: cfg.SessionProxyImage,
+			WorkspaceSize:     "1Gi",
+			CPULimit:          "1000m",
+			MemoryLimit:       "1Gi",
+			CPURequest:        "100m",
+			MemoryRequest:     "256Mi",
+		},
 	)
 	if err != nil {
 		log.Printf("Warning: Failed to initialize Kubernetes service: %v", err)
 		log.Println("Project management features will be limited")
 	}
 
-	sessionService := service.NewSessionService(sessionRepo, taskRepo, projectRepo, k8sService)
-	projectService := service.NewProjectService(projectRepo, k8sService)
-	taskService := service.NewTaskService(taskRepo, projectRepo, sessionService)
-	interactionService := service.NewInteractionService(interactionRepo, taskRepo, projectRepo, sessionRepo)
-
 	configService, err := service.NewConfigService(configRepo, cfg.EncryptionKey)
 	if err != nil {
 		log.Fatalf("Failed to initialize config service: %v", err)
 	}
+
+	sessionService := service.NewSessionService(sessionRepo, taskRepo, projectRepo, k8sService, configService)
+	projectService := service.NewProjectService(projectRepo, k8sService)
+	taskService := service.NewTaskService(taskRepo, projectRepo, sessionService)
+	interactionService := service.NewInteractionService(interactionRepo, taskRepo, projectRepo, sessionRepo)
 
 	authService, err := service.NewAuthService(cfg, userRepo)
 	if err != nil {

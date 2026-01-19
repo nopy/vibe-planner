@@ -64,6 +64,7 @@ func setupTaskExecutionIntegrationTest(t *testing.T) (*gorm.DB, *TaskHandler, se
 	projectRepo := repository.NewProjectRepository(db)
 	taskRepo := repository.NewTaskRepository(db)
 	sessionRepo := repository.NewSessionRepository(db)
+	configRepo := repository.NewConfigRepository(db)
 
 	// Initialize Kubernetes service
 	kubeconfig := os.Getenv("KUBECONFIG")
@@ -77,9 +78,17 @@ func setupTaskExecutionIntegrationTest(t *testing.T) (*gorm.DB, *TaskHandler, se
 		t.Skipf("Failed to initialize Kubernetes service: %v. Skipping integration test.", err)
 	}
 
+	encryptionKey := os.Getenv("ENCRYPTION_KEY")
+	if encryptionKey == "" {
+		// Use a test key (base64-encoded 32 bytes) - safe for testing only
+		encryptionKey = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+	}
+	configService, err := service.NewConfigService(configRepo, encryptionKey)
+	require.NoError(t, err, "Failed to initialize config service")
+
 	// Initialize services
 	projectService := service.NewProjectService(projectRepo, k8sService)
-	sessionService := service.NewSessionService(sessionRepo, taskRepo, projectRepo, k8sService)
+	sessionService := service.NewSessionService(sessionRepo, taskRepo, projectRepo, k8sService, configService)
 	taskService := service.NewTaskService(taskRepo, projectRepo, sessionService)
 
 	// Initialize handlers

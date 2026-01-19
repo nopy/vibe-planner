@@ -60,9 +60,10 @@ EXAMPLES:
 MODES:
     prod    - Single unified image with embedded frontend (29MB)
               Image: \${REGISTRY}/app:\${VERSION}
+              Sidecars: opencode-server-sidecar, file-browser-sidecar, session-proxy-sidecar
     
     dev     - Separate backend, frontend, and sidecar images
-              Images: backend, frontend, file-browser-sidecar, session-proxy-sidecar
+              Images: backend, frontend, opencode-server-sidecar, file-browser-sidecar, session-proxy-sidecar
 
 EOF
     exit 0
@@ -106,6 +107,7 @@ build_production() {
     images+=("$(build_image "app" "." "Dockerfile")")
     
     # Sidecar images
+    images+=("$(build_image "opencode-server-sidecar" "./sidecars/opencode-server" "./sidecars/opencode-server/Dockerfile")")
     images+=("$(build_image "file-browser-sidecar" "./sidecars/file-browser" "./sidecars/file-browser/Dockerfile")")
     images+=("$(build_image "session-proxy-sidecar" "./sidecars/session-proxy" "./sidecars/session-proxy/Dockerfile")")
     
@@ -155,6 +157,7 @@ build_development() {
     images+=("$(build_image "frontend" "./frontend" "./frontend/Dockerfile")")
     
     # Sidecar images
+    images+=("$(build_image "opencode-server-sidecar" "./sidecars/opencode-server" "./sidecars/opencode-server/Dockerfile")")
     images+=("$(build_image "file-browser-sidecar" "./sidecars/file-browser" "./sidecars/file-browser/Dockerfile")")
     images+=("$(build_image "session-proxy-sidecar" "./sidecars/session-proxy" "./sidecars/session-proxy/Dockerfile")")
     

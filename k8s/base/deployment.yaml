@@ -65,7 +65,7 @@ spec:
             secretKeyRef:
               name: app-secrets
               key: JWT_SECRET
-        - name: ENCRYPTION_KEY
+        - name: CONFIG_ENCRYPTION_KEY
           valueFrom:
             secretKeyRef:
               name: app-secrets

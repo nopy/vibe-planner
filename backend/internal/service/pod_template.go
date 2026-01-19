@@ -8,7 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-// buildProjectPodSpec creates a pod specification with 4 containers and shared PVC
+// buildProjectPodSpec creates a pod specification with 3 containers and shared PVC
 func buildProjectPodSpec(podName, namespace, pvcName string, projectID uuid.UUID, config *KubernetesConfig) *corev1.Pod {
 	// Common volume mount
 	volumeMount := corev1.VolumeMount{
@@ -50,7 +50,7 @@ func buildProjectPodSpec(podName, namespace, pvcName string, projectID uuid.UUID
 					Ports: []corev1.ContainerPort{
 						{
 							Name:          "http",
-							ContainerPort: 3000,
+							ContainerPort: 3003,
 							Protocol:      corev1.ProtocolTCP,
 						},
 					},
@@ -70,7 +70,7 @@ func buildProjectPodSpec(podName, namespace, pvcName string, projectID uuid.UUID
 						ProbeHandler: corev1.ProbeHandler{
 							HTTPGet: &corev1.HTTPGetAction{
 								Path: "/health",
-								Port: intstr.FromInt(3000),
+								Port: intstr.FromInt(3003),
 							},
 						},
 						InitialDelaySeconds: 30,
@@ -82,7 +82,7 @@ func buildProjectPodSpec(podName, namespace, pvcName string, projectID uuid.UUID
 						ProbeHandler: corev1.ProbeHandler{
 							HTTPGet: &corev1.HTTPGetAction{
 								Path: "/ready",
-								Port: intstr.FromInt(3000),
+								Port: intstr.FromInt(3003),
 							},
 						},
 						InitialDelaySeconds: 10,
@@ -172,69 +172,8 @@ func buildProjectPodSpec(podName, namespace, pvcName string, projectID uuid.UUID
 						},
 						{
 							Name:  "OPENCODE_URL",
-							Value: "http://localhost:3000",
+							Value: "http://localhost:3003",
 						},
-					},
-				},
-				// Container 4: OpenCode Server Sidecar
-				{
-					Name:  "opencode-server-sidecar",
-					Image: config.OpenCodeServerImage,
-					Ports: []corev1.ContainerPort{
-						{
-							Name:          "http",
-							ContainerPort: 3003,
-							Protocol:      corev1.ProtocolTCP,
-						},
-					},
-					VolumeMounts: []corev1.VolumeMount{volumeMount},
-					Resources: corev1.ResourceRequirements{
-						Requests: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("200m"),
-							corev1.ResourceMemory: resource.MustParse("256Mi"),
-						},
-						Limits: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("500m"),
-							corev1.ResourceMemory: resource.MustParse("512Mi"),
-						},
-					},
-					Env: []corev1.EnvVar{
-						{
-							Name:  "WORKSPACE_DIR",
-							Value: "/workspace",
-						},
-						{
-							Name:  "PORT",
-							Value: "3003",
-						},
-						{
-							Name:  "PROJECT_ID",
-							Value: projectID.String(),
-						},
-					},
-					LivenessProbe: &corev1.Probe{
-						ProbeHandler: corev1.ProbeHandler{
-							HTTPGet: &corev1.HTTPGetAction{
-								Path: "/health",
-								Port: intstr.FromInt(3003),
-							},
-						},
-						InitialDelaySeconds: 15,
-						PeriodSeconds:       10,
-						TimeoutSeconds:      3,
-						FailureThreshold:    3,
-					},
-					ReadinessProbe: &corev1.Probe{
-						ProbeHandler: corev1.ProbeHandler{
-							HTTPGet: &corev1.HTTPGetAction{
-								Path: "/ready",
-								Port: intstr.FromInt(3003),
-							},
-						},
-						InitialDelaySeconds: 10,
-						PeriodSeconds:       5,
-						TimeoutSeconds:      3,
-						FailureThreshold:    3,
 					},
 				},
 			},

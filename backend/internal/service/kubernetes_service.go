@@ -44,16 +44,15 @@ type kubernetesService struct {
 
 // KubernetesConfig holds configuration for Kubernetes operations
 type KubernetesConfig struct {
-	Namespace           string
-	OpenCodeImage       string
-	OpenCodeServerImage string
-	FileBrowserImage    string
-	SessionProxyImage   string
-	WorkspaceSize       string
-	CPULimit            string
-	MemoryLimit         string
-	CPURequest          string
-	MemoryRequest       string
+	Namespace         string
+	OpenCodeImage     string
+	FileBrowserImage  string
+	SessionProxyImage string
+	WorkspaceSize     string
+	CPULimit          string
+	MemoryLimit       string
+	CPURequest        string
+	MemoryRequest     string
 }
 
 // NewKubernetesService creates a new Kubernetes service
@@ -65,16 +64,15 @@ func NewKubernetesService(kubeconfig, namespace string, config *KubernetesConfig
 
 	if config == nil {
 		config = &KubernetesConfig{
-			Namespace:           namespace,
-			OpenCodeImage:       "registry.legal-suite.com/opencode/app:latest",
-			OpenCodeServerImage: "registry.legal-suite.com/opencode/opencode-server:latest",
-			FileBrowserImage:    "registry.legal-suite.com/opencode/file-browser-sidecar:latest",
-			SessionProxyImage:   "registry.legal-suite.com/opencode/session-proxy-sidecar:latest",
-			WorkspaceSize:       "1Gi",
-			CPULimit:            "1000m",
-			MemoryLimit:         "1Gi",
-			CPURequest:          "100m",
-			MemoryRequest:       "256Mi",
+			Namespace:         namespace,
+			OpenCodeImage:     "registry.legal-suite.com/opencode/opencode-server-sidecar:latest",
+			FileBrowserImage:  "registry.legal-suite.com/opencode/file-browser-sidecar:latest",
+			SessionProxyImage: "registry.legal-suite.com/opencode/session-proxy-sidecar:latest",
+			WorkspaceSize:     "1Gi",
+			CPULimit:          "1000m",
+			MemoryLimit:       "1Gi",
+			CPURequest:        "100m",
+			MemoryRequest:     "256Mi",
 		}
 	}
 
