@@ -309,9 +309,12 @@ export function ProjectDetailPage() {
                 <p className="text-blue-600 font-medium">Tasks</p>
                 <p className="text-sm text-gray-500 mt-1">Kanban board</p>
               </button>
-              <div className="border border-gray-200 rounded-lg p-6 text-center opacity-50 cursor-not-allowed">
+              <button
+                onClick={() => navigate(`/projects/${id}/files`)}
+                className="border border-blue-200 rounded-lg p-6 text-center hover:bg-blue-50 hover:border-blue-300 transition"
+              >
                 <svg
-                  className="w-8 h-8 mx-auto mb-2 text-gray-400"
+                  className="w-8 h-8 mx-auto mb-2 text-blue-600"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -323,9 +326,9 @@ export function ProjectDetailPage() {
                     d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
                   />
                 </svg>
-                <p className="text-gray-500 font-medium">Files</p>
-                <p className="text-sm text-gray-400 mt-1">Coming soon</p>
-              </div>
+                <p className="text-blue-600 font-medium">Files</p>
+                <p className="text-sm text-gray-500 mt-1">Browse and edit files</p>
+              </button>
               <div className="border border-gray-200 rounded-lg p-6 text-center opacity-50 cursor-not-allowed">
                 <svg
                   className="w-8 h-8 mx-auto mb-2 text-gray-400"

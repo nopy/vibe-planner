@@ -1,10 +1,11 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 
 import { CreateDirectoryModal } from './CreateDirectoryModal'
 import { EditorTabs } from './EditorTabs'
 import { FileTree } from './FileTree'
 import { MonacoEditor } from './MonacoEditor'
 import { RenameModal } from './RenameModal'
+import { useFileWatch } from '@/hooks/useFileWatch'
 import { getFileTree, writeFile } from '@/services/api'
 import type { FileInfo } from '@/types'
 
@@ -27,6 +28,10 @@ export function FileExplorer({ projectId }: FileExplorerProps) {
   const [showRenameModal, setShowRenameModal] = useState(false)
   const [renameTarget, setRenameTarget] = useState<string | null>(null)
 
+  const [externalChanges, setExternalChanges] = useState<Map<string, boolean>>(new Map())
+
+  const { events, isConnected, error: wsError, reconnect } = useFileWatch(projectId)
+
   const fetchTree = useCallback(async () => {
     setIsLoading(true)
     setError(null)
@@ -46,6 +51,29 @@ export function FileExplorer({ projectId }: FileExplorerProps) {
   useEffect(() => {
     fetchTree()
   }, [fetchTree])
+
+  useEffect(() => {
+    if (events.length === 0) return
+
+    const latestEvent = events[events.length - 1]
+
+    switch (latestEvent.type) {
+      case 'created':
+      case 'deleted':
+      case 'renamed':
+        console.log(`[FileExplorer] Refreshing tree due to ${latestEvent.type} event`)
+        fetchTree()
+        break
+
+      case 'modified': {
+        const isOpen = openFiles.some(f => f.path === latestEvent.path)
+        if (isOpen) {
+          setExternalChanges(prev => new Map(prev).set(latestEvent.path, true))
+        }
+        break
+      }
+    }
+  }, [events, openFiles, fetchTree])
 
   const handleSelect = (node: FileInfo) => {
     setSelectedNode(node)
@@ -102,6 +130,14 @@ export function FileExplorer({ projectId }: FileExplorerProps) {
     setOpenFiles(prev => prev.map(f => (f.path === path ? { ...f, isDirty } : f)))
   }
 
+  const handleReload = (path: string) => {
+    setExternalChanges(prev => {
+      const next = new Map(prev)
+      next.delete(path)
+      return next
+    })
+  }
+
   const handleSave = async (path: string, content: string) => {
     await writeFile(projectId, { path, content })
   }
@@ -127,15 +163,22 @@ export function FileExplorer({ projectId }: FileExplorerProps) {
 
   const getActiveFileInfo = (): FileInfo | null => {
     if (!activeFile) return null
-    return findNodeByPath(tree, activeFile) || { 
-      path: activeFile, 
-      name: activeFile.split('/').pop() || '', 
-      is_directory: false, 
-      size: 0, 
-      modified_at: new Date().toISOString(),
-      children: undefined 
-    }
+    return (
+      findNodeByPath(tree, activeFile) || {
+        path: activeFile,
+        name: activeFile.split('/').pop() || '',
+        is_directory: false,
+        size: 0,
+        modified_at: new Date().toISOString(),
+        children: undefined,
+      }
+    )
   }
+
+  const hasExternalChange = useMemo(() => {
+    if (!activeFile) return false
+    return externalChanges.get(activeFile) || false
+  }, [activeFile, externalChanges])
 
   if (isLoading && !tree) {
     return (
@@ -166,9 +209,25 @@ export function FileExplorer({ projectId }: FileExplorerProps) {
 
   return (
     <div className="h-full flex flex-col md:flex-row border border-gray-200 rounded-lg overflow-hidden bg-white">
+      {wsError && (
+        <div className="bg-red-50 border-b border-red-200 p-2 flex items-center justify-between text-xs">
+          <span className="text-red-600">⚠️ {wsError}</span>
+          <button
+            onClick={reconnect}
+            className="px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+          >
+            Reconnect
+          </button>
+        </div>
+      )}
+
       <div className="w-full md:w-[30%] min-w-[250px] border-b md:border-b-0 md:border-r border-gray-200 flex flex-col h-[500px] md:h-[calc(100vh-200px)]">
         <div className="p-2 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-gray-50">
           <div className="flex items-center space-x-2">
+            <span
+              className={`inline-block w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}
+              title={isConnected ? 'Connected' : 'Disconnected'}
+            />
             <input
               type="checkbox"
               id="showHidden"
@@ -230,13 +289,27 @@ export function FileExplorer({ projectId }: FileExplorerProps) {
         />
         <div className="flex-1 overflow-hidden relative">
           {activeFile ? (
-            <MonacoEditor
-              projectId={projectId}
-              file={getActiveFileInfo()}
-              onSave={handleSave}
-              onClose={() => handleTabClose(activeFile)}
-              onDirtyChange={handleDirtyChange}
-            />
+            <>
+              {hasExternalChange && (
+                <div className="absolute top-0 left-0 right-0 z-10 bg-yellow-50 border-b border-yellow-200 p-2 flex items-center justify-between text-xs">
+                  <span className="text-yellow-800">⚠️ File changed on disk</span>
+                  <button
+                    onClick={() => handleReload(activeFile)}
+                    className="px-2 py-1 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+                  >
+                    Reload
+                  </button>
+                </div>
+              )}
+              <MonacoEditor
+                projectId={projectId}
+                file={getActiveFileInfo()}
+                onSave={handleSave}
+                onClose={() => handleTabClose(activeFile)}
+                onDirtyChange={handleDirtyChange}
+                forceReload={hasExternalChange}
+              />
+            </>
           ) : (
             <div className="h-full flex items-center justify-center text-gray-500 bg-gray-50">
               <div className="text-center">

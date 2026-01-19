@@ -5,6 +5,7 @@ import { AppLayout } from '@/components/AppLayout'
 import { LoginPage } from '@/pages/LoginPage'
 import { OidcCallbackPage } from '@/pages/OidcCallbackPage'
 import { ProjectDetailPage } from '@/pages/ProjectDetailPage'
+import { FileExplorerPage } from '@/pages/FileExplorerPage'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { ProjectList } from '@/components/Projects/ProjectList'
 import { KanbanBoard } from '@/components/Kanban/KanbanBoard'
@@ -45,6 +46,16 @@ function App() {
               <ProtectedRoute>
                 <AppLayout>
                   <KanbanBoardPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/projects/:id/files"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <FileExplorerPage />
                 </AppLayout>
               </ProtectedRoute>
             }

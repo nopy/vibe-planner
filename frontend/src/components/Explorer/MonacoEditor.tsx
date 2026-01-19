@@ -12,6 +12,7 @@ interface MonacoEditorProps {
   onSave: (path: string, content: string) => Promise<void>
   onClose: () => void
   onDirtyChange: (path: string, isDirty: boolean) => void
+  forceReload?: boolean
 }
 
 const LANGUAGE_MAP: Record<string, string> = {
@@ -39,6 +40,7 @@ export function MonacoEditor({
   onSave,
   onClose,
   onDirtyChange,
+  forceReload = false,
 }: MonacoEditorProps) {
   const [content, setContent] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
@@ -82,30 +84,40 @@ export function MonacoEditor({
   }, [loadContent])
 
   useEffect(() => {
+    if (forceReload && file) {
+      console.log('[MonacoEditor] Force reloading due to external change:', file.path)
+      loadContent()
+    }
+  }, [forceReload, file, loadContent])
+
+  useEffect(() => {
     if (saveSuccess) {
       const timer = setTimeout(() => setSaveSuccess(false), 2000)
       return () => clearTimeout(timer)
     }
   }, [saveSuccess])
 
-  const handleSave = useCallback(async (currentContent: string) => {
-    if (!file) return
+  const handleSave = useCallback(
+    async (currentContent: string) => {
+      if (!file) return
 
-    setIsSaving(true)
-    setError(null)
+      setIsSaving(true)
+      setError(null)
 
-    try {
-      await onSave(file.path, currentContent)
-      setIsDirty(false)
-      onDirtyChange(file.path, false)
-      setSaveSuccess(true)
-    } catch (err) {
-      console.error('Failed to save:', err)
-      setError('Failed to save changes')
-    } finally {
-      setIsSaving(false)
-    }
-  }, [file, onSave, onDirtyChange])
+      try {
+        await onSave(file.path, currentContent)
+        setIsDirty(false)
+        onDirtyChange(file.path, false)
+        setSaveSuccess(true)
+      } catch (err) {
+        console.error('Failed to save:', err)
+        setError('Failed to save changes')
+      } finally {
+        setIsSaving(false)
+      }
+    },
+    [file, onSave, onDirtyChange]
+  )
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -137,7 +149,7 @@ export function MonacoEditor({
     }
   }
 
-  const handleEditorDidMount: OnMount = (editor) => {
+  const handleEditorDidMount: OnMount = editor => {
     editorRef.current = editor
 
     editor.onDidBlurEditorText(() => {
@@ -166,13 +178,18 @@ export function MonacoEditor({
         {isDirty && !isSaving && !saveSuccess && (
           <span className="text-gray-400 text-xs">Unsaved</span>
         )}
-        <button 
+        <button
           onClick={onClose}
           className="text-gray-500 hover:text-gray-300 ml-2"
           title="Close Editor"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
         </button>
       </div>
