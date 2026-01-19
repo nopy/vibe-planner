@@ -22,7 +22,72 @@ func setupSessionTestDB(t *testing.T) *gorm.DB {
 	})
 	require.NoError(t, err)
 
-	err = db.AutoMigrate(&model.Session{}, &model.Task{}, &model.Project{}, &model.User{})
+	// Create tables with SQLite-compatible SQL
+	createTablesSQL := `
+		CREATE TABLE users (
+			id TEXT PRIMARY KEY,
+			oidc_subject TEXT NOT NULL UNIQUE,
+			email TEXT NOT NULL,
+			name TEXT,
+			picture_url TEXT,
+			last_login_at DATETIME,
+			created_at DATETIME,
+			updated_at DATETIME
+		);
+
+		CREATE TABLE projects (
+			id TEXT PRIMARY KEY,
+			name TEXT NOT NULL,
+			description TEXT,
+			slug TEXT NOT NULL UNIQUE,
+			git_repository_url TEXT,
+			opencode_config TEXT,
+			pod_name TEXT,
+			pod_status TEXT DEFAULT 'pending',
+			user_id TEXT NOT NULL,
+			created_at DATETIME,
+			updated_at DATETIME,
+			deleted_at DATETIME
+		);
+
+		CREATE TABLE tasks (
+			id TEXT PRIMARY KEY,
+			project_id TEXT NOT NULL,
+			title TEXT NOT NULL,
+			description TEXT,
+			status TEXT NOT NULL DEFAULT 'todo',
+			priority TEXT NOT NULL DEFAULT 'medium',
+			position INTEGER NOT NULL DEFAULT 0,
+			assigned_to TEXT,
+			created_at DATETIME,
+			updated_at DATETIME,
+			deleted_at DATETIME
+		);
+
+		CREATE TABLE sessions (
+			id TEXT PRIMARY KEY,
+			task_id TEXT NOT NULL,
+			project_id TEXT NOT NULL,
+			status TEXT NOT NULL DEFAULT 'pending',
+			prompt TEXT,
+			output TEXT,
+			error TEXT,
+			started_at DATETIME,
+			completed_at DATETIME,
+			duration_ms INTEGER DEFAULT 0,
+			created_at DATETIME,
+			updated_at DATETIME,
+			deleted_at DATETIME,
+			FOREIGN KEY (task_id) REFERENCES tasks(id),
+			FOREIGN KEY (project_id) REFERENCES projects(id)
+		);
+
+		CREATE INDEX idx_sessions_task_id ON sessions(task_id);
+		CREATE INDEX idx_sessions_project_id ON sessions(project_id);
+		CREATE INDEX idx_sessions_deleted_at ON sessions(deleted_at);
+	`
+
+	err = db.Exec(createTablesSQL).Error
 	require.NoError(t, err)
 
 	return db
@@ -30,6 +95,7 @@ func setupSessionTestDB(t *testing.T) *gorm.DB {
 
 func createTestSession(t *testing.T, db *gorm.DB, taskID, projectID uuid.UUID, status model.SessionStatus) *model.Session {
 	session := &model.Session{
+		ID:        uuid.New(),
 		TaskID:    taskID,
 		ProjectID: projectID,
 		Status:    status,
