@@ -1,6 +1,6 @@
 # OpenCode Project Manager - TODO List
 
-**Last Updated:** 2026-01-19 09:38 CET  
+**Last Updated:** 2026-01-19 10:11 CET  
 **Current Phase:** Phase 4 - File Explorer (Weeks 7-8)  
 **Branch:** main
 
@@ -61,7 +61,7 @@ See [PHASE3.md](./PHASE3.md) for complete archive of Phase 3 tasks and implement
 
 **Objective:** Implement file browsing and editing capabilities with Monaco editor integration.
 
-**Status:** 🚧 IN PROGRESS (4.1-4.5 Complete - Backend Integration Ready)
+**Status:** 🚧 IN PROGRESS (4.1-4.7 Complete - Frontend Types & API Client Ready)
 
 ### Overview
 
@@ -428,21 +428,55 @@ Binary Build:   29MB (includes all dependencies)
 
 ### Frontend Tasks
 
-#### 4.7 Types & API Client ⏳ **PENDING**
-- [ ] **File Types**: TypeScript interfaces
-  - [ ] `FileInfo` interface (path, name, isDirectory, size, modifiedAt, children?)
-  - [ ] `FileChangeEvent` interface (type, path, oldPath?, timestamp)
-  - [ ] `WriteFileRequest` interface (path, content)
-  - [ ] **Location:** `frontend/src/types/index.ts` (extend existing)
+#### 4.7 Types & API Client ✅ **COMPLETE** (2026-01-19 10:10 CET)
 
-- [ ] **File API Client**: HTTP methods
-  - [ ] `getFileTree(projectId: string): Promise<FileInfo>`
-  - [ ] `getFileContent(projectId: string, path: string): Promise<string>`
-  - [ ] `writeFile(projectId: string, path: string, content: string): Promise<void>`
-  - [ ] `deleteFile(projectId: string, path: string): Promise<void>`
-  - [ ] `createDirectory(projectId: string, path: string): Promise<void>`
-  - [ ] All methods use axios with JWT auth
-  - [ ] **Location:** `frontend/src/services/api.ts` (extend)
+**Completion Summary:**
+- ✅ 4 TypeScript interfaces added to types/index.ts (FileInfo, FileChangeEvent, WriteFileRequest, CreateDirectoryRequest)
+- ✅ 6 API client methods implemented in services/api.ts
+- ✅ Pattern compliance verified (snake_case fields, string timestamps, axios instance)
+- ✅ TypeScript build succeeds (tsc --noEmit passed)
+- ✅ ESLint passes (--max-warnings 0)
+- ✅ Prettier formatted
+- ✅ Production build succeeds (294.13 kB bundle)
+
+**Files Modified:**
+- Modified: `frontend/src/types/index.ts` (+26 lines) - Added 4 interfaces
+- Modified: `frontend/src/services/api.ts` (+36 lines) - Added 6 API methods
+
+**Interfaces Added (4):**
+- ✅ `FileInfo` interface (path, name, is_directory, size, modified_at, children?)
+- ✅ `FileChangeEvent` interface (type, path, old_path?, timestamp, version?)
+- ✅ `WriteFileRequest` interface (path, content)
+- ✅ `CreateDirectoryRequest` interface (path)
+- ✅ **Location:** `frontend/src/types/index.ts` (lines 110-134)
+
+**API Client Methods (6):**
+- ✅ `getFileTree(projectId: string, includeHidden?: boolean): Promise<FileInfo>`
+- ✅ `getFileContent(projectId: string, path: string): Promise<string>`
+- ✅ `getFileInfo(projectId: string, path: string): Promise<FileInfo>`
+- ✅ `writeFile(projectId: string, data: WriteFileRequest): Promise<void>`
+- ✅ `deleteFile(projectId: string, path: string): Promise<void>`
+- ✅ `createDirectory(projectId: string, path: string): Promise<void>`
+- ✅ All methods use shared axios instance with JWT auth (automatic via interceptor)
+- ✅ **Location:** `frontend/src/services/api.ts` (lines 105-138)
+
+**Implementation Highlights:**
+- **Pattern Compliance:** Matches existing Project/Task API patterns exactly
+- **TypeScript:** snake_case field names (is_directory, modified_at) to match backend JSON
+- **Timestamps:** Typed as `string` (ISO 8601) - consistent with existing interfaces
+- **Optional Fields:** Used `?` suffix for children, old_path, version
+- **Union Types:** FileChangeEvent.type uses literal union ('created' | 'modified' | 'deleted' | 'renamed')
+- **Axios Config:** Query params via `params` object, camelCase JS params mapped to snake_case backend
+- **Response Unwrapping:** getFileContent returns `response.data.content` (string unwrapped from envelope)
+- **Error Handling:** Relies on global response interceptor for 401 handling (no try/catch needed)
+
+**Verification Results:**
+- ✅ TypeScript compilation: 0 errors
+- ✅ ESLint: 0 warnings (--max-warnings 0 passed)
+- ✅ Prettier: All files formatted
+- ✅ Production build: 294.13 kB (no regression)
+- ✅ Import sorting: Types imported from @/types with path alias
+- ✅ No regressions: Existing tests/functionality unaffected
 
 **TypeScript Interfaces:**
 ```typescript
@@ -626,10 +660,14 @@ interface EditorState {
   - [x] No regressions in existing tests (backend tests still passing)
   - [ ] Integration tests (require actual file system + WebSocket clients)
 
-- [ ] **4.7 Types & API Client**
-  - [ ] TypeScript interfaces defined
-  - [ ] 6 API client methods implemented
-  - [ ] Build succeeds with no type errors
+- [x] **4.7 Types & API Client** ✅ **(2026-01-19 10:10 CET)**
+  - [x] TypeScript interfaces defined (4 interfaces: FileInfo, FileChangeEvent, WriteFileRequest, CreateDirectoryRequest)
+  - [x] 6 API client methods implemented (getFileTree, getFileContent, getFileInfo, writeFile, deleteFile, createDirectory)
+  - [x] Build succeeds with no type errors (tsc --noEmit passed)
+  - [x] ESLint passes (--max-warnings 0)
+  - [x] Prettier formatted
+  - [x] Pattern compliance verified (matches existing Project/Task patterns)
+  - [x] Production build succeeds (294.13 kB bundle)
 
 - [ ] **4.8 File Explorer Components**
   - [ ] FileExplorer with split-pane layout (~200 lines)

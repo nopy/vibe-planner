@@ -3,11 +3,13 @@ import axios from 'axios'
 import type {
   CreateProjectRequest,
   CreateTaskRequest,
+  FileInfo,
   MoveTaskRequest,
   Project,
   Task,
   UpdateProjectRequest,
   UpdateTaskRequest,
+  WriteFileRequest,
 } from '@/types'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
@@ -98,4 +100,39 @@ export async function moveTask(
 
 export async function deleteTask(projectId: string, taskId: string): Promise<void> {
   await api.delete(`/projects/${projectId}/tasks/${taskId}`)
+}
+
+export async function getFileTree(projectId: string, includeHidden = false): Promise<FileInfo> {
+  const response = await api.get<FileInfo>(`/projects/${projectId}/files/tree`, {
+    params: { include_hidden: includeHidden },
+  })
+  return response.data
+}
+
+export async function getFileContent(projectId: string, path: string): Promise<string> {
+  const response = await api.get<{ content: string }>(`/projects/${projectId}/files/content`, {
+    params: { path },
+  })
+  return response.data.content
+}
+
+export async function getFileInfo(projectId: string, path: string): Promise<FileInfo> {
+  const response = await api.get<FileInfo>(`/projects/${projectId}/files/info`, {
+    params: { path },
+  })
+  return response.data
+}
+
+export async function writeFile(projectId: string, data: WriteFileRequest): Promise<void> {
+  await api.post(`/projects/${projectId}/files/write`, data)
+}
+
+export async function deleteFile(projectId: string, path: string): Promise<void> {
+  await api.delete(`/projects/${projectId}/files`, {
+    params: { path },
+  })
+}
+
+export async function createDirectory(projectId: string, path: string): Promise<void> {
+  await api.post(`/projects/${projectId}/files/mkdir`, { path })
 }

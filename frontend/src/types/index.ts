@@ -106,3 +106,29 @@ export interface MoveTaskRequest {
   status: TaskStatus
   position?: number
 }
+
+export interface FileInfo {
+  path: string
+  name: string
+  is_directory: boolean
+  size: number
+  modified_at: string
+  children?: FileInfo[]
+}
+
+export interface FileChangeEvent {
+  type: 'created' | 'modified' | 'deleted' | 'renamed'
+  path: string
+  old_path?: string
+  timestamp: string
+  version?: number
+}
+
+export interface WriteFileRequest {
+  path: string
+  content: string
+}
+
+export interface CreateDirectoryRequest {
+  path: string
+}

@@ -38,12 +38,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [moveError, setMoveError] = useState<string | null>(null)
 
-  const {
-    tasks: wsTasks,
-    isConnected,
-    error: wsError,
-    reconnect,
-  } = useTaskUpdates(projectId)
+  const { tasks: wsTasks, isConnected, error: wsError, reconnect } = useTaskUpdates(projectId)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -115,7 +110,9 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
   }
 
   const handleTaskUpdated = (updatedTask: Task) => {
-    setLocalTasks(currentTasks => currentTasks.map(t => (t.id === updatedTask.id ? updatedTask : t)))
+    setLocalTasks(currentTasks =>
+      currentTasks.map(t => (t.id === updatedTask.id ? updatedTask : t))
+    )
   }
 
   const handleTaskDeleted = (deletedTaskId: string) => {
@@ -183,7 +180,9 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
             )}
           </div>
           <div className="flex items-center gap-2 text-xs text-gray-500">
-            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+            <div
+              className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}
+            />
             {isConnected ? 'Live' : 'Offline'}
           </div>
         </div>

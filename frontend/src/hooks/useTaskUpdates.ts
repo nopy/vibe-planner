@@ -40,7 +40,9 @@ export function useTaskUpdates(projectId: string): UseTaskUpdatesReturn {
 
   const applyEvent = useCallback((event: TaskEvent) => {
     if (event.version <= lastVersion.current && event.type !== 'snapshot') {
-      console.log(`[useTaskUpdates] Ignoring stale event (version ${event.version} <= ${lastVersion.current})`)
+      console.log(
+        `[useTaskUpdates] Ignoring stale event (version ${event.version} <= ${lastVersion.current})`
+      )
       return
     }
 
@@ -50,7 +52,9 @@ export function useTaskUpdates(projectId: string): UseTaskUpdatesReturn {
       case 'snapshot':
         if (event.tasks) {
           setTasks(event.tasks)
-          console.log(`[useTaskUpdates] Applied snapshot with ${event.tasks.length} tasks (version ${event.version})`)
+          console.log(
+            `[useTaskUpdates] Applied snapshot with ${event.tasks.length} tasks (version ${event.version})`
+          )
         }
         break
 
