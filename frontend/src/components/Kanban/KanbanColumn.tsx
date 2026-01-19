@@ -9,9 +9,19 @@ interface KanbanColumnProps {
   tasks: Task[]
   onAddTask: () => void
   onTaskClick: (taskId: string) => void
+  onExecute?: (taskId: string) => void
+  executionStates?: Record<string, { isExecuting: boolean }>
 }
 
-export function KanbanColumn({ title, status, tasks, onAddTask, onTaskClick }: KanbanColumnProps) {
+export function KanbanColumn({
+  title,
+  status,
+  tasks,
+  onAddTask,
+  onTaskClick,
+  onExecute,
+  executionStates = {},
+}: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: status,
   })
@@ -44,7 +54,13 @@ export function KanbanColumn({ title, status, tasks, onAddTask, onTaskClick }: K
       >
         <div className="flex flex-col gap-3">
           {tasks.map(task => (
-            <TaskCard key={task.id} task={task} onClick={() => onTaskClick(task.id)} />
+            <TaskCard
+              key={task.id}
+              task={task}
+              onClick={() => onTaskClick(task.id)}
+              onExecute={onExecute}
+              isExecuting={executionStates[task.id]?.isExecuting || false}
+            />
           ))}
 
           {tasks.length === 0 && (

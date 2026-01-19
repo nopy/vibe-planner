@@ -132,3 +132,14 @@ export interface WriteFileRequest {
 export interface CreateDirectoryRequest {
   path: string
 }
+
+export interface ExecuteTaskResponse {
+  session_id: string
+  status: string
+}
+
+export interface TaskExecutionState {
+  isExecuting: boolean
+  sessionId: string | null
+  error: string | null
+}

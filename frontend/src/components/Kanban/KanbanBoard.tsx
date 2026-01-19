@@ -11,13 +11,13 @@ import {
   useSensors,
 } from '@dnd-kit/core'
 
-import { moveTask } from '@/services/api'
+import { moveTask, executeTask } from '@/services/api'
 import { useTaskUpdates } from '@/hooks/useTaskUpdates'
 import { KanbanColumn } from '@/components/Kanban/KanbanColumn'
 import { TaskCard } from '@/components/Kanban/TaskCard'
 import { CreateTaskModal } from '@/components/Kanban/CreateTaskModal'
 import { TaskDetailPanel } from '@/components/Kanban/TaskDetailPanel'
-import type { Task, TaskStatus } from '@/types'
+import type { Task, TaskStatus, TaskExecutionState } from '@/types'
 
 interface KanbanBoardProps {
   projectId: string
@@ -37,6 +37,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [moveError, setMoveError] = useState<string | null>(null)
+  const [executionStates, setExecutionStates] = useState<Record<string, TaskExecutionState>>({})
 
   const { tasks: wsTasks, isConnected, error: wsError, reconnect } = useTaskUpdates(projectId)
 
@@ -119,6 +120,56 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
     setLocalTasks(currentTasks => currentTasks.filter(t => t.id !== deletedTaskId))
     setSelectedTaskId(null)
   }
+
+  const handleExecuteTask = async (taskId: string) => {
+    setExecutionStates(prev => ({
+      ...prev,
+      [taskId]: { isExecuting: true, sessionId: null, error: null },
+    }))
+
+    try {
+      const result = await executeTask(projectId, taskId)
+
+      setExecutionStates(prev => ({
+        ...prev,
+        [taskId]: {
+          isExecuting: true,
+          sessionId: result.session_id,
+          error: null,
+        },
+      }))
+    } catch (err) {
+      console.error('Failed to execute task:', err)
+      setMoveError('Failed to execute task. Please try again.')
+
+      setExecutionStates(prev => ({
+        ...prev,
+        [taskId]: {
+          isExecuting: false,
+          sessionId: null,
+          error: 'Execution failed',
+        },
+      }))
+
+      setTimeout(() => setMoveError(null), 5000)
+    }
+  }
+
+  useEffect(() => {
+    const currentTasks = localTasks.length > 0 ? localTasks : wsTasks || []
+    setExecutionStates(prev => {
+      const newStates = { ...prev }
+      currentTasks.forEach(task => {
+        if (
+          newStates[task.id]?.isExecuting &&
+          (task.status === 'done' || task.status === 'ai_review')
+        ) {
+          delete newStates[task.id]
+        }
+      })
+      return newStates
+    })
+  }, [localTasks, wsTasks])
 
   if (isLoading) {
     return (
@@ -236,6 +287,8 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
               tasks={tasks.filter(t => t.status === column.id)}
               onAddTask={handleAddTask}
               onTaskClick={handleTaskClick}
+              onExecute={handleExecuteTask}
+              executionStates={executionStates}
             />
           ))}
         </div>
@@ -259,6 +312,8 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
         onClose={() => setSelectedTaskId(null)}
         onTaskUpdated={handleTaskUpdated}
         onTaskDeleted={handleTaskDeleted}
+        onExecute={handleExecuteTask}
+        isExecuting={selectedTaskId ? executionStates[selectedTaskId]?.isExecuting || false : false}
       />
     </>
   )

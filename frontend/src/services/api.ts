@@ -3,6 +3,7 @@ import axios from 'axios'
 import type {
   CreateProjectRequest,
   CreateTaskRequest,
+  ExecuteTaskResponse,
   FileInfo,
   MoveTaskRequest,
   Project,
@@ -100,6 +101,20 @@ export async function moveTask(
 
 export async function deleteTask(projectId: string, taskId: string): Promise<void> {
   await api.delete(`/projects/${projectId}/tasks/${taskId}`)
+}
+
+export async function executeTask(
+  projectId: string,
+  taskId: string
+): Promise<ExecuteTaskResponse> {
+  const response = await api.post<ExecuteTaskResponse>(
+    `/projects/${projectId}/tasks/${taskId}/execute`
+  )
+  return response.data
+}
+
+export async function stopTaskExecution(projectId: string, taskId: string): Promise<void> {
+  await api.post(`/projects/${projectId}/tasks/${taskId}/stop`)
 }
 
 export async function getFileTree(projectId: string, includeHidden = false): Promise<FileInfo> {

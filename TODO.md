@@ -328,38 +328,64 @@ Phase 5 integrates the OpenCode AI agent server into project pods for automated 
 ### Frontend Tasks
 
 #### 5.4 Execute Task UI
-**Status:** 📋 Planned
+**Status:** ✅ **COMPLETE** (2026-01-19)
 
 **Objectives:**
-- Add "Execute" button to task cards and task detail panel
-- Show execution state visually (running/completed/failed)
-- Prevent concurrent executions on same task
+- ✅ Add "Execute" button to task cards and task detail panel
+- ✅ Show execution state visually (running/completed/failed)
+- ✅ Prevent concurrent executions on same task
 
 **Tasks:**
-- [ ] **TaskCard Updates** (`components/Kanban/TaskCard.tsx`)
-  - Add "Execute" button (lightning bolt icon)
-  - Show execution status badge (running/completed/failed)
-  - Disable button when task is already running
+- [x] **TaskCard Updates** (`components/Kanban/TaskCard.tsx`)
+  - ✅ Added "Execute" button with lightning bolt icon
+  - ✅ Shows execution status badge (running/completed/failed)
+  - ✅ Disables button when task is already running
+  - ✅ Only visible on TODO tasks
 
-- [ ] **Task Detail Panel** (`components/Kanban/TaskDetailPanel.tsx`)
-  - Add "Execute Task" button in header
-  - Show execution history section
-  - Display current session status
+- [x] **Task Detail Panel** (`components/Kanban/TaskDetailPanel.tsx`)
+  - ✅ Added "Execute Task" button in header
+  - ✅ Shows execution history section
+  - ✅ Displays current session status with session ID and duration
 
-- [ ] **API Client** (`services/api.ts`)
-  - executeTask(projectId, taskId) → Promise<{ sessionId: string }>
-  - stopTaskExecution(projectId, taskId, sessionId) → Promise<void>
+- [x] **API Client** (`services/api.ts`)
+  - ✅ executeTask(projectId, taskId) → Promise<{ session_id: string }>
+  - ✅ stopTaskExecution(projectId, taskId) → Promise<void>
 
-**Files to Modify:**
-- `frontend/src/components/Kanban/TaskCard.tsx`
-- `frontend/src/components/Kanban/TaskDetailPanel.tsx`
-- `frontend/src/services/api.ts`
+**Files Modified:**
+- ✅ `frontend/src/types/index.ts` - Added ExecuteTaskResponse, TaskExecutionState interfaces
+- ✅ `frontend/src/services/api.ts` - Added executeTask, stopTaskExecution methods
+- ✅ `frontend/src/components/Kanban/TaskCard.tsx` - Added onExecute prop, isExecuting prop, execute button, execution badge
+- ✅ `frontend/src/components/Kanban/TaskDetailPanel.tsx` - Added onExecute/isExecuting props, execute button in header, execution status section
+- ✅ `frontend/src/components/Kanban/KanbanBoard.tsx` - Added execution state management, handleExecuteTask function, wire up props
+- ✅ `frontend/src/components/Kanban/KanbanColumn.tsx` - Pass through onExecute and executionStates props to TaskCard
+
+**Implementation Summary:**
+- **TypeScript Types**: Added ExecuteTaskResponse and TaskExecutionState to types/index.ts
+- **API Client**: Implemented executeTask() POST to /projects/:id/tasks/:taskId/execute, returns session_id
+- **TaskCard**: Lightning bolt button appears on TODO tasks only, shows "Running" badge with spinner when executing
+- **TaskDetailPanel**: Execute button in header (next to Edit), execution status section shows session ID and duration
+- **KanbanBoard**: Manages execution state per task (Record<taskId, TaskExecutionState>), clears state when task reaches terminal status
+- **State Management**: Optimistic UI with error rollback, automatic cleanup via WebSocket updates
+
+**Visual Features:**
+- Lightning bolt icon (⚡) for execute button
+- Blue "Running" badge with animated spinner
+- Execute button disabled during execution (opacity-50, cursor-not-allowed)
+- Execution status section with blue-50 background shows session ID in monospace font
+- Duration displayed in seconds when execution completes
+
+**Test Coverage:**
+- ✅ TypeScript compilation passes (npm run build)
+- ✅ ESLint passes with --max-warnings 0
+- ✅ All existing tests still passing (no regressions)
 
 **Success Criteria:**
-- [ ] "Execute" button visible on all task cards
-- [ ] Button disabled when execution in progress
-- [ ] Visual feedback for execution state changes
-- [ ] API client methods implemented and typed
+- [x] "Execute" button visible on all task cards (TODO status only) ✅
+- [x] Button disabled when execution in progress ✅
+- [x] Visual feedback for execution state changes ✅
+- [x] API client methods implemented and typed ✅
+
+**Next Steps:** Phase 5.5 - Real-time Output Streaming
 
 ---
 
