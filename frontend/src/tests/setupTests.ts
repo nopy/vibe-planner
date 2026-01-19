@@ -11,6 +11,7 @@ afterEach(() => {
 })
 
 // Mock window.location
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 delete (window as any).location
 window.location = {
   href: 'http://localhost:3000/',
@@ -26,6 +27,7 @@ window.location = {
   reload: vi.fn(),
   replace: vi.fn(),
   toString: () => 'http://localhost:3000/',
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 } as any
 
 // Mock window.matchMedia
@@ -52,4 +54,5 @@ global.IntersectionObserver = class IntersectionObserver {
     return []
   }
   unobserve() {}
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 } as any

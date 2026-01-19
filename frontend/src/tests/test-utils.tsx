@@ -56,6 +56,7 @@ interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
   useMemoryRouter?: boolean
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function renderWithProviders(
   ui: ReactElement,
   {
@@ -86,6 +87,7 @@ export function renderWithProviders(
   return render(ui, { wrapper: Wrapper, ...renderOptions })
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function createMockUser(overrides?: Partial<User>): User {
   return {
     id: 'test-user-id',
@@ -100,5 +102,7 @@ export function createMockUser(overrides?: Partial<User>): User {
   }
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export * from '@testing-library/react'
+// eslint-disable-next-line react-refresh/only-export-components
 export { renderWithProviders as render }
