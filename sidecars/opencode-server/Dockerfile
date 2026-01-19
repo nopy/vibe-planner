@@ -25,6 +25,10 @@ RUN bun install --production --ignore-scripts
 # Copy server implementation
 WORKDIR /build/server
 COPY server.ts .
+COPY package.json .
+
+# Install server dependencies
+RUN bun install --production
 
 # ====================================
 # Stage 2: Runtime
@@ -50,8 +54,10 @@ WORKDIR /app
 # Copy OpenCode from builder
 COPY --from=builder --chown=opencode:opencode /build/opencode ./opencode
 
-# Copy server implementation
+# Copy server implementation and dependencies
 COPY --from=builder --chown=opencode:opencode /build/server/server.ts ./server.ts
+COPY --from=builder --chown=opencode:opencode /build/server/package.json ./package.json
+COPY --from=builder --chown=opencode:opencode /build/server/node_modules ./node_modules
 
 # Switch to non-root user
 USER opencode

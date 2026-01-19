@@ -87,8 +87,9 @@ func main() {
 	fileHandler := api.NewFileHandler(projectRepo, k8sService)
 	configHandler := api.NewConfigHandler(configService)
 	interactionHandler := api.NewInteractionHandler(interactionService)
+	sessionHandler := api.NewSessionHandler(sessionService)
 
-	router := setupRouter(cfg, authHandler, projectHandler, taskHandler, fileHandler, configHandler, interactionHandler, authMiddleware)
+	router := setupRouter(cfg, authHandler, projectHandler, taskHandler, fileHandler, configHandler, interactionHandler, sessionHandler, authMiddleware)
 
 	// Setup static file serving for production (embedded frontend)
 	if cfg.Environment == "production" {
@@ -109,7 +110,7 @@ func main() {
 	}
 }
 
-func setupRouter(cfg *config.Config, authHandler *api.AuthHandler, projectHandler *api.ProjectHandler, taskHandler *api.TaskHandler, fileHandler *api.FileHandler, configHandler *api.ConfigHandler, interactionHandler *api.InteractionHandler, authMiddleware *middleware.AuthMiddleware) *gin.Engine {
+func setupRouter(cfg *config.Config, authHandler *api.AuthHandler, projectHandler *api.ProjectHandler, taskHandler *api.TaskHandler, fileHandler *api.FileHandler, configHandler *api.ConfigHandler, interactionHandler *api.InteractionHandler, sessionHandler *api.SessionHandler, authMiddleware *middleware.AuthMiddleware) *gin.Engine {
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -143,6 +144,12 @@ func setupRouter(cfg *config.Config, authHandler *api.AuthHandler, projectHandle
 			auth.GET("/oidc/callback", authHandler.OIDCCallback)
 			auth.GET("/me", authMiddleware.JWTAuth(), authHandler.GetCurrentUser)
 			auth.POST("/logout", authHandler.Logout)
+		}
+
+		sessions := v1.Group("/sessions")
+		{
+			sessions.GET("/active", sessionHandler.GetActiveSessions)
+			sessions.PATCH("/:id/status", sessionHandler.UpdateSessionStatus)
 		}
 
 		projects := v1.Group("/projects", authMiddleware.JWTAuth())

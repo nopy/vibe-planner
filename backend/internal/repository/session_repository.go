@@ -16,6 +16,7 @@ type SessionRepository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*model.Session, error)
 	FindByTaskID(ctx context.Context, taskID uuid.UUID) ([]model.Session, error)
 	FindActiveSessionsForProject(ctx context.Context, projectID uuid.UUID) ([]model.Session, error)
+	FindAllActiveSessions(ctx context.Context) ([]model.Session, error)
 	Update(ctx context.Context, session *model.Session) error
 	UpdateStatus(ctx context.Context, id uuid.UUID, status model.SessionStatus) error
 	UpdateOutput(ctx context.Context, id uuid.UUID, output string) error
@@ -125,4 +126,16 @@ func (r *sessionRepository) SoftDelete(ctx context.Context, id uuid.UUID) error 
 	}
 
 	return nil
+}
+
+func (r *sessionRepository) FindAllActiveSessions(ctx context.Context) ([]model.Session, error) {
+	var sessions []model.Session
+
+	if err := r.db.WithContext(ctx).
+		Where("status IN ?", []string{"pending", "running", "waiting_input"}).
+		Find(&sessions).Error; err != nil {
+		return nil, fmt.Errorf("failed to find all active sessions: %w", err)
+	}
+
+	return sessions, nil
 }

@@ -13,6 +13,8 @@
 
 import { file, write as bunWrite } from "bun";
 import { access, constants } from "fs/promises";
+import { createOpencodeClient } from "@opencode-ai/sdk";
+import type { Session as OpenCodeSession, Message, Part } from "@opencode-ai/sdk";
 
 // Environment configuration
 const PORT = parseInt(process.env.PORT || "3003", 10);
@@ -20,6 +22,7 @@ const WORKSPACE_DIR = process.env.WORKSPACE_DIR || "/workspace";
 const LOG_LEVEL = process.env.LOG_LEVEL || "info";
 const SESSION_TIMEOUT = parseInt(process.env.SESSION_TIMEOUT || "3600", 10);
 const MAX_CONCURRENT_SESSIONS = parseInt(process.env.MAX_CONCURRENT_SESSIONS || "5", 10);
+const BACKEND_API_URL = process.env.BACKEND_API_URL || "http://localhost:8090";
 
 // Logger utility
 const logLevels: Record<string, number> = { debug: 0, info: 1, warn: 2, error: 3 };
@@ -45,6 +48,10 @@ interface SessionState {
   progress: number;
   currentTool?: string;
   controller?: AbortController;
+  opencodeSessionId?: string; // OpenCode SDK session ID
+  error?: string; // Error message if failed
+  lastEventId?: string; // Last processed OpenCode event ID for replay
+  eventBuffer: Array<{ eventId: string; eventType: string; data: object }>; // Event buffer for reconnection
 }
 
 interface ModelConfig {
@@ -59,6 +66,17 @@ interface ModelConfig {
 }
 
 const sessions = new Map<string, SessionState>();
+
+let opencodeClient: ReturnType<typeof createOpencodeClient> | null = null;
+
+async function getOpencodeClient() {
+  if (!opencodeClient) {
+    opencodeClient = createOpencodeClient({
+      baseUrl: process.env.OPENCODE_SERVER_URL || "http://localhost:3000"
+    });
+  }
+  return opencodeClient;
+}
 
 // Health check endpoint
 function handleHealthz(): Response {
@@ -150,18 +168,18 @@ async function handleCreateSession(req: Request): Promise<Response> {
       );
     }
 
-    // Create session state
     const now = new Date().toISOString();
     const session: SessionState = {
       sessionId: body.session_id,
       prompt: body.prompt,
       modelConfig: body.model_config,
       systemPrompt: body.system_prompt,
-      status: "running",
+      status: "pending",
       createdAt: now,
       lastActivity: now,
       progress: 0,
-      controller: new AbortController()
+      controller: new AbortController(),
+      eventBuffer: []
     };
 
     sessions.set(body.session_id, session);
@@ -171,23 +189,67 @@ async function handleCreateSession(req: Request): Promise<Response> {
       provider: body.model_config.provider 
     });
 
-    // Start async session execution (placeholder for OpenCode integration)
-    executeSession(session).catch(err => {
-      log("error", "Session execution failed", { 
-        sessionId: session.sessionId, 
-        error: err.message 
+    // Create OpenCode session SYNCHRONOUSLY to get remote_session_id
+    try {
+      const client = await getOpencodeClient();
+      
+      const createResult = await client.session.create({
+        body: {
+          title: `Session ${session.sessionId}`,
+          workingDirectory: WORKSPACE_DIR
+        }
       });
-      session.status = "failed";
-    });
+      
+      if (!createResult.data) {
+        throw new Error("Failed to create OpenCode session");
+      }
+      
+      session.opencodeSessionId = createResult.data.id;
+      session.status = "running";
+      session.lastActivity = new Date().toISOString();
+      
+      log("info", "OpenCode session created", { 
+        sessionId: session.sessionId,
+        opencodeSessionId: session.opencodeSessionId
+      });
 
-    return Response.json(
-      {
-        session_id: body.session_id,
-        status: "running",
-        created_at: now
-      },
-      { status: 201 }
-    );
+      // Start async execution in background
+      executeSessionAsync(session).catch(err => {
+        log("error", "Session execution failed", { 
+          sessionId: session.sessionId, 
+          error: err.message 
+        });
+        session.status = "failed";
+        session.error = err.message;
+      });
+
+      return Response.json(
+        {
+          session_id: body.session_id,
+          remote_session_id: session.opencodeSessionId,
+          status: "running",
+          created_at: now
+        },
+        { status: 201 }
+      );
+    } catch (error) {
+      session.status = "failed";
+      session.error = error instanceof Error ? error.message : String(error);
+      
+      log("error", "Failed to create OpenCode session", { 
+        sessionId: body.session_id,
+        error: session.error
+      });
+      
+      return Response.json(
+        { 
+          error: "Failed to create OpenCode session",
+          details: session.error,
+          timestamp: new Date().toISOString()
+        },
+        { status: 500 }
+      );
+    }
   } catch (error) {
     log("error", "Failed to create session", { 
       error: error instanceof Error ? error.message : String(error) 
@@ -203,21 +265,86 @@ async function handleCreateSession(req: Request): Promise<Response> {
   }
 }
 
-// Placeholder session execution (will integrate with OpenCode in Phase 2.3)
-async function executeSession(session: SessionState): Promise<void> {
-  log("info", "Starting session execution", { sessionId: session.sessionId });
+async function executeSessionAsync(session: SessionState): Promise<void> {
+  log("info", "Starting OpenCode prompt execution", { 
+    sessionId: session.sessionId,
+    opencodeSessionId: session.opencodeSessionId
+  });
   
-  // Simulate work for MVP (will be replaced with real OpenCode execution)
-  await new Promise(resolve => setTimeout(resolve, 100));
+  const timeoutId = setTimeout(() => {
+    if (session.status === "running" || session.status === "pending") {
+      session.controller?.abort();
+      session.status = "failed";
+      session.error = `Session timeout after ${SESSION_TIMEOUT} seconds`;
+      session.lastActivity = new Date().toISOString();
+      log("warn", "Session timeout", { 
+        sessionId: session.sessionId,
+        timeout: SESSION_TIMEOUT 
+      });
+    }
+  }, SESSION_TIMEOUT * 1000);
   
-  session.status = "completed";
-  session.lastActivity = new Date().toISOString();
-  session.progress = 100;
-  
-  log("info", "Session completed", { sessionId: session.sessionId });
+  try {
+    const client = await getOpencodeClient();
+    
+    if (!session.opencodeSessionId) {
+      throw new Error("Missing remote session ID");
+    }
+    
+    const sendResult = await client.session.prompt({
+      path: { id: session.opencodeSessionId },
+      body: {
+        model: {
+          providerID: session.modelConfig.provider,
+          modelID: session.modelConfig.model,
+          apiKey: session.modelConfig.api_key,
+          temperature: session.modelConfig.temperature,
+          maxTokens: session.modelConfig.max_tokens
+        },
+        parts: [
+          ...(session.systemPrompt ? [{ type: "text" as const, text: session.systemPrompt }] : []),
+          { type: "text" as const, text: session.prompt }
+        ]
+      }
+    });
+    
+    if (session.controller?.signal.aborted) {
+      session.status = "cancelled";
+      log("info", "Session cancelled during execution", { sessionId: session.sessionId });
+      clearTimeout(timeoutId);
+      return;
+    }
+    
+    session.status = "completed";
+    session.lastActivity = new Date().toISOString();
+    session.progress = 100;
+    clearTimeout(timeoutId);
+    
+    log("info", "OpenCode session completed", { 
+      sessionId: session.sessionId,
+      opencodeSessionId: session.opencodeSessionId
+    });
+    
+  } catch (error) {
+    clearTimeout(timeoutId);
+    
+    if (session.controller?.signal.aborted) {
+      session.status = "cancelled";
+      log("info", "Session cancelled during execution", { sessionId: session.sessionId });
+    } else {
+      session.status = "failed";
+      session.error = error instanceof Error ? error.message : String(error);
+      session.lastActivity = new Date().toISOString();
+      
+      log("error", "OpenCode prompt execution failed", {
+        sessionId: session.sessionId,
+        opencodeSessionId: session.opencodeSessionId,
+        error: session.error
+      });
+    }
+  }
 }
 
-// SSE stream endpoint
 function handleSessionStream(sessionId: string, req: Request): Response {
   const session = sessions.get(sessionId);
   
@@ -231,77 +358,128 @@ function handleSessionStream(sessionId: string, req: Request): Response {
     );
   }
 
-  log("info", "SSE stream started", { sessionId });
+  const lastEventId = req.headers.get("Last-Event-ID");
+  log("info", "SSE stream started", { sessionId, lastEventId });
 
-  // Create SSE stream using ReadableStream
-  let eventId = 0;
   const stream = new ReadableStream({
     async start(controller) {
       const encoder = new TextEncoder();
       
-      // Helper to send SSE event
-      const sendEvent = (eventType: string, data: object) => {
-        eventId++;
+      const sendEvent = (eventId: string, eventType: string, data: object) => {
         const message = `event: ${eventType}\nid: ${eventId}\ndata: ${JSON.stringify(data)}\n\n`;
         controller.enqueue(encoder.encode(message));
+        
+        session.eventBuffer.push({ eventId, eventType, data });
+        if (session.eventBuffer.length > 100) {
+          session.eventBuffer.shift();
+        }
+        session.lastEventId = eventId;
       };
 
       try {
-        // Send initial status event
-        sendEvent("status", {
+        if (lastEventId) {
+          const replayIndex = session.eventBuffer.findIndex(e => e.eventId === lastEventId);
+          if (replayIndex !== -1) {
+            const eventsToReplay = session.eventBuffer.slice(replayIndex + 1);
+            for (const event of eventsToReplay) {
+              controller.enqueue(encoder.encode(
+                `event: ${event.eventType}\nid: ${event.eventId}\ndata: ${JSON.stringify(event.data)}\n\n`
+              ));
+            }
+            log("info", "Replayed events from buffer", { 
+              sessionId, 
+              count: eventsToReplay.length 
+            });
+          }
+        }
+
+        const initialEventId = `${session.opencodeSessionId || sessionId}-init-${Date.now()}`;
+        sendEvent(initialEventId, "status", {
           status: session.status,
           timestamp: new Date().toISOString()
         });
 
-        // Simulate streaming output (MVP - will integrate with OpenCode in Phase 2.3)
-        sendEvent("output", {
-          type: "stdout",
-          text: `Starting task: ${session.prompt}`,
-          timestamp: new Date().toISOString()
-        });
+        if (!session.opencodeSessionId) {
+          const errorEventId = `${sessionId}-error-${Date.now()}`;
+          sendEvent(errorEventId, "error", {
+            error: "OpenCode session not initialized",
+            fatal: true,
+            timestamp: new Date().toISOString()
+          });
+          controller.close();
+          return;
+        }
 
-        await new Promise(resolve => setTimeout(resolve, 500));
+        const client = await getOpencodeClient();
+        const eventsResult = await client.event.subscribe();
+        
+        if (!eventsResult.data) {
+          throw new Error("Failed to subscribe to OpenCode events");
+        }
 
-        sendEvent("tool_call", {
-          tool: "read",
-          args: { file: "/workspace/README.md" },
-          timestamp: new Date().toISOString()
-        });
-
-        await new Promise(resolve => setTimeout(resolve, 300));
-
-        sendEvent("tool_result", {
-          tool: "read",
-          result: { content: "File content..." },
-          timestamp: new Date().toISOString()
-        });
-
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        sendEvent("output", {
-          type: "stdout",
-          text: "Task execution completed successfully",
-          timestamp: new Date().toISOString()
-        });
-
-        sendEvent("complete", {
-          final_message: "Task completed",
-          files_modified: [],
-          timestamp: new Date().toISOString()
-        });
-
-        // Heartbeat interval (send every 30 seconds to keep connection alive)
         const heartbeatInterval = setInterval(() => {
           if (session.status === "completed" || session.status === "failed" || session.status === "cancelled") {
             clearInterval(heartbeatInterval);
-            controller.close();
           } else {
-            sendEvent("heartbeat", {});
+            const heartbeatEventId = `${session.opencodeSessionId}-heartbeat-${Date.now()}`;
+            sendEvent(heartbeatEventId, "heartbeat", {});
           }
         }, 30000);
 
-        // Close after completion events
-        await new Promise(resolve => setTimeout(resolve, 100));
+        for await (const event of eventsResult.data.stream) {
+          if (session.controller?.signal.aborted) {
+            clearInterval(heartbeatInterval);
+            const cancelEventId = event.id || `${session.opencodeSessionId}-cancel-${Date.now()}`;
+            sendEvent(cancelEventId, "status", {
+              status: "cancelled",
+              timestamp: new Date().toISOString()
+            });
+            break;
+          }
+
+          const opencodeEventId = event.id || `${session.opencodeSessionId}-${event.type}-${Date.now()}`;
+
+          if (event.type === "tool_call") {
+            sendEvent(opencodeEventId, "tool_call", {
+              tool: event.properties.tool,
+              args: event.properties.args,
+              timestamp: new Date().toISOString()
+            });
+            session.currentTool = event.properties.tool;
+          } else if (event.type === "tool_result") {
+            sendEvent(opencodeEventId, "tool_result", {
+              tool: event.properties.tool,
+              result: event.properties.result,
+              timestamp: new Date().toISOString()
+            });
+            session.currentTool = undefined;
+          } else if (event.type === "output") {
+            sendEvent(opencodeEventId, "output", {
+              type: event.properties.stream || "stdout",
+              text: event.properties.text,
+              timestamp: new Date().toISOString()
+            });
+          } else if (event.type === "progress") {
+            session.progress = event.properties.percent || 0;
+            sendEvent(opencodeEventId, "status", {
+              status: session.status,
+              progress: session.progress,
+              timestamp: new Date().toISOString()
+            });
+          }
+
+          if (session.status === "completed" || session.status === "failed") {
+            clearInterval(heartbeatInterval);
+            const completeEventId = event.id || `${session.opencodeSessionId}-complete-${Date.now()}`;
+            sendEvent(completeEventId, "complete", {
+              final_message: event.properties.message || "Task completed",
+              files_modified: event.properties.files || [],
+              timestamp: new Date().toISOString()
+            });
+            break;
+          }
+        }
+
         clearInterval(heartbeatInterval);
         controller.close();
         
@@ -310,7 +488,8 @@ function handleSessionStream(sessionId: string, req: Request): Response {
           sessionId, 
           error: error instanceof Error ? error.message : String(error) 
         });
-        sendEvent("error", {
+        const errorEventId = `${session.opencodeSessionId || sessionId}-error-${Date.now()}`;
+        sendEvent(errorEventId, "error", {
           error: error instanceof Error ? error.message : String(error),
           fatal: true,
           timestamp: new Date().toISOString()
@@ -330,8 +509,7 @@ function handleSessionStream(sessionId: string, req: Request): Response {
   });
 }
 
-// Cancel session endpoint
-function handleCancelSession(sessionId: string): Response {
+async function handleCancelSession(sessionId: string): Promise<Response> {
   const session = sessions.get(sessionId);
   
   if (!session) {
@@ -344,10 +522,28 @@ function handleCancelSession(sessionId: string): Response {
     );
   }
 
-  // Cancel the session
   session.controller?.abort();
   session.status = "cancelled";
   session.lastActivity = new Date().toISOString();
+
+  if (session.opencodeSessionId) {
+    try {
+      const client = await getOpencodeClient();
+      await client.session.abort({
+        path: { id: session.opencodeSessionId }
+      });
+      log("info", "OpenCode session aborted", { 
+        sessionId, 
+        opencodeSessionId: session.opencodeSessionId 
+      });
+    } catch (error) {
+      log("error", "Failed to abort OpenCode session", {
+        sessionId,
+        opencodeSessionId: session.opencodeSessionId,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }
 
   log("info", "Session cancelled", { sessionId });
 
@@ -454,6 +650,137 @@ function setupGracefulShutdown(server: any) {
   process.on("SIGINT", () => shutdown("SIGINT"));
 }
 
+async function recoverActiveSessions() {
+  log("info", "Starting session recovery from backend database");
+  
+  try {
+    const response = await fetch(`${BACKEND_API_URL}/api/sessions/active`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json"
+      }
+    });
+
+    if (!response.ok) {
+      log("warn", "Failed to fetch active sessions", { 
+        status: response.status,
+        statusText: response.statusText
+      });
+      return;
+    }
+
+    const data = await response.json();
+    const activeSessions = data.sessions || [];
+
+    log("info", "Active sessions found in database", { count: activeSessions.length });
+
+    for (const dbSession of activeSessions) {
+      try {
+        if (!dbSession.remote_session_id) {
+          log("warn", "Session missing remote_session_id, marking as failed", {
+            sessionId: dbSession.id
+          });
+          await markSessionFailed(dbSession.id, "Missing OpenCode session ID");
+          continue;
+        }
+
+        const client = await getOpencodeClient();
+        const sessionStatus = await client.session.get({
+          path: { id: dbSession.remote_session_id }
+        });
+
+        if (sessionStatus.data) {
+          log("info", "Recovered session from OpenCode", {
+            sessionId: dbSession.id,
+            remoteSessionId: dbSession.remote_session_id,
+            opencodeStatus: sessionStatus.data.status
+          });
+
+          const recoveredSession: SessionState = {
+            sessionId: dbSession.id,
+            prompt: dbSession.prompt || "",
+            modelConfig: {
+              provider: dbSession.model_config?.provider || "openai",
+              model: dbSession.model_config?.model || "gpt-4o-mini",
+              api_key: "",
+              temperature: dbSession.model_config?.temperature || 0.7,
+              max_tokens: dbSession.model_config?.max_tokens || 4096,
+              enabled_tools: dbSession.model_config?.enabled_tools || []
+            },
+            status: mapOpencodeStatus(sessionStatus.data.status),
+            createdAt: dbSession.created_at,
+            lastActivity: new Date().toISOString(),
+            progress: 0,
+            controller: new AbortController(),
+            opencodeSessionId: dbSession.remote_session_id,
+            lastEventId: dbSession.last_event_id,
+            eventBuffer: []
+          };
+
+          sessions.set(dbSession.id, recoveredSession);
+        } else {
+          log("warn", "OpenCode session not found, marking as failed", {
+            sessionId: dbSession.id,
+            remoteSessionId: dbSession.remote_session_id
+          });
+          await markSessionFailed(dbSession.id, "OpenCode session no longer exists");
+        }
+      } catch (error) {
+        log("error", "Failed to recover session", {
+          sessionId: dbSession.id,
+          error: error instanceof Error ? error.message : String(error)
+        });
+        await markSessionFailed(dbSession.id, 
+          error instanceof Error ? error.message : "Unknown recovery error");
+      }
+    }
+
+    log("info", "Session recovery complete", { 
+      recovered: sessions.size,
+      total: activeSessions.length 
+    });
+  } catch (error) {
+    log("error", "Session recovery failed", {
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
+}
+
+function mapOpencodeStatus(opencodeStatus: string): SessionState["status"] {
+  switch (opencodeStatus) {
+    case "running":
+      return "running";
+    case "completed":
+      return "completed";
+    case "failed":
+      return "failed";
+    case "cancelled":
+      return "cancelled";
+    default:
+      return "pending";
+  }
+}
+
+async function markSessionFailed(sessionId: string, reason: string) {
+  try {
+    await fetch(`${BACKEND_API_URL}/api/sessions/${sessionId}/status`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        status: "failed",
+        error: reason
+      })
+    });
+  } catch (error) {
+    log("error", "Failed to update session status in backend", {
+      sessionId,
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
+}
+
 // Start server
 const server = Bun.serve({
   port: PORT,
@@ -472,8 +799,13 @@ const server = Bun.serve({
 
 setupGracefulShutdown(server);
 
+recoverActiveSessions().catch(err => {
+  log("error", "Startup recovery failed", { error: err.message });
+});
+
 log("info", "OpenCode Server started", { 
   port: PORT, 
   workspace: WORKSPACE_DIR,
-  logLevel: LOG_LEVEL
+  logLevel: LOG_LEVEL,
+  backendApiUrl: BACKEND_API_URL
 });

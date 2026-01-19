@@ -30,7 +30,9 @@ type SessionService interface {
 	GetSession(ctx context.Context, sessionID uuid.UUID) (*model.Session, error)
 	GetSessionsByTaskID(ctx context.Context, taskID uuid.UUID) ([]model.Session, error)
 	GetActiveProjectSessions(ctx context.Context, projectID uuid.UUID) ([]model.Session, error)
+	GetAllActiveSessions(ctx context.Context) ([]model.Session, error)
 	UpdateSessionOutput(ctx context.Context, sessionID uuid.UUID, output string) error
+	UpdateSessionStatus(ctx context.Context, sessionID uuid.UUID, status string, errorMsg string) error
 }
 
 type sessionService struct {
@@ -112,17 +114,17 @@ func (s *sessionService) StartSession(ctx context.Context, taskID uuid.UUID, pro
 
 	// Start OpenCode session on sidecar
 	startedAt := time.Now()
-	if err := s.callOpenCodeStart(ctx, podIP, session.ID, prompt, project.ID); err != nil {
-		// Update session status to failed
+	remoteSessionID, err := s.callOpenCodeStart(ctx, podIP, session.ID, prompt, project.ID)
+	if err != nil {
 		session.Status = model.SessionStatusFailed
 		session.Error = err.Error()
 		_ = s.sessionRepo.Update(ctx, session)
 		return nil, fmt.Errorf("%w: %v", ErrOpenCodeAPICall, err)
 	}
 
-	// Update session status to running
 	session.Status = model.SessionStatusRunning
 	session.StartedAt = &startedAt
+	session.RemoteSessionID = remoteSessionID
 	if err := s.sessionRepo.Update(ctx, session); err != nil {
 		return nil, fmt.Errorf("failed to update session status: %w", err)
 	}
@@ -217,17 +219,17 @@ func (s *sessionService) UpdateSessionOutput(ctx context.Context, sessionID uuid
 }
 
 // callOpenCodeStart starts a new OpenCode session on the sidecar
-func (s *sessionService) callOpenCodeStart(ctx context.Context, podIP string, sessionID uuid.UUID, prompt string, projectID uuid.UUID) error {
+func (s *sessionService) callOpenCodeStart(ctx context.Context, podIP string, sessionID uuid.UUID, prompt string, projectID uuid.UUID) (string, error) {
 	url := fmt.Sprintf("http://%s:3003/sessions", podIP)
 
 	config, err := s.configService.GetActiveConfig(ctx, projectID)
 	if err != nil {
-		return fmt.Errorf("failed to get project config: %w", err)
+		return "", fmt.Errorf("failed to get project config: %w", err)
 	}
 
 	apiKey, err := s.configService.GetDecryptedAPIKey(ctx, projectID)
 	if err != nil {
-		return fmt.Errorf("failed to decrypt API key: %w", err)
+		return "", fmt.Errorf("failed to decrypt API key: %w", err)
 	}
 
 	requestBody := map[string]interface{}{
@@ -255,28 +257,39 @@ func (s *sessionService) callOpenCodeStart(ctx context.Context, podIP string, se
 
 	jsonBody, err := json.Marshal(requestBody)
 	if err != nil {
-		return fmt.Errorf("failed to marshal request: %w", err)
+		return "", fmt.Errorf("failed to marshal request: %w", err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
+		return "", fmt.Errorf("failed to create request: %w", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed to call OpenCode API: %w", err)
+		return "", fmt.Errorf("failed to call OpenCode API: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("OpenCode API returned status %d: %s", resp.StatusCode, string(body))
+		return "", fmt.Errorf("OpenCode API returned status %d: %s", resp.StatusCode, string(body))
 	}
 
-	return nil
+	var response struct {
+		SessionID       string `json:"session_id"`
+		RemoteSessionID string `json:"remote_session_id"`
+		Status          string `json:"status"`
+		CreatedAt       string `json:"created_at"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return "", fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return response.RemoteSessionID, nil
 }
 
 // callOpenCodeStop stops an active OpenCode session on the sidecar
@@ -297,6 +310,31 @@ func (s *sessionService) callOpenCodeStop(ctx context.Context, podIP string, ses
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("OpenCode API returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	return nil
+}
+
+func (s *sessionService) GetAllActiveSessions(ctx context.Context) ([]model.Session, error) {
+	return s.sessionRepo.FindAllActiveSessions(ctx)
+}
+
+func (s *sessionService) UpdateSessionStatus(ctx context.Context, sessionID uuid.UUID, status string, errorMsg string) error {
+	session, err := s.sessionRepo.FindByID(ctx, sessionID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrSessionNotFound
+		}
+		return fmt.Errorf("failed to get session: %w", err)
+	}
+
+	session.Status = model.SessionStatus(status)
+	if errorMsg != "" {
+		session.Output += fmt.Sprintf("\nError: %s\n", errorMsg)
+	}
+
+	if err := s.sessionRepo.Update(ctx, session); err != nil {
+		return fmt.Errorf("failed to update session: %w", err)
 	}
 
 	return nil

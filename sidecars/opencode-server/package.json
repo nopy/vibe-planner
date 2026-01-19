@@ -1,0 +1,16 @@
+{
+  "name": "opencode-server-sidecar",
+  "version": "1.0.0",
+  "description": "OpenCode Server Sidecar for Vibe Project Manager",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run server.ts",
+    "start": "bun run server.ts"
+  },
+  "dependencies": {
+    "@opencode-ai/sdk": "latest"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}
