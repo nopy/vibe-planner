@@ -7,7 +7,7 @@ import {
 } from '@/services/api'
 import type { OpenCodeConfig, CreateConfigRequest } from '@/types'
 
-interface UseConfigReturn {
+export interface UseConfigReturn {
   config: OpenCodeConfig | null
   loading: boolean
   error: string | null
