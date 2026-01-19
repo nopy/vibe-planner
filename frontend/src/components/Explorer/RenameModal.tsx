@@ -35,7 +35,7 @@ export function RenameModal({ isOpen, onClose, onRenamed, currentPath }: RenameM
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!currentPath) return
-    
+
     setError(null)
 
     const validationError = validateName(newName)
@@ -46,7 +46,7 @@ export function RenameModal({ isOpen, onClose, onRenamed, currentPath }: RenameM
 
     const isImplemented = false
     if (isImplemented) {
-        onRenamed(currentPath || '', newName)
+      onRenamed(currentPath || '', newName)
     }
 
     setError('Rename functionality will be available in Phase 4.10')
