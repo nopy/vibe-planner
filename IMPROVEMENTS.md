@@ -1,9 +1,9 @@
 # Project Improvements & Future Enhancements
 
-**Last Updated**: 2026-01-18 21:42 CET  
+**Last Updated**: 2026-01-19 18:45 CET  
 **Project**: OpenCode Project Manager  
-**Current Phase**: Phase 3 (Task Management & Kanban) - Planning  
-**Previous Phase**: Phase 2 (Project Management) - Complete ✅
+**Current Phase**: Phase 7 (Two-Way Interactions) - Planning  
+**Previous Phase**: Phase 6 (OpenCode Configuration UI) - Complete ✅
 
 ---
 
@@ -15,7 +15,210 @@ This document tracks optional improvements and enhancements that could be implem
 - Original testing and infrastructure improvements
 - Phase 1 deferred improvements (from PHASE1.md)
 - Phase 2 deferred improvements (from PHASE2.md)
+- Phase 6 deferred improvements (from PHASE6.md)
 - Ongoing quality enhancements
+
+---
+
+## 🔧 Phase 6 Deferred Improvements
+
+### P6.1 Default Config on Project Creation
+
+**Impact**: Better UX, no manual config needed  
+**Effort**: Low (1-2 hours)  
+**Priority**: Medium  
+**Deferred to**: Phase 7 (project creation hook)
+
+**Current Implementation:**
+- Users must manually create config after project creation
+- No default config provided
+
+**What to Implement:**
+```go
+// backend/internal/service/project_service.go
+
+func (s *ProjectService) CreateProject(ctx context.Context, project *model.Project) error {
+    // ... existing project creation code ...
+    
+    // Create default config
+    defaultConfig := &model.OpenCodeConfig{
+        ProjectID:      project.ID,
+        ModelProvider:  "openai",
+        ModelName:      "gpt-4o-mini",
+        Temperature:    0.7,
+        MaxTokens:      4096,
+        EnabledTools:   []string{"file_ops", "web_search", "code_exec"},
+        MaxIterations:  10,
+        TimeoutSeconds: 300,
+        CreatedBy:      project.UserID,
+    }
+    
+    if err := s.configService.CreateOrUpdateConfig(ctx, defaultConfig, ""); err != nil {
+        // Log error but don't fail project creation
+        log.Printf("Failed to create default config: %v", err)
+    }
+    
+    return nil
+}
+```
+
+**Files to Modify:**
+- `backend/internal/service/project_service.go` (add default config creation)
+- `backend/internal/service/project_service_test.go` (add test for default config)
+
+**Referenced in:** PHASE6.md (Deferred Items)
+
+---
+
+### P6.2 Rate Limiting for Config Updates
+
+**Impact**: Prevent abuse, protect database  
+**Effort**: Low (1-2 hours)  
+**Priority**: Low  
+**Deferred to**: Phase 9 (Production Hardening)
+
+**Current Implementation:**
+- No rate limiting on config update endpoint
+- Could be abused to create many versions
+
+**What to Implement:**
+```go
+// backend/internal/middleware/rate_limit.go
+
+func RateLimitConfig() gin.HandlerFunc {
+    rate := limiter.Rate{
+        Period: 1 * time.Minute,
+        Limit:  10, // 10 config updates per minute per user
+    }
+    
+    store := memory.NewStore()
+    instance := limiter.New(store, rate)
+    
+    return func(c *gin.Context) {
+        userID := c.GetString("user_id")
+        context, err := instance.Get(c, userID)
+        if err != nil {
+            c.AbortWithStatus(500)
+            return
+        }
+        
+        if context.Reached {
+            c.AbortWithStatusJSON(429, gin.H{
+                "error": "Too many config updates. Please try again later.",
+            })
+            return
+        }
+        
+        c.Next()
+    }
+}
+```
+
+**Files to Create:**
+- `backend/internal/middleware/rate_limit.go` (if doesn't exist)
+
+**Files to Modify:**
+- `backend/cmd/api/main.go` (apply rate limiter to config routes)
+
+**Referenced in:** PHASE6.md (Deferred Items)
+
+---
+
+### P6.3 Project Ownership Validation in Config Handlers
+
+**Impact**: Security (users can't modify other users' configs)  
+**Effort**: Low (1 hour)  
+**Priority**: High  
+**Deferred to**: Phase 7 (integration with project service)
+
+**Current Implementation:**
+- Config handlers don't validate project ownership
+- Users could potentially modify configs for projects they don't own
+
+**What to Implement:**
+```go
+// backend/internal/api/config.go
+
+func (h *ConfigHandler) GetActiveConfig(c *gin.Context) {
+    projectID, err := uuid.Parse(c.Param("id"))
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "invalid project ID"})
+        return
+    }
+    
+    // NEW: Validate project ownership
+    userID := c.GetString("user_id")
+    if err := h.projectService.ValidateProjectOwnership(c.Request.Context(), projectID, uuid.MustParse(userID)); err != nil {
+        c.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
+        return
+    }
+    
+    config, err := h.configService.GetActiveConfig(c.Request.Context(), projectID)
+    // ... rest of handler
+}
+```
+
+**Files to Modify:**
+- `backend/internal/api/config.go` (add ownership validation to all handlers)
+- `backend/internal/api/config_test.go` (add tests for unauthorized access)
+
+**Referenced in:** PHASE6.md (Completion Summary - Security Review)
+
+---
+
+### P6.4 Config Changes Reflection in OpenCode Execution
+
+**Impact**: Config actually affects agent behavior  
+**Effort**: Medium (3-4 hours)  
+**Priority**: High  
+**Deferred to**: Phase 7 (OpenCode execution integration)
+
+**Current Implementation:**
+- Config stored in database but not used during task execution
+- OpenCode server uses hardcoded defaults
+
+**What to Implement:**
+```go
+// backend/internal/service/task_service.go
+
+func (s *TaskService) ExecuteTaskWithOpenCode(ctx context.Context, task *model.Task) error {
+    // Get active config for project
+    config, err := s.configService.GetActiveConfig(ctx, task.ProjectID)
+    if err != nil {
+        return fmt.Errorf("failed to get config: %w", err)
+    }
+    
+    // Get decrypted API key
+    apiKey, err := s.configService.GetDecryptedAPIKey(ctx, task.ProjectID)
+    if err != nil {
+        return fmt.Errorf("failed to get API key: %w", err)
+    }
+    
+    // Build OpenCode request with config
+    request := &opencode.ExecuteRequest{
+        Task:           task.Description,
+        ModelProvider:  config.ModelProvider,
+        ModelName:      config.ModelName,
+        APIKey:         apiKey,
+        APIEndpoint:    config.APIEndpoint,
+        Temperature:    config.Temperature,
+        MaxTokens:      config.MaxTokens,
+        EnabledTools:   config.EnabledTools,
+        SystemPrompt:   config.SystemPrompt,
+        MaxIterations:  config.MaxIterations,
+        TimeoutSeconds: config.TimeoutSeconds,
+    }
+    
+    // Execute with config
+    return s.opencodeClient.Execute(ctx, request)
+}
+```
+
+**Files to Modify:**
+- `backend/internal/service/task_service.go` (use config in execution)
+- `sidecars/session-proxy/internal/handler/execute.go` (accept config params)
+
+**Referenced in:** PHASE6.md (Success Criteria - Integration)
 
 ---
 
