@@ -251,6 +251,293 @@ func (r *ProjectRepository) FindByUserIDWithFilter(ctx context.Context, userID u
 
 ---
 
+## 🗂️ Phase 4 Deferred Improvements
+
+### P4.1 File Tree Pagination
+
+**Impact**: Better performance for large projects (>1000 files)  
+**Effort**: Medium (3-4 hours)  
+**Priority**: Low
+
+**Current Implementation**:
+- Loads entire tree in one request
+- Assumes <1000 files per project
+- Works well for MVP scope
+
+**What to Implement**:
+- Lazy-load subdirectories on expand
+- Pagination for large directory listings (>100 files)
+- Virtual scrolling for file tree (react-window or similar)
+- Caching expanded directories client-side
+
+**Files to Modify**:
+- `sidecars/file-browser/internal/service/file.go` (add pagination params)
+- `frontend/src/components/Explorer/FileTree.tsx` (lazy loading logic)
+- `frontend/src/hooks/useFileWatch.ts` (handle partial tree updates)
+
+**Referenced in**: PHASE4.md (Deferred Items - Performance)
+
+---
+
+### P4.2 Monaco Bundle Splitting
+
+**Impact**: Smaller initial bundle size (~3MB reduction)  
+**Effort**: Low (1-2 hours)  
+**Priority**: Low
+
+**Current Implementation**:
+- Monaco included in main bundle
+- ~3MB added to frontend bundle
+- Acceptable for MVP (users expect rich editor)
+
+**What to Implement**:
+```typescript
+// frontend/src/components/Explorer/MonacoEditor.tsx
+
+import { lazy, Suspense } from 'react';
+
+const MonacoEditor = lazy(() => import('@monaco-editor/react'));
+
+export const Editor = ({ file, content, onChange }) => {
+  return (
+    <Suspense fallback={<div>Loading editor...</div>}>
+      <MonacoEditor value={content} onChange={onChange} />
+    </Suspense>
+  );
+};
+```
+
+**Files to Modify**:
+- `frontend/src/components/Explorer/MonacoEditor.tsx`
+- `frontend/vite.config.ts` (add code splitting config)
+
+**Referenced in**: PHASE4.md (Deferred Items - Performance)
+
+---
+
+### P4.3 File Content Streaming
+
+**Impact**: Support files >10MB  
+**Effort**: High (6-8 hours)  
+**Priority**: Low
+
+**Current Implementation**:
+- In-memory loading (10MB limit enforced)
+- Acceptable for MVP (most source files <1MB)
+
+**What to Implement**:
+```go
+// sidecars/file-browser/internal/handler/files.go
+
+func (h *FileHandler) ReadFile(c *gin.Context) {
+    // For large files, use chunked transfer
+    file, _ := os.Open(filePath)
+    defer file.Close()
+    
+    c.Header("Transfer-Encoding", "chunked")
+    c.Stream(func(w io.Writer) bool {
+        buf := make([]byte, 1024*64) // 64KB chunks
+        n, err := file.Read(buf)
+        if err != nil {
+            return false
+        }
+        w.Write(buf[:n])
+        return true
+    })
+}
+```
+
+**Files to Modify**:
+- `sidecars/file-browser/internal/service/file.go` (return io.ReadCloser)
+- `sidecars/file-browser/internal/handler/files.go` (chunked response)
+- `frontend/src/components/Explorer/MonacoEditor.tsx` (stream parsing)
+
+**Referenced in**: PHASE4.md (Deferred Items - Performance)
+
+---
+
+### P4.4 File Search (Ctrl+P)
+
+**Impact**: Faster navigation for large projects  
+**Effort**: Medium (4-6 hours)  
+**Priority**: Medium
+
+**What to Implement**:
+- Quick file finder modal (Ctrl+P or Cmd+P)
+- Fuzzy search with keyboard navigation (arrow keys, Enter)
+- Recent files support (MRU cache)
+- Search results highlighting
+
+**Example UI**:
+```
+┌─────────────────────────────────────┐
+│  > TaskCa_                          │
+├─────────────────────────────────────┤
+│  > TaskCard.tsx                     │ ← highlighted
+│    TaskDetailPanel.tsx              │
+│    TaskService.go                   │
+└─────────────────────────────────────┘
+```
+
+**Files to Create**:
+- `frontend/src/components/Explorer/FileSearch.tsx`
+- `frontend/src/hooks/useFileSearch.ts`
+
+**Files to Modify**:
+- `frontend/src/components/Explorer/FileExplorer.tsx` (add Ctrl+P listener)
+
+**Referenced in**: PHASE4.md (Deferred Items - Features)
+
+---
+
+### P4.5 Git Integration
+
+**Impact**: Better version control awareness in editor  
+**Effort**: High (2-3 days)  
+**Priority**: Low
+
+**What to Implement**:
+- Git status indicators in file tree (M, A, D, ??)
+- Diff view in Monaco editor (side-by-side comparison)
+- Blame annotations (show commit author per line)
+- Commit UI (stage files, write message, commit)
+
+**Files to Create**:
+- `sidecars/file-browser/internal/service/git.go` (git operations)
+- `frontend/src/components/Explorer/GitDiffView.tsx`
+- `frontend/src/components/Explorer/GitPanel.tsx`
+
+**Dependencies**:
+- git binary in file-browser sidecar Docker image
+- go-git library (https://github.com/go-git/go-git)
+
+**Referenced in**: PHASE4.md, Phase 6+ (Advanced Features)
+
+---
+
+### P4.6 Collaborative Editing (CRDT)
+
+**Impact**: Real-time multi-user editing  
+**Effort**: Very High (1-2 weeks)  
+**Priority**: Low
+
+**What to Implement**:
+- CRDT-based conflict resolution (Yjs or Automerge)
+- Cursor tracking across users (show collaborator positions)
+- Real-time presence indicators (who's editing what file)
+- Operational transforms for Monaco editor
+
+**Technology Options**:
+- **Yjs**: Mature CRDT library with Monaco bindings
+- **Automerge**: CRDT with time-travel debugging
+- **ShareDB**: OT-based collaborative editing
+
+**Files to Create**:
+- `frontend/src/services/collaboration.ts`
+- `backend/internal/service/collaboration_service.go` (CRDT sync)
+
+**Referenced in**: PHASE4.md, Phase 8+ (Advanced Features)
+
+---
+
+### P4.7 File Upload/Download
+
+**Impact**: Easier project setup and export  
+**Effort**: Medium (4-6 hours)  
+**Priority**: Medium
+
+**What to Implement**:
+- Drag-drop file upload to file tree
+- Bulk file download as ZIP
+- Progress indicators for large uploads/downloads
+- File conflict handling (overwrite/rename/skip)
+
+**Files to Create**:
+- `sidecars/file-browser/internal/handler/upload.go`
+- `sidecars/file-browser/internal/handler/download.go` (ZIP generation)
+- `frontend/src/components/Explorer/FileUpload.tsx`
+
+**Libraries Needed**:
+- Backend: `archive/zip` (Go standard library)
+- Frontend: `jszip` (browser-side ZIP extraction)
+
+**Referenced in**: PHASE4.md (Deferred Items - Features)
+
+---
+
+### P4.8 Syntax Checking / Linting
+
+**Impact**: Better code quality feedback in editor  
+**Effort**: High (1-2 days)  
+**Priority**: Medium
+
+**What to Implement**:
+- ESLint integration for JavaScript/TypeScript
+- golangci-lint integration for Go
+- Inline error highlights in Monaco (red squiggles)
+- Quick fixes (ESLint auto-fix, Go imports)
+
+**Architecture**:
+```
+Monaco Editor → Language Server Protocol (LSP) → Linter Backend
+```
+
+**Files to Create**:
+- `sidecars/file-browser/internal/service/linter.go`
+- `frontend/src/services/lsp.ts` (LSP client)
+
+**Dependencies**:
+- Monaco LSP client (monaco-languageclient)
+- Language servers (typescript-language-server, gopls)
+
+**Referenced in**: PHASE4.md, Phase 5+ (OpenCode Integration)
+
+---
+
+### P4.9 Security Enhancements
+
+**Impact**: Production-ready security hardening  
+**Effort**: Medium (3-4 hours)  
+**Priority**: Medium (before production)
+
+**What to Implement**:
+
+1. **Configurable File Size Limits** (per-project):
+   ```go
+   // Add to Project model
+   type Project struct {
+       ...
+       MaxFileSizeMB int `gorm:"default:10"`
+   }
+   ```
+
+2. **Rate Limiting** on file operations:
+   ```go
+   // 100 requests per minute per user
+   rateLimiter := rate.NewLimiter(rate.Every(time.Minute/100), 100)
+   ```
+
+3. **Audit Logging** (create/edit/delete with user ID):
+   ```go
+   type FileAuditLog struct {
+       ID        uuid.UUID
+       UserID    uuid.UUID
+       ProjectID uuid.UUID
+       Action    string // CREATE, UPDATE, DELETE
+       FilePath  string
+       Timestamp time.Time
+   }
+   ```
+
+**Files to Modify**:
+- `backend/internal/api/files.go` (add audit logging)
+- `backend/internal/middleware/rate_limit.go` (create)
+- `sidecars/file-browser/internal/service/file.go` (configurable limits)
+
+**Referenced in**: PHASE4.md (Deferred Items - Security)
+
+---
+
 ## 🔐 Authentication & Security Improvements (Phase 1 Deferred)
 
 ### A1. Token Refresh Logic
@@ -1791,6 +2078,15 @@ The following sections preserve the original improvement tracking from before Ph
 | **Phase 2** | Pod Resources UI (P2.2) | 📋 Planned | - | Low | Custom limits |
 | **Phase 2** | Project Pagination (P2.3) | 📋 Planned | - | Medium | Performance |
 | **Phase 2** | Search/Filter (P2.4) | 📋 Planned | - | Low | UX improvement |
+| **Phase 4** | File Tree Pagination (P4.1) | 📋 Planned | - | Low | Large projects |
+| **Phase 4** | Monaco Bundle Split (P4.2) | 📋 Planned | - | Low | Bundle size |
+| **Phase 4** | File Streaming (P4.3) | 📋 Planned | - | Low | Large files >10MB |
+| **Phase 4** | File Search Ctrl+P (P4.4) | 📋 Planned | - | Medium | Navigation UX |
+| **Phase 4** | Git Integration (P4.5) | 📋 Planned | - | Low | Phase 6+ feature |
+| **Phase 4** | Collaborative Edit (P4.6) | 📋 Planned | - | Low | Phase 8+ feature |
+| **Phase 4** | File Upload/DL (P4.7) | 📋 Planned | - | Medium | UX improvement |
+| **Phase 4** | Syntax Check (P4.8) | 📋 Planned | - | Medium | Code quality |
+| **Phase 4** | Security (P4.9) | 📋 Planned | - | Medium | Production ready |
 | **Auth** | Token Refresh Logic (A1) | 📋 Planned | - | High | Phase 1 deferred |
 | **Auth** | Environment Config (A2) | 📋 Planned | - | High | Phase 1 deferred |
 | **Auth** | Error Handling (A3) | 📋 Planned | - | Medium | Phase 1 deferred |
@@ -1821,22 +2117,24 @@ The following sections preserve the original improvement tracking from before Ph
 
 ## 📝 Notes
 
-1. **Phase 2 Deferred Items**: Items P2.1-P2.4 were identified during Phase 2 implementation but deferred to maintain focus on core functionality. Medium priority items (P2.1, P2.3) should be addressed before Phase 9.
+1. **Phase 4 Deferred Items**: Items P4.1-P4.9 were identified during Phase 4 implementation but deferred to maintain focus on core file explorer functionality. Medium priority items (P4.4, P4.7, P4.8, P4.9) should be addressed before production deployment.
 
-2. **Phase 1 Deferred Items**: All items marked as "Phase 1 deferred" were identified during Phase 1 implementation but deferred to maintain focus on core authentication functionality. These should be addressed before production deployment.
+2. **Phase 2 Deferred Items**: Items P2.1-P2.4 were identified during Phase 2 implementation but deferred to maintain focus on core functionality. Medium priority items (P2.1, P2.3) should be addressed before Phase 9.
 
-3. **Testing Strategy**: Focus on high-priority tests (T1, T2, T3) before Phase 3 begins to establish a solid testing baseline for new features. Note: Phase 2 already has 55 backend unit tests and integration test suite.
+3. **Phase 1 Deferred Items**: All items marked as "Phase 1 deferred" were identified during Phase 1 implementation but deferred to maintain focus on core authentication functionality. These should be addressed before production deployment.
 
-4. **Security First**: Items A2, A4, and #16 should be addressed together as a security hardening sprint before production.
+4. **Testing Strategy**: Focus on high-priority tests (T1, T2, T3) before Phase 5 begins to establish a solid testing baseline for new features. Note: Phase 2 has 55 tests, Phase 3 has 100 tests, Phase 4 has 106 tests (total: 261 backend unit tests passing).
 
-5. **Documentation**: Items D1, D2, D3 can be bundled together in a documentation sprint, likely during Phase 9 (Testing & Documentation).
+5. **Security First**: Items A2, A4, P4.9, and #16 should be addressed together as a security hardening sprint before production.
 
-6. **UX Polish**: Items UI1, UI2, UI3, P2.4 are low priority and can be addressed in Phase 10 (Polish & Optimization).
+6. **Documentation**: Items D1, D2, D3 can be bundled together in a documentation sprint, likely during Phase 9 (Testing & Documentation).
+
+7. **UX Polish**: Items UI1, UI2, UI3, P2.4, P4.4, P4.7 are low-to-medium priority and can be addressed in Phase 10 (Polish & Optimization).
 
 ---
 
-**Last Updated**: 2026-01-18 21:42 CET  
-**Next Review**: Before Phase 3 kickoff  
-**Source Documents**: PHASE1.md + PHASE2.md (deferred improvements) + original IMPROVEMENTS.md
+**Last Updated**: 2026-01-19 12:33 CET  
+**Next Review**: Before Phase 5 kickoff  
+**Source Documents**: PHASE1.md + PHASE2.md + PHASE3.md + PHASE4.md (deferred improvements) + original IMPROVEMENTS.md
 
-**Note**: This document is a living guide. Prioritization should be revisited as project needs evolve. Items from Phase 1 and Phase 2 are now centralized here to maintain a single source of truth for all improvements.
+**Note**: This document is a living guide. Prioritization should be revisited as project needs evolve. Items from Phase 1-4 are now centralized here to maintain a single source of truth for all improvements.

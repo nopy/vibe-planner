@@ -13,23 +13,32 @@ fi
 
 kubectl config use-context "kind-${CLUSTER_NAME}"
 
+# Build images if they don't exist
+echo "Checking if images exist locally..."
+if ! docker images | grep -q "registry.legal-suite.com/opencode/app"; then
+  echo "  opencode/app image not found. Building production images..."
+  ./scripts/build-images.sh --mode prod
+else
+  echo "  ✓ opencode/app image found"
+fi
+
 # Load Docker images into kind cluster
 echo "Loading Docker images into kind cluster..."
-if docker images | grep -q "registry.legal-suite.com/opencode/app"; then
-  echo "  Loading opencode/app..."
-  kind load docker-image registry.legal-suite.com/opencode/app:latest --name ${CLUSTER_NAME}
-else
-  echo "  WARNING: opencode/app image not found locally. Build it first with: make docker-build-prod"
-fi
+echo "  Loading opencode/app (OpenCode server)..."
+kind load docker-image registry.legal-suite.com/opencode/app:latest --name ${CLUSTER_NAME}
 
 if docker images | grep -q "registry.legal-suite.com/opencode/file-browser-sidecar"; then
   echo "  Loading file-browser-sidecar..."
   kind load docker-image registry.legal-suite.com/opencode/file-browser-sidecar:latest --name ${CLUSTER_NAME}
+else
+  echo "  WARNING: file-browser-sidecar image not found locally. Build it first with: make docker-build-prod"
 fi
 
 if docker images | grep -q "registry.legal-suite.com/opencode/session-proxy-sidecar"; then
   echo "  Loading session-proxy-sidecar..."
   kind load docker-image registry.legal-suite.com/opencode/session-proxy-sidecar:latest --name ${CLUSTER_NAME}
+else
+  echo "  WARNING: session-proxy-sidecar image not found locally. Build it first with: make docker-build-prod"
 fi
 
 echo "Creating namespace..."

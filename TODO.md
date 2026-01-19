@@ -1,8 +1,8 @@
 # OpenCode Project Manager - TODO List
 
-**Last Updated:** 2026-01-19 12:25 CET  
-**Current Phase:** Phase 4 - File Explorer (Complete)  
-**Status:** Phase 4 Complete (4.1-4.12) → ⏳ Manual E2E Testing Pending → Next: Phase 5  
+**Last Updated:** 2026-01-19 12:33 CET  
+**Current Phase:** Phase 5 - OpenCode Integration (Planning)  
+**Status:** Phase 4 Complete & Archived → Ready for Phase 5  
 **Branch:** main
 
 ---
@@ -45,6 +45,8 @@ See [PHASE2.md](./PHASE2.md) for complete archive of Phase 2 tasks and implement
 
 🎉 **Phase 3 archived to PHASE3.md** - Ready for Phase 4 development!
 
+See [PHASE3.md](./PHASE3.md) for complete archive of Phase 3 tasks and implementation details.
+
 **Key Achievements:**
 - ✅ Complete task CRUD with state machine (TODO → IN_PROGRESS → AI_REVIEW → HUMAN_REVIEW → DONE)
 - ✅ 100 backend unit tests (repository: 30, service: 35, handlers: 35) - all passing
@@ -58,1665 +60,452 @@ See [PHASE3.md](./PHASE3.md) for complete archive of Phase 3 tasks and implement
 
 ---
 
-## 🔄 Phase 4: File Explorer (Weeks 7-8)
+## ✅ Phase 4: File Explorer - COMPLETE
 
-**Objective:** Implement file browsing and editing capabilities with Monaco editor integration.
+**Completion Date:** 2026-01-19 12:25 CET  
+**Status:** All implementation complete (4.1-4.12) → ⏳ Manual E2E Testing Pending
 
-**Status:** 🚧 IN PROGRESS (4.1-4.11 Complete - Full File Explorer Implementation Ready for E2E Testing)
+🎉 **Phase 4 archived to PHASE4.md** - Ready for Phase 5 development!
+
+**Key Achievements:**
+- ✅ File-Browser Sidecar: Production-ready Go service (21.1MB, 80 tests)
+- ✅ Backend Integration: HTTP/WebSocket proxy layer (22 tests)
+- ✅ Kubernetes Deployment: 3-container pod spec with health probes
+- ✅ Frontend Components: File tree + Monaco editor + real-time (1,264 lines)
+- ✅ Security: Path traversal prevention + file size limits + sensitive file blocking
+- ✅ Real-time: WebSocket file watching with exponential backoff
+- ✅ Total: 106 backend tests passing, 2,100 lines of production code
+
+See [PHASE4.md](./PHASE4.md) for complete archive of Phase 4 tasks and implementation details.
+
+---
+
+## 🔄 Phase 5: OpenCode Integration (Weeks 9-10)
+
+**Objective:** Integrate OpenCode server for AI-powered task execution with real-time output streaming.
+
+**Status:** 📋 PLANNING
 
 ### Overview
 
-Phase 4 introduces file management functionality:
-- File browser sidecar service (Go)
-- File tree component with hierarchical display
-- Monaco editor for code editing with syntax highlighting
-- Multi-file support with tabs
-- Real-time file synchronization across tabs
+Phase 5 integrates the OpenCode AI agent server into project pods for automated task execution:
+- OpenCode server sidecar running in each project pod
+- Session management API for starting/stopping AI sessions
+- Real-time output streaming via Server-Sent Events (SSE)
+- Task state transitions triggered by session lifecycle events
+- Error handling and retry mechanisms
 
 ---
 
 ### Architecture
 
 ```
-┌────────────────────────────────────────────────────────┐
-│  Frontend (React)                                      │
-│  ├─ FileExplorer (main container)                     │
-│  ├─ FileTree (hierarchical tree view)                 │
-│  ├─ TreeNode (individual file/folder)                 │
-│  ├─ EditorTabs (multi-file tab bar)                   │
-│  └─ MonacoEditor (code editor)                        │
-└─────────────────┬──────────────────────────────────────┘
-                  │ HTTP + WebSocket
-┌─────────────────▼──────────────────────────────────────┐
-│  File Browser Sidecar (Go) :3001                      │
-│  ├─ GET /api/projects/:id/files/tree                  │
-│  ├─ GET /api/projects/:id/files/content?path=...      │
-│  ├─ POST /api/projects/:id/files/write                │
-│  ├─ DELETE /api/projects/:id/files?path=...           │
-│  ├─ POST /api/projects/:id/files/mkdir                │
-│  └─ WS /api/projects/:id/files/watch (file changes)   │
-└─────────────────┬──────────────────────────────────────┘
-                  │
-┌─────────────────▼──────────────────────────────────────┐
-│  Project Workspace (PVC)                               │
-│  /workspace/:project-id/                               │
-└────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│  Frontend (React)                                               │
+│  ├─ TaskCard "Execute" button                                  │
+│  ├─ ExecutionPanel (streaming output view)                     │
+│  └─ ExecutionHistory (past runs)                               │
+└─────────────────┬───────────────────────────────────────────────┘
+                  │ HTTP/SSE
+┌─────────────────▼───────────────────────────────────────────────┐
+│  Backend API (Go)                                               │
+│  ├─ POST /api/projects/:id/tasks/:taskId/execute               │
+│  ├─ GET  /api/projects/:id/tasks/:taskId/output (SSE stream)   │
+│  ├─ POST /api/projects/:id/tasks/:taskId/stop                  │
+│  └─ GET  /api/projects/:id/sessions (list active sessions)     │
+└─────────────────┬───────────────────────────────────────────────┘
+                  │ HTTP (internal)
+┌─────────────────▼───────────────────────────────────────────────┐
+│  OpenCode Server Sidecar (:3003)                                │
+│  ├─ POST /sessions (start new session)                         │
+│  ├─ GET  /sessions/:id/stream (SSE output)                     │
+│  ├─ POST /sessions/:id/stop (terminate session)                │
+│  └─ GET  /sessions/:id/status (session health)                 │
+└─────────────────┬───────────────────────────────────────────────┘
+                  │ reads/writes
+┌─────────────────▼───────────────────────────────────────────────┐
+│  Project Workspace (PVC /workspace)                             │
+│  - Source code files (managed by file-browser)                  │
+│  - OpenCode configuration (.opencode/config.json)               │
+│  - Session history and logs (.opencode/sessions/)               │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-### Backend Tasks (Sidecar Service)
+### Backend Tasks
 
-#### 4.1 File Browser Sidecar Setup ✅ **COMPLETE** (2026-01-19 08:37 CET)
+#### 5.1 Session Management Service
+**Status:** 📋 Planned
 
-**Completion Summary:**
-- ✅ Enhanced main.go with structured logging (`slog`), graceful shutdown (10s timeout), 3 health check endpoints
-- ✅ File service with proper structs, sentinel errors, path traversal prevention, 10MB file size limits
-- ✅ API handlers with centralized error handling and proper HTTP status codes
-- ✅ Optimized Dockerfile with HEALTHCHECK (20.8MB image)
-- ✅ **58 comprehensive unit tests** (24 service + 34 handler) - **Exceeded targets by 132%**
-- ✅ All tests passing, binary compiles successfully, Docker image built
+**Objectives:**
+- Create session management service in backend
+- Track active OpenCode sessions per task
+- Handle session lifecycle (create, monitor, terminate)
 
-**Files Modified/Created:**
-- Modified: `cmd/main.go`, `go.mod`, `internal/service/file.go`, `internal/handler/files.go`, `Dockerfile`
-- Created: `internal/service/file_test.go` (24 tests), `internal/handler/files_test.go` (34 tests)
+**Tasks:**
+- [ ] **Session Model** (`internal/model/session.go`)
+  - Fields: ID, TaskID, ProjectID, Status, StartedAt, CompletedAt, Error
+  - Status enum: PENDING, RUNNING, COMPLETED, FAILED, CANCELLED
+  - GORM relationships to Task and Project
 
-**Key Achievements:**
-- ✅ Production-ready Go 1.24 service with complete CRUD operations
-- ✅ Security: Path traversal blocked, file size limits enforced
-- ✅ Observability: Structured JSON logging, multiple health check strategies
-- ✅ Code quality: Interface-based design, comprehensive test coverage, proper error handling
+- [ ] **Session Repository** (`internal/repository/session_repository.go`)
+  - CreateSession(session *Session) error
+  - GetSessionByID(id uuid.UUID) (*Session, error)
+  - GetActiveSessionsForProject(projectID uuid.UUID) ([]*Session, error)
+  - UpdateSessionStatus(id uuid.UUID, status SessionStatus) error
 
-**Test Results:**
-```
-Service Tests:  24/24 passing (path validation, CRUD, edge cases)
-Handler Tests:  34/34 passing (HTTP endpoints, error handling)
-Binary Build:   29MB unstripped → 20MB stripped
-Docker Image:   20.8MB (Alpine + binary + wget)
-HEALTHCHECK:    Verified (30s interval, 3s timeout, 3 retries)
-```
+- [ ] **Session Service** (`internal/service/session_service.go`)
+  - StartSession(taskID uuid.UUID, prompt string) (*Session, error)
+  - StopSession(sessionID uuid.UUID) error
+  - GetSessionStatus(sessionID uuid.UUID) (*Session, error)
+  - Internal: CallOpenCodeAPI(podIP string, endpoint string) (response, error)
 
-**Success Criteria Met:**
-- [x] Go module initialized and added to workspace
-- [x] Main.go compiles successfully with enhanced features
-- [x] Health check endpoints responding (/healthz, /health, /ready)
-- [x] All 6 file operations implemented (GetTree, GetFileInfo, ReadFile, WriteFile, DeleteFile, CreateDirectory)
-- [x] Path validation prevents directory traversal
-- [x] Unit tests: 58 passing (exceeds 25+ target)
-- [x] Docker image builds successfully (20.8MB, acceptable vs <15MB target)
-- [x] Binary compilation successful
+**Files to Create:**
+- `internal/model/session.go`
+- `internal/repository/session_repository.go`
+- `internal/repository/session_repository_test.go`
+- `internal/service/session_service.go`
+- `internal/service/session_service_test.go`
 
-**Note:** Image size 20.8MB vs 15MB target is acceptable - includes Alpine base, wget for health checks, and stripped binary. Further optimization possible with `scratch` base but Alpine provides better debugging tools.
+**Success Criteria:**
+- [ ] Session CRUD operations working
+- [ ] Can communicate with OpenCode sidecar via HTTP
+- [ ] Session lifecycle tracked in database
+- [ ] At least 20 unit tests passing
 
-#### 4.2 File Service Layer ✅ **COMPLETE** (2026-01-19 08:50 CET)
+---
 
-**Completion Summary:**
-- ✅ FileWatcher service with fsnotify recursive directory watching
-- ✅ WebSocket handler for /files/watch endpoint with ping/pong keep-alive
-- ✅ Event debouncing (100ms window) to prevent event storms
-- ✅ Monotonic version counter for client-side event ordering
-- ✅ Thread-safe client registry with RWMutex
-- ✅ **16 unit tests** (11 watcher service + 5 WebSocket handler) - **Exceeded targets**
-- ✅ Pattern follows backend TaskBroadcaster design exactly
+#### 5.2 Task Execution API
+**Status:** 📋 Planned
 
-**Files Created:**
-- `internal/service/watcher.go` (263 lines) - FileWatcher with fsnotify
-- `internal/service/watcher_test.go` (279 lines) - 11 comprehensive tests
-- `internal/handler/watch.go` (104 lines) - WebSocket endpoint handler
-- `internal/handler/watch_test.go` (159 lines) - 5 handler tests
+**Objectives:**
+- Add task execution endpoints to main API
+- Integrate with session service
+- Trigger task state transitions based on execution events
 
-**Files Modified:**
-- `cmd/main.go` - Added FileWatcher initialization and /files/watch route
-- `go.mod` - Added fsnotify and gorilla/websocket dependencies
+**Tasks:**
+- [ ] **Execute Endpoint** (`POST /api/projects/:id/tasks/:taskId/execute`)
+  - Extract project pod IP from Kubernetes API
+  - Create session via SessionService
+  - Start OpenCode session on sidecar
+  - Update task status to IN_PROGRESS
+  - Return session ID to client
 
-**Key Features:**
-- ✅ Recursive directory watching (auto-adds subdirectories)
-- ✅ Event type mapping: CREATE/WRITE/REMOVE/RENAME/CHMOD → created/modified/deleted/renamed
-- ✅ Debouncing coalesces rapid file changes within 100ms window
-- ✅ WebSocket broadcasting to all connected clients
-- ✅ Versioned events (monotonic counter) for client-side ordering
-- ✅ Proper lifecycle management (Start/Close with cleanup)
-- ✅ 30s ping/pong keep-alive prevents connection timeout
+- [ ] **Output Stream Endpoint** (`GET /api/projects/:id/tasks/:taskId/output`)
+  - Server-Sent Events (SSE) endpoint
+  - Proxy SSE stream from OpenCode sidecar
+  - Forward events to frontend in real-time
+  - Handle connection cleanup on close
 
-**Test Results:**
-```
-Watcher Service Tests:  11/11 passing (lifecycle, event mapping, debouncing, versioning)
-WebSocket Handler Tests: 5/5 passing (upgrade, events, ping/pong, disconnect)
-Skipped Tests: 2 (require actual WebSocket connections - integration tests)
-Total Phase 4.1+4.2: 74 tests passing (58 + 16)
-Binary Build: 29MB (includes new dependencies)
-```
+- [ ] **Stop Execution** (`POST /api/projects/:id/tasks/:taskId/stop`)
+  - Call OpenCode sidecar stop endpoint
+  - Update session status to CANCELLED
+  - Update task status back to TODO
 
-**Success Criteria Met:**
-- [x] All 6 file operations implemented (GetTree, ReadFile, WriteFile, DeleteFile, CreateDirectory, GetFileInfo)
-- [x] File watcher using fsnotify with recursive watching
-- [x] WebSocket broadcasting with event versioning
-- [x] Path validation prevents directory traversal
-- [x] Unit tests: 16 passing (exceeds 15+ target)
-- [x] Event debouncing (100ms window)
-- [x] No regressions in existing tests
+**Files to Modify:**
+- `internal/api/tasks.go` (add 3 new endpoints)
+- `internal/service/task_service.go` (add ExecuteTask, StopTask methods)
 
-**Note:** 2 tests skipped (WebSocket client registration tests) as they require actual WebSocket connections for proper testing. These should be covered in integration tests.
+**Files to Create:**
+- `internal/api/tasks_execution_test.go` (test execution endpoints)
 
-#### 4.3 API Handlers ✅ **COMPLETE (2026-01-19 09:00 CET)**
-- [x] **HTTP Endpoints**: File operations (proxy layer in main backend)
-  - [x] `GET /api/projects/:id/files/tree` - Get directory tree (proxy to sidecar)
-  - [x] `GET /api/projects/:id/files/content?path=...` - Get file content (proxy to sidecar)
-  - [x] `POST /api/projects/:id/files/write` - Write file (proxy to sidecar)
-  - [x] `DELETE /api/projects/:id/files?path=...` - Delete file/directory (proxy to sidecar)
-  - [x] `POST /api/projects/:id/files/mkdir` - Create directory (proxy to sidecar)
-  - [x] `GET /api/projects/:id/files/info?path=...` - Get file metadata (proxy to sidecar)
-  - [x] Request validation (project ownership, user authorization)
-  - [x] Error handling (400 for invalid input, 401 for unauthorized, 502 for sidecar errors)
-  - [x] **Location:** `backend/internal/api/files.go` (425 lines)
+**Success Criteria:**
+- [ ] Can start OpenCode session from API call
+- [ ] SSE stream proxies output in real-time
+- [ ] Can stop running sessions
+- [ ] Task state transitions working (TODO → IN_PROGRESS)
+- [ ] At least 15 integration tests passing
 
-- [x] **WebSocket Endpoint**: Real-time file watching (proxy layer)
-  - [x] `WS /api/projects/:id/files/watch` - Stream file change events from sidecar
-  - [x] Bidirectional WebSocket proxy (client ↔ backend ↔ sidecar)
-  - [x] Connection management (upgrade, pump messages, cleanup)
-  - [x] Authorization check (project ownership validation)
-  - [x] **Location:** `backend/internal/api/files.go` (FileChangesStream method)
+---
 
-- [x] **Routes Registered**: All endpoints wired in `cmd/api/main.go`
-  - [x] 6 HTTP routes + 1 WebSocket route under `/api/projects/:id/files/...`
-  - [x] JWT authentication middleware applied to all routes
-  - [x] FileHandler initialized with ProjectRepository and KubernetesService
+#### 5.3 OpenCode Sidecar Integration
+**Status:** 📋 Planned
 
-- [x] **Unit Tests**: 22 comprehensive tests (all passing)
-  - [x] Success cases for all 6 HTTP endpoints
-  - [x] Error cases: invalid UUIDs, unauthorized users, missing projects, pod IP failures
-  - [x] Mock sidecar server with httptest (dynamic port resolution)
-  - [x] **Location:** `backend/internal/api/files_test.go` (623 lines)
+**Objectives:**
+- Add OpenCode server sidecar to project pod template
+- Configure sidecar with appropriate resource limits
+- Set up health probes and startup configuration
 
-**Key Implementation Details:**
-- **Proxy Pattern:** FileHandler forwards requests to file-browser sidecar via HTTP/WebSocket
-- **Pod IP Resolution:** Uses `KubernetesService.GetPodIP()` to discover sidecar pod dynamically
-- **Sidecar URL:** Constructed as `http://<podIP>:3001` (port 3001 configurable for testing)
-- **Authorization:** All endpoints verify project ownership before proxying requests
-- **WebSocket:** Bidirectional proxy with gorilla/websocket (2 goroutines: client→sidecar, sidecar→client)
-- **Error Mapping:** 400 (bad input), 401 (unauthorized), 500 (internal errors), 502 (sidecar unreachable)
+**Tasks:**
+- [ ] **Pod Template Update** (`internal/service/pod_template.go`)
+  - Add fourth container (opencode-server)
+  - Mount workspace PVC to /workspace
+  - Set environment variables (WORKSPACE_DIR, PORT=3003)
+  - Configure resource limits (CPU: 200m-500m, Memory: 256Mi-512Mi)
+  - Add liveness/readiness probes
 
-**Test Coverage:**
-- GetTree: 5 tests (success, invalid ID, not found, unauthorized, pod IP error)
-- GetContent: 3 tests (success, missing path, unauthorized)
-- GetFileInfo: 2 tests (success, missing path)
-- WriteFile: 3 tests (success, invalid JSON, unauthorized)
-- DeleteFile: 2 tests (success, missing path)
-- CreateDirectory: 2 tests (success, invalid JSON)
-- NewFileHandler: 1 test (constructor validation)
-- **Total:** 22 tests, all passing in <20ms
+- [ ] **Health Check Configuration**
+  - Liveness: HTTP GET /health on port 3003
+  - Readiness: HTTP GET /ready on port 3003
+  - Initial delay: 15s (OpenCode server startup time)
 
-**Request/Response DTOs** (implemented in handler):
-```go
-type WriteFileRequest struct {
-    Path    string `json:"path" binding:"required"`
-    Content string `json:"content"`  // Base64 encoded
-}
+- [ ] **Volume Mounts**
+  - Shared workspace PVC: /workspace (read-write)
+  - Config directory: /workspace/.opencode (for session configs)
 
-type DeleteFileRequest struct {
-    Path string `form:"path" binding:"required"`
-}
+**Files to Modify:**
+- `internal/service/pod_template.go`
+- `internal/service/kubernetes_service_test.go` (verify 4-container spec)
 
-type MkdirRequest struct {
-    Path string `json:"path" binding:"required"`
-}
-
-type FileChangeEvent struct {
-    Type      string    `json:"type"`       // created, modified, deleted, renamed
-    Path      string    `json:"path"`
-    OldPath   string    `json:"old_path,omitempty"` // For rename events
-    Timestamp time.Time `json:"timestamp"`
-}
-```
-
-#### 4.4 Security & Validation ✅ **COMPLETE (2026-01-19 09:33 CET)**
-
-**Completion Summary:**
-- ✅ Complete path traversal prevention with comprehensive validation
-- ✅ File size limits enforced (10MB max) with HTTP 413 status code
-- ✅ Hidden file filtering with sensitive file blocklist
-- ✅ Query parameter `?include_hidden=true` support
-- ✅ **10 new comprehensive tests** (6 service + 4 handler) - **All passing**
-- ✅ **80 total tests** passing in file-browser sidecar (2 skipped)
-- ✅ Binary compiles successfully (29MB)
-
-**Files Modified:**
-- Modified: `internal/service/file.go` (+34 lines) - Added sensitive blocklist + filtering logic
-- Modified: `internal/handler/files.go` (+2 lines) - Parse include_hidden query param
-- Modified: `internal/service/file_test.go` (+182 lines) - 6 hidden file tests
-- Modified: `internal/handler/files_test.go` (+105 lines) - 4 HTTP query parameter tests
-
-**Security Features Implemented:**
-
-- [x] **Path Traversal Prevention**
-  - [x] Validate all paths against workspace root (`validatePath()` function)
-  - [x] Reject paths with `..` (parent directory references) - `strings.Contains()` check
-  - [x] Reject absolute paths outside workspace - `strings.HasPrefix()` verification
-  - [x] Path sanitization with `filepath.Clean()`
-  - [x] **Tests:** 7 path validation tests (all passing)
-  - [x] **Location:** `sidecars/file-browser/internal/service/file.go` (lines 42-60)
-
-- [x] **File Size Limits**
-  - [x] Max file size: 10MB constant (`MaxFileSize = 10 * 1024 * 1024`)
-  - [x] Return HTTP 413 Payload Too Large for oversized files (handler mapping on line 136)
-  - [x] Size check before read (`ReadFile`, line 166-168) and write (`WriteFile`, line 184-186)
-  - [x] **Tests:** 4 file size limit tests (2 service + 2 handler, all passing)
-  - [x] **Note:** In-memory loading acceptable for 10MB limit (streaming deferred to optimization)
-
-- [x] **Hidden Files**
-  - [x] By default, hide files starting with `.` (filtered in `buildTree()`, line 96-99)
-  - [x] Optional query param `?include_hidden=true` (handler parses on line 27)
-  - [x] Never show sensitive files - **15 patterns in blocklist** (always blocked, even with includeHidden=true):
-    - `.env`, `.env.local`, `.env.production`, `.env.development`
-    - `credentials.json`, `secrets.yaml`, `secrets.yml`
-    - `.aws`, `.ssh`, `id_rsa`, `id_rsa.pub`
-    - `.npmrc`, `.pypirc`, `docker-compose.override.yml`
-  - [x] **Tests:** 10 hidden file tests (6 service + 4 handler, all passing)
-  - [x] **Location:** `sidecars/file-browser/internal/service/file.go` (lines 24-38, 91-99)
-
-**Test Results:**
-```
-Service Tests:  30/30 passing (file operations + hidden files)
-Handler Tests:  39/39 passing (HTTP endpoints + query params)
-Watcher Tests:  11/11 passing (2 skipped for integration)
-Binary Build:   29MB (includes all dependencies)
-```
-
-**Success Criteria Met:**
-- [x] All path traversal attempts blocked (7 tests)
-- [x] File size limits enforced (10MB max, 4 tests)
-- [x] HTTP 413 returned for oversized files (2 tests)
-- [x] Hidden files filtered by default (10 tests)
-- [x] Sensitive files always blocked (15 patterns, 3 tests)
-- [x] No regressions in existing tests (80 total passing)
-
-**Verification Report:** See `/tmp/phase-4.4-verification.md` for detailed evidence
-
-#### 4.5 Dockerfile & Deployment ✅ **COMPLETE (2026-01-19 09:38 CET)**
-
-**Completion Summary:**
-- ✅ Multi-stage Dockerfile with Alpine base (21.1MB final image)
-- ✅ HEALTHCHECK configured (30s interval, wget-based, verified in docker inspect)
-- ✅ File-browser sidecar added to pod template with health probes
-- ✅ Resource limits: 50Mi/100Mi memory, 50m/100m CPU (optimized for sidecar)
-- ✅ Shared workspace volume mount: /workspace (PVC backed)
-- ✅ All backend tests passing (no regressions)
-- ✅ Backend service compiles successfully
-
-**Files Modified:**
-- Modified: `backend/internal/service/pod_template.go` (+53 lines) - Added file-browser container spec
-- Verified: `sidecars/file-browser/Dockerfile` (26 lines) - Multi-stage build with HEALTHCHECK
-- Image: `registry.legal-suite.com/opencode/file-browser-sidecar:latest` (21.1MB)
-
-**Container Specification (in pod template):**
-```go
-// Container 2: File Browser Sidecar (lines 94-150)
-{
-    Name:  "file-browser",
-    Image: config.FileBrowserImage, // registry.legal-suite.com/opencode/file-browser-sidecar:latest
-    Ports: []corev1.ContainerPort{{ContainerPort: 3001, Protocol: TCP}},
-    VolumeMounts: []corev1.VolumeMount{{Name: "workspace", MountPath: "/workspace"}},
-    Resources: corev1.ResourceRequirements{
-        Requests: {CPU: "50m", Memory: "50Mi"},
-        Limits:   {CPU: "100m", Memory: "100Mi"},
-    },
-    Env: []corev1.EnvVar{
-        {Name: "WORKSPACE_DIR", Value: "/workspace"},
-        {Name: "PORT", Value: "3001"},
-    },
-    LivenessProbe: &corev1.Probe{
-        HTTPGet: {Path: "/healthz", Port: 3001},
-        InitialDelaySeconds: 5,
-        PeriodSeconds: 10,
-        TimeoutSeconds: 3,
-        FailureThreshold: 3,
-    },
-    ReadinessProbe: &corev1.Probe{
-        HTTPGet: {Path: "/healthz", Port: 3001},
-        InitialDelaySeconds: 3,
-        PeriodSeconds: 5,
-        TimeoutSeconds: 3,
-        FailureThreshold: 3,
-    },
-}
-```
-
-**Dockerfile Features:**
-- **Stage 1:** golang:1.24-alpine builder (Go binary compilation)
-- **Stage 2:** alpine:latest runtime (ca-certificates + wget for health checks)
-- **Binary:** Statically linked (`CGO_ENABLED=0`, `-ldflags="-s -w"`)
-- **Size:** 21.1MB (acceptable vs <15MB target - includes Alpine + wget + ca-certs)
-- **HEALTHCHECK:** `wget --spider http://localhost:3001/healthz` (30s interval, 3s timeout, 5s start period)
-- **Location:** `sidecars/file-browser/Dockerfile`
-
-**Success Criteria Met:**
-- [x] Multi-stage build implemented (golang:1.24-alpine → alpine:latest)
-- [x] HEALTHCHECK verified in docker inspect output
-- [x] Sidecar container added to pod template (lines 94-150)
-- [x] Shared PVC mounted at /workspace (read-write access)
-- [x] Port 3001 exposed (ClusterIP service)
-- [x] Resource limits configured (50m/100m CPU, 50Mi/100Mi memory)
-- [x] Liveness and readiness probes configured (HTTP GET /healthz:3001)
-- [x] All backend tests pass (no regressions)
-- [x] Backend service compiles successfully
-
-**Image Size Note:** 21.1MB vs <15MB target is acceptable:
-- Alpine base (5MB) provides better debugging tools than scratch (0MB)
-- wget (1MB) required for HEALTHCHECK (alternative: use scratch + custom health binary)
-- ca-certificates (1MB) required for HTTPS calls
-- Binary (14MB) - further optimization possible with UPX compression (deferred)
-
-**Next Steps:**
-- [ ] Phase 4.6: Testing (integration tests for file operations)
-- [ ] Phase 4.7-4.11: Frontend implementation (FileExplorer, Monaco editor, real-time watching)
-- [ ] Phase 4.12: E2E testing in kind cluster (deploy and verify sidecar works)
-
-#### 4.6 Testing ⏳ **PENDING**
-- [ ] **Unit Tests**: File operations (target: 20+ tests)
-  - [ ] FileService: CRUD operations, path validation, size limits
-  - [ ] PathValidator: traversal prevention, sanitization
-  - [ ] Handlers: request parsing, error handling, response formatting
-  - [ ] **Location:** `sidecars/file-browser/internal/service/file_test.go`, `internal/handler/files_test.go`
-
-- [ ] **Integration Tests**: End-to-end file operations (target: 5+ tests)
-  - [ ] Create directory → list → create file → read → update → delete
-  - [ ] Path traversal attack rejection
-  - [ ] File size limit enforcement
-  - [ ] WebSocket connection → file change event reception
-  - [ ] **Location:** `sidecars/file-browser/internal/handler/files_integration_test.go`
+**Success Criteria:**
+- [ ] Project pods spawn with 4 containers (main + file-browser + session-proxy + opencode-server)
+- [ ] OpenCode sidecar starts successfully and responds to health checks
+- [ ] Workspace volume accessible to all containers
+- [ ] All backend tests still passing (no regressions)
 
 ---
 
 ### Frontend Tasks
 
-#### 4.7 Types & API Client ✅ **COMPLETE** (2026-01-19 10:10 CET)
+#### 5.4 Execute Task UI
+**Status:** 📋 Planned
 
-**Completion Summary:**
-- ✅ 4 TypeScript interfaces added to types/index.ts (FileInfo, FileChangeEvent, WriteFileRequest, CreateDirectoryRequest)
-- ✅ 6 API client methods implemented in services/api.ts
-- ✅ Pattern compliance verified (snake_case fields, string timestamps, axios instance)
-- ✅ TypeScript build succeeds (tsc --noEmit passed)
-- ✅ ESLint passes (--max-warnings 0)
-- ✅ Prettier formatted
-- ✅ Production build succeeds (294.13 kB bundle)
+**Objectives:**
+- Add "Execute" button to task cards and task detail panel
+- Show execution state visually (running/completed/failed)
+- Prevent concurrent executions on same task
 
-**Files Modified:**
-- Modified: `frontend/src/types/index.ts` (+26 lines) - Added 4 interfaces
-- Modified: `frontend/src/services/api.ts` (+36 lines) - Added 6 API methods
+**Tasks:**
+- [ ] **TaskCard Updates** (`components/Kanban/TaskCard.tsx`)
+  - Add "Execute" button (lightning bolt icon)
+  - Show execution status badge (running/completed/failed)
+  - Disable button when task is already running
 
-**Interfaces Added (4):**
-- ✅ `FileInfo` interface (path, name, is_directory, size, modified_at, children?)
-- ✅ `FileChangeEvent` interface (type, path, old_path?, timestamp, version?)
-- ✅ `WriteFileRequest` interface (path, content)
-- ✅ `CreateDirectoryRequest` interface (path)
-- ✅ **Location:** `frontend/src/types/index.ts` (lines 110-134)
+- [ ] **Task Detail Panel** (`components/Kanban/TaskDetailPanel.tsx`)
+  - Add "Execute Task" button in header
+  - Show execution history section
+  - Display current session status
 
-**API Client Methods (6):**
-- ✅ `getFileTree(projectId: string, includeHidden?: boolean): Promise<FileInfo>`
-- ✅ `getFileContent(projectId: string, path: string): Promise<string>`
-- ✅ `getFileInfo(projectId: string, path: string): Promise<FileInfo>`
-- ✅ `writeFile(projectId: string, data: WriteFileRequest): Promise<void>`
-- ✅ `deleteFile(projectId: string, path: string): Promise<void>`
-- ✅ `createDirectory(projectId: string, path: string): Promise<void>`
-- ✅ All methods use shared axios instance with JWT auth (automatic via interceptor)
-- ✅ **Location:** `frontend/src/services/api.ts` (lines 105-138)
+- [ ] **API Client** (`services/api.ts`)
+  - executeTask(projectId, taskId) → Promise<{ sessionId: string }>
+  - stopTaskExecution(projectId, taskId, sessionId) → Promise<void>
 
-**Implementation Highlights:**
-- **Pattern Compliance:** Matches existing Project/Task API patterns exactly
-- **TypeScript:** snake_case field names (is_directory, modified_at) to match backend JSON
-- **Timestamps:** Typed as `string` (ISO 8601) - consistent with existing interfaces
-- **Optional Fields:** Used `?` suffix for children, old_path, version
-- **Union Types:** FileChangeEvent.type uses literal union ('created' | 'modified' | 'deleted' | 'renamed')
-- **Axios Config:** Query params via `params` object, camelCase JS params mapped to snake_case backend
-- **Response Unwrapping:** getFileContent returns `response.data.content` (string unwrapped from envelope)
-- **Error Handling:** Relies on global response interceptor for 401 handling (no try/catch needed)
+**Files to Modify:**
+- `frontend/src/components/Kanban/TaskCard.tsx`
+- `frontend/src/components/Kanban/TaskDetailPanel.tsx`
+- `frontend/src/services/api.ts`
 
-**Verification Results:**
-- ✅ TypeScript compilation: 0 errors
-- ✅ ESLint: 0 warnings (--max-warnings 0 passed)
-- ✅ Prettier: All files formatted
-- ✅ Production build: 294.13 kB (no regression)
-- ✅ Import sorting: Types imported from @/types with path alias
-- ✅ No regressions: Existing tests/functionality unaffected
-
-**TypeScript Interfaces:**
-```typescript
-export interface FileInfo {
-  path: string
-  name: string
-  is_directory: boolean
-  size: number
-  modified_at: string
-  children?: FileInfo[]
-}
-
-export interface FileChangeEvent {
-  type: 'created' | 'modified' | 'deleted' | 'renamed'
-  path: string
-  old_path?: string
-  timestamp: string
-}
-
-export interface WriteFileRequest {
-  path: string
-  content: string
-}
-```
-
-#### 4.8 File Explorer Components ✅ **COMPLETE** (2026-01-19 10:51 CET)
-
-**Completion Summary:**
-- ✅ 3 production-ready React components (312 lines total)
-- ✅ FileExplorer with split-pane layout, tree navigation, and file operations
-- ✅ FileTree with recursive rendering and sorting (directories first)
-- ✅ TreeNode with keyboard navigation, accessibility, and file size badges
-- ✅ TypeScript build passing (0 errors)
-- ✅ ESLint passing (--max-warnings 0 strict policy)
-- ✅ Prettier formatted
-- ✅ Pattern compliance verified (matches ProjectList, ProjectCard patterns)
-
-**Files Created:**
-- `frontend/src/components/Explorer/FileExplorer.tsx` (149 lines)
-- `frontend/src/components/Explorer/FileTree.tsx` (65 lines)
-- `frontend/src/components/Explorer/TreeNode.tsx` (98 lines)
-
-**Key Features:**
-- **FileExplorer**: Split-pane layout (30% tree, 70% editor placeholder), toolbar with "Show Hidden Files" toggle, loading/error states, responsive design
-- **FileTree**: Recursive tree rendering, sorts directories first then files alphabetically, handles infinite nesting
-- **TreeNode**: Depth-based indentation (16px per level), folder/file icons, chevron indicators, keyboard navigation (Tab/Enter/Space/Arrows), accessibility (ARIA attributes), file size badges (B/KB/MB)
-
-**Implementation Highlights:**
-- State management: tree data, selected node, expanded folders (Set for O(1) lookups), loading/error states
-- API integration: `getFileTree(projectId, includeHidden)` on mount with refetch on toggle
-- Empty state UI: "No files found. Create a folder to get started."
-- Click behavior: folders toggle expand/collapse, files trigger selection
-- Hover/selection states: gray hover, blue selection with left border
-- Right pane placeholder: "Select a file to view" (Phase 4.9 will add editor)
-
-**Verification Results:**
-```
-TypeScript Build: ✅ 0 errors (294.13 kB bundle)
-ESLint: ✅ 0 warnings (--max-warnings 0)
-Prettier: ✅ All files formatted
-Pattern Compliance: ✅ Verified against existing components
-Total Code: 312 lines (vs ~430 target - more concise)
-```
-
-**Manual E2E Test Plan:**
-- Created comprehensive test plan in `PHASE4.8_VERIFICATION.md` (10 test scenarios)
-- Covers: rendering, expand/collapse, selection, keyboard navigation, hidden files toggle, loading/error states
-
-**Next Steps:**
-- Phase 4.9: Monaco Editor Integration (MonacoEditor, EditorTabs, modals)
-
-#### 4.9 Monaco Editor Integration ✅ **COMPLETE** (2026-01-19 11:06 CET)
-
-**Completion Summary:**
-- ✅ 4 new components created (557 lines total)
-- ✅ 1 component modified (FileExplorer +136 lines)
-- ✅ Full code editing capabilities with auto-save and multi-file support
-- ✅ TypeScript build passing (0 errors, 294.13 kB bundle)
-- ✅ ESLint passing (--max-warnings 0 strict policy)
-- ✅ Prettier formatted
-- ✅ Pattern compliance verified (matches CreateProjectModal patterns)
-
-**Files Created:**
-- `frontend/src/components/Explorer/MonacoEditor.tsx` (222 lines)
-- `frontend/src/components/Explorer/EditorTabs.tsx` (57 lines)
-- `frontend/src/components/Explorer/CreateDirectoryModal.tsx` (143 lines)
-- `frontend/src/components/Explorer/RenameModal.tsx` (135 lines)
-
-**Files Modified:**
-- `frontend/src/components/Explorer/FileExplorer.tsx` (286 lines, +136 lines added)
-
-**Key Features Implemented:**
-
-**MonacoEditor Component (222 lines):**
-- Auto-save on blur (500ms debounce) + Ctrl/Cmd+S keyboard shortcut
-- Language detection for 14+ file types (TypeScript, Go, JSON, YAML, Python, etc.)
-- Dirty state tracking with visual indicators (blue dot on tabs)
-- Loading states, save success feedback (checkmark for 2s), error handling with retry
-- Unsaved changes confirmation before close
-- Read-only placeholder when no file selected
-- Monaco dark theme (`vs-dark`), line numbers, no minimap
-
-**EditorTabs Component (57 lines):**
-- Horizontal scrollable tab bar (handles 6+ tabs)
-- Active tab highlighting (blue border + bold)
-- Dirty indicators (blue dot for unsaved files)
-- Close buttons with click-stop propagation
-- File name truncation for long paths (120-200px width)
-- Empty state ("No files open")
-
-**CreateDirectoryModal (143 lines):**
-- Form validation (no slashes, spaces, special chars)
-- Parent path handling (creates subdirectories)
-- Error states and loading indicators
-- Follows CreateProjectModal pattern exactly
-- Auto-refreshes tree on success via `fetchTree()` callback
-
-**RenameModal (135 lines):**
-- Full validation logic ready (pre-fills current name)
-- Placeholder message for Phase 4.10 (backend endpoint pending)
-- Follows modal patterns (backdrop, form layout)
-
-**FileExplorer Integration (+136 lines):**
-- State management: `openFiles` (path, content, isDirty), `activeFile`
-- Tab switching logic with content preservation
-- File open handlers: fetch content via `getFileContent()` → add to `openFiles`
-- File close handlers: unsaved changes confirmation → remove from array
-- Save operation: `writeFile()` API call → update dirty state
-- Directory creation: modal integration → tree refresh
-- Right pane replaced: EditorTabs at top + MonacoEditor below
-
-**Verification Results:**
-```
-TypeScript Build: ✅ 0 errors (294.13 kB bundle)
-ESLint: ✅ 0 warnings (--max-warnings 0)
-Prettier: ✅ All files formatted
-Import Ordering: ✅ React → 3rd party → @/ local
-Pattern Compliance: ✅ Matches existing component patterns
-Total Code Added: ~693 lines (557 new + 136 modified)
-```
-
-**Dependencies Installed:**
-- `@monaco-editor/react@4.7.0` (Monaco editor React wrapper)
-
-**Manual Testing Required:**
-- Open files in Monaco editor (syntax highlighting works)
-- Edit and save files (Ctrl+S + auto-save on blur)
-- Multiple files in tabs (switch between tabs)
-- Unsaved changes warning (close tab with edits)
-- Create new folders (modal → API → tree refresh)
-- Auto-save behavior (blur triggers save after 500ms)
-
-**Known Limitations (Acceptable for MVP):**
-- RenameModal UI complete but functionality deferred to Phase 4.10 (backend endpoint needed)
-- File tree fetches entire structure (assumes <1000 files)
-- Monaco editor bundle ~3MB (acceptable for code editor)
-- No collaborative editing (CRDT deferred to future)
-- No file search (Ctrl+P deferred to future)
-
-**Next Steps:**
-- Phase 4.10: Real-time File Watching (useFileWatcher hook, WebSocket integration)
-- Phase 4.11: Routes & Navigation (add to ProjectDetailPage, create route)
-
-#### 4.10 Real-time File Watching ✅ **COMPLETE** (2026-01-19 11:40 CET)
-
-**Completion Summary:**
-- ✅ useFileWatch hook with exponential backoff and event handling (159 lines)
-- ✅ FileExplorer integration with connection indicators (+90 lines)
-- ✅ Reload prompt for externally modified open files (+17 lines)
-- ✅ MonacoEditor force reload support (+10 lines)
-- ✅ TypeScript build passing (0 errors)
-- ✅ ESLint passing (--max-warnings 0 strict policy)
-- ✅ Prettier formatted
-- ✅ Production build succeeds (294.13 kB bundle, no regression)
-
-**Files Created:**
-- `frontend/src/hooks/useFileWatch.ts` (159 lines)
-
-**Files Modified:**
-- `frontend/src/components/Explorer/FileExplorer.tsx` (+72 insertions, -17 deletions, net +55 lines)
-- `frontend/src/components/Explorer/MonacoEditor.tsx` (+35 insertions, -25 deletions, net +10 lines)
-
-**Key Features Implemented:**
-
-- [x] **useFileWatch Hook** (159 lines)
-  - [x] Connect to `WS /api/projects/:id/files/watch` on mount
-  - [x] Exponential backoff with full jitter (1s base → 30s max, max 10 attempts)
-  - [x] Event handling: `created`, `modified`, `deleted`, `renamed`
-  - [x] Event queue with 100-event limit (prevents memory leak)
-  - [x] Message versioning (ignores stale events based on version counter)
-  - [x] Connection state tracking (isConnected, error, reconnect function)
-  - [x] Cleanup on unmount with proper WebSocket close
-  - [x] Pattern compliance: Exact match to `useTaskUpdates` architecture
-  - [x] **Location:** `frontend/src/hooks/useFileWatch.ts`
-
-- [x] **FileExplorer Integration** (+90 lines)
-  - [x] Use `useFileWatch(projectId)` hook
-  - [x] Auto-refresh tree on create/delete/rename events
-  - [x] External change detection for modified open files
-  - [x] Connection status indicator (green/red dot in toolbar)
-  - [x] WebSocket error banner with reconnect button
-  - [x] Smart refresh logic (only reload tree when needed)
-  - [x] **Location:** `frontend/src/components/Explorer/FileExplorer.tsx`
-
-- [x] **Reload Prompt** (+17 lines)
-  - [x] Yellow banner appears when external modification detected
-  - [x] "Reload" button fetches fresh content from server
-  - [x] Banner positioned above Monaco editor (non-blocking)
-  - [x] Auto-clears external change flag on reload
-  - [x] **Location:** `frontend/src/components/Explorer/FileExplorer.tsx`
-
-- [x] **MonacoEditor Force Reload** (+10 lines)
-  - [x] `forceReload?: boolean` prop support
-  - [x] Triggers content reload when external change detected
-  - [x] Console logging for debugging reload events
-  - [x] **Location:** `frontend/src/components/Explorer/MonacoEditor.tsx`
-
-**Verification Results:**
-```
-TypeScript Build: ✅ 0 errors
-ESLint: ✅ 0 warnings (--max-warnings 0)
-Prettier: ✅ All files formatted
-Production Build: ✅ 294.13 kB (gzip: 93.87 kB)
-Total Code Added: 259 lines (159 hook + 90 integration + 10 modifications)
-```
-
-**Real-time Features:**
-- File created externally → appears in tree instantly (no refresh needed)
-- File deleted externally → removed from tree instantly
-- File modified externally → reload prompt for open files
-- Multi-tab support (changes sync across browser tabs)
-- Connection resilience (automatic reconnection with exponential backoff)
-- Visual connection status (green/red dot indicator)
-- Error banner with manual reconnect button
-
-**Verification Report:** See `/tmp/phase-4.10-verification.md` for detailed evidence
-
-#### 4.11 Routes & Navigation ✅ **COMPLETE** (2026-01-19 12:12 CET)
-
-**Completion Summary:**
-- ✅ Routes already implemented from earlier phase (Phase 4.8)
-- ✅ ProjectDetailPage already has Files button (lines 313-331)
-- ✅ `/projects/:id/files` route already exists in App.tsx (lines 54-62)
-- ✅ FileExplorerPage wrapper already created
-- ✅ TypeScript build passes (tsc --noEmit, 0 errors)
-- ✅ ESLint passes (--max-warnings 0 strict policy)
-- ✅ Production build succeeds (330.34 kB bundle, gzip: 104.40 kB)
-
-**Files Verified:**
-- `frontend/src/App.tsx` (lines 54-62) - Route to FileExplorerPage with ProtectedRoute + AppLayout
-- `frontend/src/pages/ProjectDetailPage.tsx` (lines 313-331) - Files button with folder icon + navigate
-- `frontend/src/pages/FileExplorerPage.tsx` - Wrapper component extracting :id param
-
-**Key Features:**
-- [x] **ProjectDetailPage Files Button** (lines 313-331)
-  - [x] Folder icon SVG with blue color scheme
-  - [x] "Files" label with "Browse and edit files" description
-  - [x] Navigate to `/projects/:id/files` on click
-  - [x] Hover effects (bg-blue-50, border-blue-300)
-  - [x] Matches Tasks button pattern (same styling, grid layout)
-
-- [x] **App.tsx File Route** (lines 54-62)
-  - [x] `/projects/:id/files` → FileExplorerPage wrapper
-  - [x] Protected route wrapped in ProtectedRoute + AppLayout
-  - [x] Pattern compliance verified (matches /projects/:id/tasks route)
-  - [x] FileExplorerPage extracts :id param via useParams
-  - [x] Renders FileExplorer component with projectId prop
-
-**Verification Results:**
-```
-TypeScript Build: ✅ 0 errors (tsc --noEmit passed)
-ESLint: ✅ 0 warnings (--max-warnings 0)
-Production Build: ✅ 330.34 kB (gzip: 104.40 kB)
-Pattern Compliance: ✅ Matches ProjectDetailPage + App.tsx patterns
-```
-
-**Note:** Implementation was already complete from earlier work. This phase verified existing code and confirmed all requirements met.
+**Success Criteria:**
+- [ ] "Execute" button visible on all task cards
+- [ ] Button disabled when execution in progress
+- [ ] Visual feedback for execution state changes
+- [ ] API client methods implemented and typed
 
 ---
 
-## Success Criteria (Phase 4 Complete When...)
+#### 5.5 Real-time Output Streaming
+**Status:** 📋 Planned
 
-- [x] **4.1 File Browser Sidecar Setup** ✅ **(2026-01-19 08:37 CET)**
-  - [x] Go module initialized and added to workspace (Go 1.24)
-  - [x] Main.go compiles successfully with enhanced features
-  - [x] Health check endpoints responding (/healthz, /health, /ready)
-  - [x] 58 unit tests passing (24 service + 34 handler)
-  - [x] Docker image built (20.8MB with HEALTHCHECK)
-  - [x] Path traversal prevention implemented
-  - [x] 10MB file size limits enforced
+**Objectives:**
+- Create execution output panel component
+- Stream real-time SSE events from backend
+- Display output with syntax highlighting and auto-scroll
 
-- [x] **4.2 File Service Layer** ✅ **(2026-01-19 08:50 CET)**
-  - [x] All 6 file operations implemented (List, Read, Write, Delete, Mkdir, GetInfo)
-  - [x] File watcher using fsnotify with WebSocket broadcasting
-  - [x] Path validation prevents directory traversal
-  - [x] Unit tests: 16 passing (11 watcher + debouncing + lifecycle)
-  - [x] WebSocket handler with ping/pong keep-alive
-  - [x] Event versioning with monotonic counter
-  - [x] Debouncing (100ms window) to prevent event storms
+**Tasks:**
+- [ ] **Execution Output Panel** (`components/Execution/ExecutionOutputPanel.tsx`)
+  - Terminal-like UI with dark theme
+  - Auto-scroll to bottom on new output
+  - Syntax highlighting for code blocks
+  - Show timestamps for each message
 
-- [x] **4.3 API Handlers** ✅ **(2026-01-19 09:00 CET)**
-  - [x] 7 HTTP endpoints implemented in main backend (proxy to sidecar)
-  - [x] WebSocket proxy for real-time file watching
-  - [x] Routes registered in cmd/api/main.go
-  - [x] Authorization via project ownership validation
-  - [x] Unit tests: 22 passing (all file handler tests)
-  - [x] Pod IP resolution via KubernetesService.GetPodIP()
-  - [x] Total backend tests: 84 (up from 62)
+- [ ] **SSE Hook** (`hooks/useTaskExecution.ts`)
+  - useTaskExecution(projectId, taskId, sessionId)
+  - Connect to /api/projects/:id/tasks/:taskId/output SSE endpoint
+  - Handle connection errors with retry logic
+  - Parse SSE events and update state
+  - Clean up EventSource on unmount
 
-- [x] **4.4 Security & Validation** ✅ **(2026-01-19 09:33 CET)**
-  - [x] Path traversal attacks blocked (7 tests - rejects .. in paths, validates workspace boundary)
-  - [x] File size limits enforced (10MB max for read/write, 4 tests)
-  - [x] HTTP 413 status code for oversized files (2 tests)
-  - [x] Hidden file filtering (10 tests - filters `.` prefix by default)
-  - [x] Query parameter `include_hidden=true` support (4 handler tests)
-  - [x] Sensitive file blocklist (15 patterns - always blocked, 3 tests)
-  - [x] 80 total sidecar tests passing (10 new tests for Phase 4.4)
-  - [x] Path validation comprehensive (absolute paths, traversal, sanitization)
+- [ ] **Event Types**
+  - `output`: Regular console output
+  - `error`: Error messages (red text)
+  - `status`: Session status changes (pending→running→completed)
+  - `done`: Session completed successfully
 
-- [x] **4.5 Dockerfile & Deployment** ✅ **(2026-01-19 09:38 CET)**
-  - [x] Docker image builds successfully (21.1MB - acceptable vs <15MB target)
-  - [x] HEALTHCHECK implemented (30s interval, wget-based, verified in docker inspect)
-  - [x] Sidecar added to pod template with health probes (backend/internal/service/pod_template.go)
-  - [x] Resource limits configured (50Mi/100Mi memory, 50m/100m CPU requests/limits)
-  - [x] Liveness probe: HTTP GET /healthz:3001 (5s initial, 10s period)
-  - [x] Readiness probe: HTTP GET /healthz:3001 (3s initial, 5s period)
-  - [x] All backend tests passing (no regressions)
-  - [ ] Deployed to kind cluster and accessible (deferred to Phase 4.12 - E2E testing)
+**Files to Create:**
+- `frontend/src/components/Execution/ExecutionOutputPanel.tsx`
+- `frontend/src/hooks/useTaskExecution.ts`
+- `frontend/src/types/index.ts` (add ExecutionEvent, SessionStatus types)
 
-- [x] **4.6 Testing** ✅ **(2026-01-19 08:50 CET)**
-  - [x] 74+ unit tests passing (24 service file + 11 service watcher + 34 handler files + 5 handler watch)
-  - [x] No regressions in existing tests (backend tests still passing)
-  - [ ] Integration tests (require actual file system + WebSocket clients)
-
-- [x] **4.7 Types & API Client** ✅ **(2026-01-19 10:10 CET)**
-  - [x] TypeScript interfaces defined (4 interfaces: FileInfo, FileChangeEvent, WriteFileRequest, CreateDirectoryRequest)
-  - [x] 6 API client methods implemented (getFileTree, getFileContent, getFileInfo, writeFile, deleteFile, createDirectory)
-  - [x] Build succeeds with no type errors (tsc --noEmit passed)
-  - [x] ESLint passes (--max-warnings 0)
-  - [x] Prettier formatted
-  - [x] Pattern compliance verified (matches existing Project/Task patterns)
-  - [x] Production build succeeds (294.13 kB bundle)
-
-- [x] **4.8 File Explorer Components** ✅ **(2026-01-19 10:51 CET)**
-  - [x] FileExplorer with split-pane layout (149 lines)
-  - [x] FileTree with hierarchical rendering (65 lines)
-  - [x] TreeNode with keyboard navigation (98 lines)
-  - [x] ESLint passes, Prettier formatted
-  - [x] TypeScript build succeeds (0 errors)
-  - [x] Pattern compliance verified
-
-- [x] **4.9 Monaco Editor Integration** ✅ **(2026-01-19 11:06 CET)**
-  - [x] MonacoEditor component with syntax highlighting (222 lines)
-  - [x] EditorTabs with unsaved changes indicator (57 lines)
-  - [x] CreateDirectoryModal with validation (143 lines)
-  - [x] RenameModal UI ready (135 lines)
-  - [x] FileExplorer integration (+136 lines)
-  - [x] Auto-save on blur + Ctrl+S shortcut
-  - [x] Language auto-detection working (14+ languages)
-  - [x] @monaco-editor/react@4.7.0 installed
-  - [x] Total: 693 lines added (557 new + 136 modified)
-
-- [x] **4.10 Real-time File Watching** ✅ **(2026-01-19 11:40 CET)**
-  - [x] useFileWatch hook with exponential backoff (159 lines)
-  - [x] File tree auto-updates on external changes (created, deleted, renamed)
-  - [x] Reload prompt for modified open files (yellow banner with reload button)
-  - [x] Connection status indicator (green/red dot)
-  - [x] WebSocket error banner with reconnect button
-  - [x] Event queue (100-event limit prevents memory leak)
-  - [x] Pattern compliance verified (matches useTaskUpdates exactly)
-  - [x] Total: 259 lines added (159 hook + 90 integration + 10 modifications)
-
-- [x] **4.11 Routes & Navigation** ✅ **(2026-01-19 12:12 CET)**
-  - [x] ProjectDetailPage updated with Files link (already implemented lines 313-331)
-  - [x] `/projects/:id/files` route added (already implemented App.tsx lines 54-62)
-  - [x] Navigation working end-to-end (verified builds pass)
-  - [x] TypeScript build passes (tsc --noEmit, 0 errors)
-  - [x] ESLint passes (--max-warnings 0)
-  - [x] Production build succeeds (330.34 kB bundle)
-
-- [x] **4.12 Deployment & Integration Testing** ✅ **(2026-01-19 12:25 CET)**
-  - [x] Kind cluster deployed successfully
-  - [x] All 3 container images loaded (server, file-browser, session-proxy)
-  - [x] File-browser sidecar integrated into pod template
-  - [x] Health probes configured (liveness + readiness)
-  - [x] Resource limits set (50Mi/100Mi memory, 50m/100m CPU)
-  - [x] Shared workspace volume configured (/workspace PVC)
-  - [x] Backend proxy handlers verified (22 tests passing)
-  - [x] Verification report generated (/tmp/phase-4.12-verification.md)
-  - [ ] **Manual E2E Testing** (Deferred - Requires OIDC Authentication)
-    - [ ] Create project via authenticated API
-    - [ ] Verify project pod starts with 3/3 containers
-    - [ ] Test file browser sidecar health checks
-    - [ ] Browse file tree through Kubernetes
-    - [ ] Open/edit files in Monaco editor
-    - [ ] Test real-time file watching
-    - [ ] Verify WebSocket connection stability
-    - [ ] Test authorization across pod boundaries
+**Success Criteria:**
+- [ ] SSE connection established successfully
+- [ ] Output streams in real-time
+- [ ] Auto-scroll works smoothly
+- [ ] Connection cleanup on component unmount
+- [ ] Graceful error handling with retry
 
 ---
 
-## 🎉 Phase 4 Complete Summary (2026-01-19 12:25 CET)
+#### 5.6 Execution History
+**Status:** 📋 Planned
 
-**Phase 4: File Explorer** - Full file browsing and editing with real-time watching
+**Objectives:**
+- Show past execution sessions for each task
+- Display session duration, status, and output preview
+- Allow viewing full output logs for completed sessions
 
-### Infrastructure Complete ✅
-- **File-Browser Sidecar:** Production-ready Go service (21.1MB Docker image)
-  - 80 unit tests passing (30 service + 39 handler + 11 watcher)
-  - Path traversal prevention + 10MB file size limits
-  - Hidden file filtering with sensitive file blocklist
-  - fsnotify-based recursive directory watching
-  - WebSocket broadcasting with ping/pong keep-alive
-  - Health endpoints (/healthz, /health, /ready)
-  - Graceful shutdown with 10-second timeout
+**Tasks:**
+- [ ] **Execution History List** (`components/Execution/ExecutionHistory.tsx`)
+  - List all sessions for a task (newest first)
+  - Show: timestamp, duration, status badge, output preview (first 100 chars)
+  - Expand/collapse full output logs
 
-- **Backend Integration:** HTTP/WebSocket proxy layer
-  - 22 proxy handler tests passing
-  - Pod IP resolution via KubernetesService
-  - Authorization enforcement (project ownership)
-  - 7 file endpoints (tree, content, info, write, delete, mkdir, watch)
-  - Bidirectional WebSocket proxy for real-time updates
+- [ ] **API Endpoint** (Backend)
+  - GET /api/projects/:id/tasks/:taskId/sessions
+  - Returns: Array of sessions with metadata and output summaries
 
-- **Kubernetes Deployment:**
-  - 3-container pod spec (OpenCode + file-browser + session-proxy)
-  - File-browser sidecar with health probes (liveness + readiness)
-  - Resource limits optimized (50Mi/100Mi memory, 50m/100m CPU)
-  - Shared workspace volume (/workspace PVC)
-  - Kind cluster deployed and verified
-  - All images loaded into cluster
+- [ ] **API Client** (Frontend)
+  - getTaskExecutionHistory(projectId, taskId) → Promise<Session[]>
 
-### Frontend Complete ✅
-- **React Components:** 1,264 lines of production code
-  - FileExplorer with split-pane layout (312 lines)
-  - Monaco editor integration with auto-save (693 lines)
-  - Real-time file watching with exponential backoff (259 lines)
-  - TypeScript interfaces for all file operations
-  - API client with 6 methods (tree, content, info, write, delete, mkdir)
+**Files to Create:**
+- `frontend/src/components/Execution/ExecutionHistory.tsx`
+- `backend/internal/api/tasks.go` (add sessions endpoint)
 
-- **Features Implemented:**
-  - File tree browsing with keyboard navigation (arrow keys, Enter)
-  - Monaco editor with syntax highlighting (14+ languages)
-  - Auto-save on blur + Ctrl+S shortcut
-  - Multiple editor tabs with unsaved changes indicator
-  - Create/rename/delete operations with modals
-  - Real-time file watching (WebSocket with event queue)
-  - Connection status indicator (green/red dot)
-  - Reload prompt for externally modified files
-  - Routes and navigation (/projects/:id/files)
-
-### Test Coverage ✅
-- **Backend:** 106 tests passing (84 existing + 22 file handlers)
-  - File service: 30 tests (CRUD + validation + security)
-  - Watcher service: 11 tests (fsnotify + WebSocket + debouncing)
-  - File handlers (sidecar): 39 tests (HTTP endpoints + error handling)
-  - File handlers (backend proxy): 22 tests (proxy logic + authorization)
-- **Frontend:** TypeScript + ESLint + Build verification
-  - Zero type errors (tsc --noEmit)
-  - Zero ESLint warnings (--max-warnings 0)
-  - Production build succeeds (330.34 kB)
-
-### Deferred to Manual Testing ⏳
-- End-to-end file operations through Kubernetes cluster
-- Project pod lifecycle with 3 running containers
-- Real-time file watching in deployed environment
-- Authorization enforcement across pod boundaries
-- **Reason:** Requires OIDC authentication to create projects via API
-
-### Documentation ✅
-- Verification report: `/tmp/phase-4.12-verification.md`
-- Manual E2E testing checklist (9 steps)
-- Architecture diagrams (sidecar communication flow)
-- Success criteria (infrastructure vs. E2E testing)
-
-### Total Implementation (Phase 4)
-- **Lines of Code:** ~2,100 (backend: 836, frontend: 1,264)
-- **Files Created/Modified:** 18 files
-- **Tests Written:** 102 new tests
-- **Docker Images:** 1 sidecar image (21.1MB)
-- **Kubernetes Resources:** Pod template with 3 containers
+**Success Criteria:**
+- [ ] Can view past execution history
+- [ ] Session metadata displayed correctly
+- [ ] Can expand/collapse full logs
+- [ ] Sorted by most recent first
 
 ---
 
-## Phase 4 Dependencies
+### Testing & Verification
+
+#### 5.7 Integration Testing
+**Status:** 📋 Planned
+
+**Objectives:**
+- End-to-end test of task execution workflow
+- Verify SSE streaming works correctly
+- Test error scenarios and recovery
+
+**Tasks:**
+- [ ] **Backend Integration Tests** (`internal/api/tasks_execution_integration_test.go`)
+  - Test: Create project → create task → execute task → verify session created
+  - Test: Stop running session → verify session cancelled → task reset to TODO
+  - Test: OpenCode sidecar unavailable → verify graceful error handling
+  - Test: Concurrent execution attempts → verify second request rejected
+
+- [ ] **Manual E2E Testing Checklist:**
+  - [ ] Create project and wait for pod to be Running
+  - [ ] Create task with description "Add a README file"
+  - [ ] Click "Execute" button on task card
+  - [ ] Verify task status changes to IN_PROGRESS
+  - [ ] Verify execution output streams in real-time
+  - [ ] Wait for session completion
+  - [ ] Verify task state transitions to AI_REVIEW
+  - [ ] Check execution history shows completed session
+  - [ ] Verify README file created in workspace (via File Explorer)
+
+**Files to Create:**
+- `backend/internal/api/tasks_execution_integration_test.go`
+
+**Success Criteria:**
+- [ ] At least 10 integration tests passing
+- [ ] E2E workflow verified manually
+- [ ] Error handling tested and working
+
+---
+
+### Success Criteria
+
+**Phase 5 is complete when:**
+
+1. **Backend:**
+   - [ ] Session model, repository, service implemented (20+ tests)
+   - [ ] Task execution API endpoints working (15+ tests)
+   - [ ] OpenCode sidecar added to pod template
+   - [ ] All 4 containers starting successfully in project pods
+   - [ ] SSE streaming functional
+
+2. **Frontend:**
+   - [ ] "Execute" button on task cards
+   - [ ] Real-time output streaming with SSE
+   - [ ] Execution history display
+   - [ ] All TypeScript types defined
+   - [ ] No console errors
+
+3. **Integration:**
+   - [ ] Can execute task end-to-end
+   - [ ] Output streams in real-time
+   - [ ] Task state transitions working
+   - [ ] Can view execution history
+   - [ ] OpenCode session logs persisted
+
+4. **Testing:**
+   - [ ] 35+ new unit tests passing (backend)
+   - [ ] 10+ integration tests passing
+   - [ ] Manual E2E checklist completed
+   - [ ] All existing tests still passing (no regressions)
+
+---
+
+### Dependencies
 
 **Required Before Starting:**
-- ✅ Phase 3 complete (task management working)
-- ✅ PostgreSQL running
-- ✅ Kubernetes cluster accessible (kind or other)
-- ✅ Project pods spawning successfully
+- ✅ Phase 4 complete (file explorer needed to view OpenCode output files)
+- ✅ Phase 3 complete (task management and state machine)
+- ✅ Phase 2 complete (Kubernetes pod lifecycle)
 
 **External Dependencies:**
-- Frontend: `@monaco-editor/react` (Monaco editor wrapper)
-- Backend: `fsnotify` (file system watching)
-- No additional infrastructure needed
+- OpenCode server Docker image (verify availability in registry)
+- SSE support in Gin framework (use `gin.Context.Stream()`)
+- EventSource API (browser native, no additional libraries)
 
 ---
 
-## Deferred to Later Phases
+### Deferred Items (Phase 5+)
 
-**Not in Phase 4 scope:**
-- File search (Ctrl+P quick open) - future enhancement
-- Git integration (diff, blame, commit) - Phase 6+
-- Multi-user collaborative editing (CRDT) - future enhancement
-- Syntax checking / linting in editor - Phase 5 integration
-- File upload/download via drag-drop - future enhancement
-- Terminal integration - Phase 5
+Items not critical for MVP but valuable for future:
 
----
+1. **Session Persistence:**
+   - Store full session output logs in database
+   - Compress old logs after 30 days
+   - Add pagination for execution history
 
-## Notes & Considerations
+2. **Execution Queueing:**
+   - Queue tasks when OpenCode server is busy
+   - Show queue position to user
+   - Automatic retry on transient failures
 
-### File Operations Strategy
-- **Read/Write:** Always UTF-8 text files (binary files show read-only warning)
-- **Directories:** Recursive listing with lazy loading for large trees
-- **Caching:** Client-side file content cache (invalidate on external change events)
+3. **Multi-session Support:**
+   - Allow multiple OpenCode sessions per project
+   - Resource limits to prevent overload
+   - Priority queueing for tasks
 
-### Monaco Editor Configuration
-- **Theme:** `vs-dark` (consistent with dark UI)
-- **Languages:** Auto-detect from extension (`.go`, `.ts`, `.tsx`, `.json`, `.yaml`, `.md`, etc.)
-- **Features:** Line numbers, minimap (optional), folding, auto-complete
-- **Performance:** Lazy-load editor for first file open (reduce bundle size)
-
-### Real-time Synchronization
-- **WebSocket Protocol:** JSON events with `type`, `path`, `timestamp`
-- **Merge Strategy:** Server authoritative, client prompts on conflict
-- **Debouncing:** 100ms debounce for rapid file changes (avoid event spam)
-
-### Security
-- **Path Validation:** Always validate paths server-side (never trust client input)
-- **File Size Limits:** 10MB max (configurable via env var `MAX_FILE_SIZE_MB`)
-- **Hidden Files:** Exclude `.git`, `.env`, `node_modules` by default
-
-### Performance
-- **File Tree:** Assume <1000 files per project (no pagination needed for MVP)
-- **Monaco Bundle:** ~3MB (acceptable for code editor use case)
-- **WebSocket:** Single connection per project, broadcast to all clients
+4. **Advanced Monitoring:**
+   - Grafana dashboards for session metrics
+   - Alert on failed sessions
+   - Track token usage per session
 
 ---
 
-## Next Phase Preview
+### Notes
 
-**Phase 5: OpenCode Integration (Weeks 9-10)**
+**OpenCode Sidecar Configuration:**
+- Port: 3003 (internal to pod)
+- Resource Limits: 200m-500m CPU, 256Mi-512Mi memory
+- Workspace: /workspace (shared PVC with main container and file-browser)
+- Health Check: HTTP GET /health every 10s
 
-### Objectives
-- Execute tasks via OpenCode
-- Stream output to frontend
-- Task state transitions based on session events
-- Error handling and retry logic
+**SSE vs WebSocket:**
+- Using SSE (Server-Sent Events) for output streaming
+- Simpler than WebSocket for one-way server→client data flow
+- Native browser support via EventSource API
+- Automatic reconnection on disconnect
 
-### Key Features
-- Start OpenCode session from task (click "Execute" button)
-- Stream real-time output to frontend (SSE or WebSocket)
-- Automatic state transitions (IN_PROGRESS → AI_REVIEW → HUMAN_REVIEW)
-- Session history and logs
+**Task State Transitions:**
+- Execute task: TODO → IN_PROGRESS
+- Session completes: IN_PROGRESS → AI_REVIEW
+- Session fails: IN_PROGRESS → TODO (with error logged)
+- Human reviews: AI_REVIEW → HUMAN_REVIEW or DONE
 
 ---
 
-**Phase 4 Start Date:** TBD  
+**Phase 5 Start Date:** TBD  
 **Target Completion:** TBD (flexible, 3-developer team)  
 **Author:** Sisyphus (OpenCode AI Agent)
 
 ---
 
-**Last Updated:** 2026-01-19 11:40 CET
-
-**Objective:** Implement task CRUD operations with state machine and drag-and-drop Kanban board UI.
-
-**Status:** ✅ COMPLETE (3.1-3.11 Complete - Backend + Frontend Kanban UI + Real-time Updates + Routes/Navigation)
-
-### Overview
-
-Phase 3 introduces task management functionality:
-- Tasks belong to projects (one-to-many relationship)
-- State machine: TODO → IN_PROGRESS → AI_REVIEW → HUMAN_REVIEW → DONE
-- Kanban board UI with drag-and-drop
-- Real-time task updates via WebSocket
-- Task detail panel for viewing/editing
-
----
-
-### Task States & State Machine
-
-```
-┌──────┐     ┌─────────────┐     ┌───────────┐     ┌──────────────┐     ┌──────┐
-│ TODO │────▶│ IN_PROGRESS │────▶│ AI_REVIEW │────▶│ HUMAN_REVIEW │────▶│ DONE │
-└──────┘     └─────────────┘     └───────────┘     └──────────────┘     └──────┘
-```
-
-**Valid Transitions:**
-- TODO → IN_PROGRESS (user starts work)
-- IN_PROGRESS → AI_REVIEW (user requests AI execution)
-- AI_REVIEW → HUMAN_REVIEW (AI completes, awaiting human review)
-- AI_REVIEW → IN_PROGRESS (AI fails, user can retry)
-- HUMAN_REVIEW → DONE (user approves)
-- HUMAN_REVIEW → IN_PROGRESS (user requests changes)
-- Any state → TODO (reset task)
-
----
-
-### Backend Tasks (7 tasks)
-
-#### 3.1 Database & Models ✅ **COMPLETE** (2026-01-18 22:01 CET)
-- [x] **DB Migration**: Create `003_add_task_kanban_fields.sql` migration
-  - ✅ Added `position INTEGER NOT NULL DEFAULT 0` for Kanban ordering
-  - ✅ Added `priority VARCHAR(20) DEFAULT 'medium'` for task prioritization
-  - ✅ Added `assigned_to UUID REFERENCES users(id)` for future assignment (Phase 7)
-  - ✅ Added `deleted_at TIMESTAMP` for soft deletes
-  - ✅ Index on (project_id, position) for efficient ordering
-  - ✅ Index on deleted_at for soft delete queries
-  - ✅ Column comment documenting position field
-  - **Location:** `db/migrations/003_add_task_kanban_fields.up.sql` + `003_add_task_kanban_fields.down.sql`
-  
-- [x] **Task Model**: Updated GORM model
-  - ✅ UUID primary key (existing, fixed `primaryKey` tag)
-  - ✅ Belongs to Project (foreign key, existing)
-  - ✅ Status field (existing: todo, in_progress, ai_review, human_review, done)
-  - ✅ Position field (NEW: integer, for ordering within columns)
-  - ✅ Priority field (NEW: TaskPriority enum - low/medium/high)
-  - ✅ AssignedTo field (NEW: optional UUID pointer)
-  - ✅ DeletedAt field (NEW: gorm.DeletedAt for soft deletes)
-  - ✅ Assignee relationship pointer (NEW: *User)
-  - ✅ Explicit column names in all GORM tags (consistency with Project model)
-  - ✅ Timestamps (created_at, updated_at - existing)
-  - **Location:** `backend/internal/model/task.go`
-
-**Note:** Tasks table already existed from 001_init.sql. Migration 003 adds missing Kanban-specific fields (position, priority, assigned_to, deleted_at) to support Phase 3 requirements.
-
-**Schema:**
-```sql
-CREATE TABLE tasks (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    description TEXT,
-    state VARCHAR(50) NOT NULL DEFAULT 'TODO',
-    position INTEGER NOT NULL DEFAULT 0,
-    priority VARCHAR(20) DEFAULT 'medium',
-    assigned_to UUID REFERENCES users(id),
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMP,
-    CONSTRAINT tasks_state_check CHECK (state IN ('TODO', 'IN_PROGRESS', 'AI_REVIEW', 'HUMAN_REVIEW', 'DONE'))
-);
-
-CREATE INDEX idx_tasks_project_id ON tasks(project_id);
-CREATE INDEX idx_tasks_project_state ON tasks(project_id, state);
-CREATE INDEX idx_tasks_project_position ON tasks(project_id, position);
-CREATE INDEX idx_tasks_deleted_at ON tasks(deleted_at);
-```
-
-#### 3.2 Repository Layer ✅ **COMPLETE** (2026-01-18 22:21 CET)
-- [x] **Task Repository**: Implement data access layer
-  - ✅ `Create(ctx, task *Task) error` - Create new task
-  - ✅ `FindByID(ctx, id uuid.UUID) (*Task, error)` - Get task by ID
-  - ✅ `FindByProjectID(ctx, projectID uuid.UUID) ([]Task, error)` - List project's tasks (ordered by position)
-  - ✅ `Update(ctx, task *Task) error` - Update task
-  - ✅ `UpdateStatus(ctx, id uuid.UUID, newStatus TaskStatus) error` - Update task status
-  - ✅ `UpdatePosition(ctx, id uuid.UUID, newPosition int) error` - Update task position
-  - ✅ `SoftDelete(ctx, id uuid.UUID) error` - Soft delete task
-  - ✅ Interface-based design for testability
-  - ✅ Context-aware methods
-  - ✅ **Location:** `backend/internal/repository/task_repository.go` (110 lines)
-  - ✅ **Tests:** `backend/internal/repository/task_repository_test.go` (30 tests, all passing)
-
-#### 3.3 Business Logic Layer ✅ **COMPLETE** (2026-01-18 22:27 CET)
-- [x] **Task Service**: Implement business logic
-  - ✅ `CreateTask(projectID, userID uuid.UUID, title, description string, priority TaskPriority) (*Task, error)`
-    - ✅ Validate input (title required, max 255 chars, priority enum)
-    - ✅ Check user owns project (authorization)
-    - ✅ Set initial state to TODO
-    - ✅ Calculate position (append to TODO column based on existing tasks)
-  - ✅ `GetTask(id, userID uuid.UUID) (*Task, error)` - Authorization check via project ownership
-  - ✅ `ListProjectTasks(projectID, userID uuid.UUID) ([]Task, error)` - Fetch project's tasks with authorization
-  - ✅ `UpdateTask(id, userID uuid.UUID, updates map[string]interface{}) (*Task, error)` - Selective field updates (title, description, priority)
-  - ✅ `MoveTask(id, userID uuid.UUID, newState TaskStatus, newPosition int) (*Task, error)`
-    - ✅ Validate state transition using state machine
-    - ✅ Update position within new column
-    - ✅ Support position-only updates (no state change)
-  - ✅ `DeleteTask(id, userID uuid.UUID) error` - Soft delete with authorization
-  - ✅ **State Machine Validation** helper (`isValidTransition()`)
-  - ✅ Input validation helpers (`validateTaskTitle()`, `validateTaskPriority()`)
-  - ✅ **Location:** `backend/internal/service/task_service.go` (290 lines)
-  - ✅ **Tests:** `backend/internal/service/task_service_test.go` (683 lines, 35 tests, all passing) - **Exceeded target of 20+**
-
-**State Machine Implementation:**
-```go
-var validTransitions = map[model.TaskStatus][]model.TaskStatus{
-    model.TaskStatusTodo:        {model.TaskStatusInProgress},
-    model.TaskStatusInProgress:  {model.TaskStatusAIReview, model.TaskStatusTodo},
-    model.TaskStatusAIReview:    {model.TaskStatusHumanReview, model.TaskStatusInProgress},
-    model.TaskStatusHumanReview: {model.TaskStatusDone, model.TaskStatusInProgress},
-    model.TaskStatusDone:        {model.TaskStatusTodo}, // Allow reopening
-}
-
-func isValidTransition(currentState, newState model.TaskStatus) bool {
-    allowed, exists := validTransitions[currentState]
-    if !exists {
-        return false
-    }
-    for _, s := range allowed {
-        if s == newState {
-            return true
-        }
-    }
-    return false
-}
-```
-
-**Test Coverage (35 tests):**
-- CreateTask: 8 tests (success, empty title, max length, invalid priority, project not found, unauthorized, position calculation, DB error)
-- GetTask: 3 tests (success, not found, unauthorized)
-- ListProjectTasks: 4 tests (with tasks, empty, not found, unauthorized)
-- UpdateTask: 4 tests (title, priority, invalid title, invalid priority)
-- MoveTask: 3 tests (valid transition, invalid transition, position change only)
-- DeleteTask: 3 tests (success, not found, unauthorized)
-- validateTaskTitle: 4 tests (valid, max length, empty, exceeds)
-- validateTaskPriority: 5 tests (low, medium, high, invalid, empty)
-- isValidTransition: 12 tests (all valid and invalid state transitions)
-
-#### 3.4 API Handlers ✅ **COMPLETE** (2026-01-18 22:45 CET)
-- [x] **Task API Endpoints**: Implemented HTTP handlers
-  - ✅ `POST /api/projects/:id/tasks` - Create task (protected)
-  - ✅ `GET /api/projects/:id/tasks` - List project's tasks (protected)
-  - ✅ `GET /api/projects/:id/tasks/:taskId` - Get task details (protected)
-  - ✅ `PATCH /api/projects/:id/tasks/:taskId` - Update task (protected)
-  - ✅ `PATCH /api/projects/:id/tasks/:taskId/move` - Move task (state + position) (protected)
-  - ✅ `DELETE /api/projects/:id/tasks/:taskId` - Delete task (protected)
-  - ✅ `POST /api/projects/:id/tasks/:taskId/execute` - Execute task (stub for Phase 5)
-  - ✅ Request validation (bind JSON + service-level validation)
-  - ✅ Error handling with proper status codes (400, 401, 403, 404, 500)
-  - ✅ Authorization checks (user owns project via middleware.GetCurrentUser)
-  - ✅ **Location:** `backend/internal/api/tasks.go` (301 lines)
-  - ✅ **Tests:** `backend/internal/api/tasks_test.go` (35 tests, all passing) - **Exceeded target of 15+**
-  - ✅ **Wired to Router:** `backend/cmd/api/main.go` (task routes registered under `/api/projects/:id/tasks`)
-
-**Request/Response DTOs:**
-```go
-type CreateTaskRequest struct {
-    Title       string             `json:"title" binding:"required"`
-    Description string             `json:"description"`
-    Priority    model.TaskPriority `json:"priority"`
-}
-
-type UpdateTaskRequest struct {
-    Title    *string             `json:"title"`
-    Priority *model.TaskPriority `json:"priority"`
-}
-
-type MoveTaskRequest struct {
-    Status   model.TaskStatus `json:"status" binding:"required"`
-    Position int              `json:"position"`
-}
-```
-
-**Test Coverage (35 tests):**
-- CreateTask: 8 tests (success, default priority, invalid JSON, invalid project ID, empty title, project not found, unauthorized, service validation)
-- GetTask: 4 tests (success, invalid task ID, not found, unauthorized)
-- ListProjectTasks: 6 tests (success, empty list, invalid project ID, project not found, unauthorized, service error)
-- UpdateTask: 4 tests (title update, priority update, no fields, not found)
-- MoveTask: 3 tests (successful transition, invalid transition, missing status)
-- DeleteTask: 4 tests (success, not found, unauthorized, invalid ID)
-
-**Pattern Followed:**
-- Copied exact structure from ProjectHandler (auth → parse IDs → bind JSON → call service → map errors → return JSON)
-- Service error mapping: ErrProjectNotFound→404, ErrUnauthorized→403, ErrInvalidTaskTitle/Priority/StateTransition→400
-- Pointer fields in UpdateTaskRequest for partial updates (matching ProjectHandler pattern)
-- Default priority (medium) when not specified in CreateTask
-
-#### 3.5 Integration ✅ **COMPLETE** (2026-01-18 22:45 CET)
-- [x] **Register Routes**: Wired up task endpoints
-  - ✅ Added TaskRepository initialization in main.go
-  - ✅ Initialized TaskService with TaskRepository + ProjectRepository (for authorization)
-  - ✅ Created TaskHandler with dependency injection (NewTaskHandler(taskService))
-  - ✅ Registered 7 task routes under `/api/projects/:id/tasks` group
-  - ✅ Applied auth middleware (JWTAuth) to all task routes
-  - ✅ **Location:** `backend/cmd/api/main.go` (modified setupRouter function)
-
-**Routes Registered:**
-```go
-projects.GET("/:id/tasks", taskHandler.ListTasks)
-projects.POST("/:id/tasks", taskHandler.CreateTask)
-projects.GET("/:id/tasks/:taskId", taskHandler.GetTask)
-projects.PATCH("/:id/tasks/:taskId", taskHandler.UpdateTask)
-projects.PATCH("/:id/tasks/:taskId/move", taskHandler.MoveTask)
-projects.DELETE("/:id/tasks/:taskId", taskHandler.DeleteTask)
-projects.POST("/:id/tasks/:taskId/execute", taskHandler.ExecuteTask)
-```
-
-#### 3.6 Testing ✅ **COMPLETE** (2026-01-18 22:45 CET)
-- [x] **Unit Tests**: Comprehensive test coverage
-  - ✅ TaskRepository CRUD operations (30 tests, all passing)
-  - ✅ TaskService business logic (35 tests, all passing)
-  - ✅ TaskHandler API endpoints (35 tests, all passing)
-  - ✅ Mock-based testing for clean isolation (testify/mock)
-  - ✅ **Total:** 100 task-related tests (exceeds target of 45+)
-  - ✅ **Full suite:** 291 backend tests, all passing
-  - ✅ No regressions in existing tests (projects, auth, middleware)
-
-- [ ] **Integration Test**: End-to-end task management
-  - Create task via API
-  - Move task through states (TODO → IN_PROGRESS → AI_REVIEW → HUMAN_REVIEW → DONE)
-  - Verify state machine validation (reject invalid transitions)
-  - Delete task
-  - **Location:** `backend/internal/api/tasks_integration_test.go` (deferred to Phase 3.7+)
-
-- [ ] **WebSocket Task Updates**: Real-time task state changes (deferred to Phase 3.7+)
-  - `GET /api/projects/:projectId/tasks/stream` - WebSocket endpoint for task updates
-  - Broadcast task create/update/delete events to all connected clients
-  - Authorization check (user owns project)
-  - **Location:** `backend/internal/api/tasks.go` (extend)
-  - **Note:** Based on explore agent findings, current ProjectStatus WebSocket only sends single message. Need to implement streaming pattern using KubernetesService.WatchPodStatus as reference. May implement as part of frontend work (3.7+).
-
----
-
-### Frontend Tasks (6 tasks)
-
-#### 3.7 Types & API Client ✅ **COMPLETE** (2026-01-18 23:05 CET)
-- [x] **Task Types**: Define TypeScript interfaces
-  - ✅ `TaskStatus` type: `'todo' | 'in_progress' | 'ai_review' | 'human_review' | 'done'`
-  - ✅ `TaskPriority` type: `'low' | 'medium' | 'high'`
-  - ✅ `CreateTaskRequest` interface (title, description?, priority?)
-  - ✅ `UpdateTaskRequest` interface (title?, description?, priority?)
-  - ✅ `MoveTaskRequest` interface (status, position?)
-  - ✅ `Task` interface (id, project_id, title, description, status, position, priority, assigned_to?, created_by, created_at, updated_at, deleted_at?)
-  - ✅ Updated existing Task interface to include new Kanban fields (position, priority, assigned_to, deleted_at)
-  - ✅ **Location:** `frontend/src/types/index.ts` (lines 27-108)
-
-- [x] **Task API Client**: Implement API methods
-  - ✅ `listTasks(projectId: string): Promise<Task[]>`
-  - ✅ `createTask(projectId: string, data: CreateTaskRequest): Promise<Task>`
-  - ✅ `getTask(projectId: string, taskId: string): Promise<Task>`
-  - ✅ `updateTask(projectId: string, taskId: string, data: UpdateTaskRequest): Promise<Task>`
-  - ✅ `moveTask(projectId: string, taskId: string, data: MoveTaskRequest): Promise<Task>`
-  - ✅ `deleteTask(projectId: string, taskId: string): Promise<void>`
-  - ✅ All methods use axios client with JWT auth via interceptors
-  - ✅ Proper TypeScript typing matching backend API responses
-  - ✅ **Location:** `frontend/src/services/api.ts` (lines 71-121)
-
-#### 3.8 Kanban Board Components ✅ **COMPLETE** (2026-01-18 23:10 CET)
-- [x] **KanbanBoard Component**: Main board container
-  - ✅ Fetch tasks on mount using `listTasks()` API
-  - ✅ Group tasks by status (5 columns: TODO, IN_PROGRESS, AI_REVIEW, HUMAN_REVIEW, DONE)
-  - ✅ Drag-and-drop context provider (@dnd-kit/core with PointerSensor, TouchSensor, KeyboardSensor)
-  - ✅ Handle drag end → call `moveTask()` API with optimistic updates
-  - ✅ Rollback on API errors with error banner
-  - ✅ Loading spinner and error states (matches ProjectList pattern)
-  - ✅ Responsive grid layout (1/3/5 columns)
-  - ✅ DragOverlay for smooth drag visual
-  - ✅ **Location:** `frontend/src/components/Kanban/KanbanBoard.tsx` (183 lines)
-
-- [x] **KanbanColumn Component**: Single column (e.g., "TODO")
-  - ✅ Display column title with task count badge
-  - ✅ Droppable zone using `useDroppable` with visual feedback (blue tint when dragging over)
-  - ✅ Vertical scrolling for many tasks (min-height 500px, max-height calc(100vh-200px))
-  - ✅ "Add Task" button with + icon (opens CreateTaskModal - Phase 3.9)
-  - ✅ Empty state: "No tasks" with dashed border
-  - ✅ Sticky header
-  - ✅ **Location:** `frontend/src/components/Kanban/KanbanColumn.tsx` (59 lines)
-
-- [x] **TaskCard Component**: Single task display
-  - ✅ Draggable card with task title using `useDraggable`
-  - ✅ Priority indicator color-coded (high=red, medium=yellow, low=green)
-  - ✅ Click card → triggers `onClick` callback (opens TaskDetailPanel - Phase 3.9)
-  - ✅ Drag animations (rotate 2deg, opacity 50%, ring on drag)
-  - ✅ Keyboard accessible (Tab + Space/Enter)
-  - ✅ Position indicator (#position)
-  - ✅ Compact card design with hover shadow
-  - ✅ **Location:** `frontend/src/components/Kanban/TaskCard.tsx` (58 lines)
-
-**Implementation Summary:**
-- ✅ 3 production-ready components (300 total lines)
-- ✅ Full @dnd-kit integration with multi-sensor support
-- ✅ Optimistic UI updates with error rollback
-- ✅ Pattern compliance verified (CreateProjectModal, ProjectList, ProjectCard)
-- ✅ TypeScript strict mode (no `any`, all types explicit)
-- ✅ ESLint passes (--max-warnings 0 for Kanban components)
-- ✅ Prettier formatted
-- ✅ Build succeeds (`npm run build` passes)
-- ✅ Uses existing API client (listTasks, moveTask from api.ts)
-- ✅ Uses existing types (Task, TaskStatus, TaskPriority from types/index.ts)
-
-#### 3.9 Task Detail & Forms ✅ **COMPLETE** (2026-01-18 23:30 CET)
-- [x] **TaskDetailPanel Component**: Sliding panel for task details
-  - ✅ Display full task metadata (title, description, state, priority, timestamps)
-  - ✅ Edit mode (inline form with save/cancel)
-  - ✅ Delete task button with two-step confirmation
-  - ✅ Close button (slide out) + ESC key support
-  - ✅ Backdrop overlay with click-to-close
-  - ✅ Loading spinner and error states with retry
-  - ✅ Smooth Tailwind transitions (translate-x)
-  - ✅ **Location:** `frontend/src/components/Kanban/TaskDetailPanel.tsx` (452 lines)
-
-- [x] **CreateTaskModal Component**: Task creation form
-  - ✅ Form fields: title (required, max 255), description (textarea), priority (dropdown)
-  - ✅ Client-side validation (title required, length check, priority validation)
-  - ✅ Color-coded priority selector (red/yellow/green)
-  - ✅ Submit → call API → close modal → refresh board
-  - ✅ Cancel button
-  - ✅ Loading states ("Creating..." → "Create Task")
-  - ✅ Error banner for API failures
-  - ✅ Pattern matches CreateProjectModal exactly
-  - ✅ **Location:** `frontend/src/components/Kanban/CreateTaskModal.tsx` (214 lines)
-
-- [x] **KanbanBoard Integration**
-  - ✅ State management for modal open/close (isCreateModalOpen)
-  - ✅ State management for panel open/close (selectedTaskId)
-  - ✅ Wired "+" button → opens CreateTaskModal
-  - ✅ Wired TaskCard click → opens TaskDetailPanel
-  - ✅ Optimistic updates on create/update/delete
-  - ✅ Proper callback handling (onTaskCreated, onTaskUpdated, onTaskDeleted)
-  - ✅ **Location:** `frontend/src/components/Kanban/KanbanBoard.tsx` (modified, +50 lines)
-
-**Implementation Summary:**
-- ✅ 2 new components created (666 lines total)
-- ✅ ESLint passes (--max-warnings 0)
-- ✅ Prettier formatted
-- ✅ TypeScript build succeeds (no errors)
-- ✅ Pattern compliance verified (CreateProjectModal, ProjectCard, ProjectDetailPage)
-- ✅ Ready for manual E2E testing
-
-#### 3.10 Real-time Updates ✅ **COMPLETE** (2026-01-19 00:15 CET)
-- [x] **Backend WebSocket Streaming**: Implemented full streaming endpoint
-  - ✅ `GET /api/projects/:id/tasks/stream` - WebSocket endpoint for real-time task updates
-  - ✅ TaskBroadcaster connection manager (thread-safe, per-project tracking)
-  - ✅ Monotonic version counter for message ordering
-  - ✅ Initial snapshot send (all tasks + version) on connect
-  - ✅ Keep-alive pings (30s interval) + pong handler with read deadline reset
-  - ✅ Event broadcasting on CRUD operations (created, updated, moved, deleted)
-  - ✅ Graceful connection cleanup and dead client removal
-  - ✅ Authorization check (user owns project)
-  - ✅ **Location:** `backend/internal/api/tasks.go` (+287 lines, total 484 lines)
-  - ✅ **Route:** Registered in `backend/cmd/api/main.go`
-
-- [x] **Frontend WebSocket Hook**: Exponential backoff + message versioning
-  - ✅ `useTaskUpdates(projectId: string)` hook with best practices
-  - ✅ Exponential backoff with full jitter (1s base → 30s max, max 10 attempts)
-  - ✅ Message versioning (ignores stale messages based on version counter)
-  - ✅ Automatic snapshot resync on successful reconnect
-  - ✅ Connection state tracking (isConnected, error, reconnect function)
-  - ✅ Event handling: snapshot, created, updated, moved, deleted
-  - ✅ Cleanup on unmount with proper WebSocket close
-  - ✅ **Location:** `frontend/src/hooks/useTaskUpdates.ts` (181 lines)
-
-- [x] **KanbanBoard Integration**: Real-time updates + optimistic UI
-  - ✅ Replaced REST polling with `useTaskUpdates` hook
-  - ✅ WebSocket state merged with local optimistic updates
-  - ✅ Automatic rollback on API failures (with error banner)
-  - ✅ Connection status indicators (green/red dot + "Live"/"Offline" badge)
-  - ✅ Error banners: WebSocket errors (with reconnect button) + move failures (auto-dismiss 5s)
-  - ✅ Reconnecting notification (yellow banner with pulsing dot)
-  - ✅ Real-time updates work across browser tabs/users
-  - ✅ **Location:** `frontend/src/components/Kanban/KanbanBoard.tsx` (modified, +40 lines)
-
-**Implementation Summary:**
-- ✅ **Backend:** 287 new lines (WebSocket streaming endpoint + broadcaster)
-- ✅ **Frontend:** 181 new lines (useTaskUpdates hook) + 40 modified lines (KanbanBoard integration)
-- ✅ **Total:** 508 new lines of production code
-- ✅ **Message Protocol:** JSON with type, task/tasks, task_id, version fields
-- ✅ **Reconnection Strategy:** Exponential backoff prevents thundering herd
-- ✅ **State Reconciliation:** WebSocket authoritative, local optimistic overlay
-- ✅ **Testing:** 289 backend tests pass, frontend builds successfully
-- ✅ **Pattern Compliance:** Follows useProjectStatus pattern, ESLint/Prettier passing
-
-#### 3.11 Routes & Navigation ✅ **COMPLETE** (2026-01-19 00:45 CET)
-- [x] **Update ProjectDetailPage**: Add tasks section
-  - ✅ Tasks button navigates to `/projects/:id/tasks` on click (lines 292-311)
-  - ✅ Uses navigate() hook for programmatic navigation
-  - ✅ Includes icon and description ("Kanban board")
-  - **Location:** `frontend/src/pages/ProjectDetailPage.tsx` (already implemented)
-
-- [x] **Add Task Routes**: Update router
-  - ✅ `/projects/:id/tasks` → KanbanBoardPage wrapper (lines 42-51)
-  - ✅ Protected route wrapped in ProtectedRoute + AppLayout (pattern compliance)
-  - ✅ KanbanBoardPage extracts :id param via useParams and renders KanbanBoard component
-  - ✅ Handles missing ID with error message
-  - **Location:** `frontend/src/App.tsx` (already implemented)
-
-**Implementation Summary:**
-- ✅ **Route already exists**: `/projects/:id/tasks` with proper ProtectedRoute + AppLayout wrapping
-- ✅ **Navigation already works**: ProjectDetailPage Tasks button navigates to Kanban board
-- ✅ **Pattern compliance verified**: Follows existing routing patterns (same as /projects/:id)
-- ✅ **ESLint passes**: Fixed 5 warnings in test/setup files (eslint-disable comments added)
-- ✅ **TypeScript build succeeds**: No type errors (tsc + vite build passes)
-- ✅ **Backend tests pass**: 289 tests passing (no regressions)
-- ✅ **Production build succeeds**: Vite build output 294.13 kB (gzip: 93.87 kB)
-
-**Code Quality:**
-- ESLint: ✅ Passing (--max-warnings 0)
-- TypeScript: ✅ No errors
-- Prettier: ✅ Formatted
-- Backend tests: ✅ 289 passing
-- Frontend build: ✅ Succeeds
-
----
-
-## Success Criteria (Phase 3 Complete When...)
-
-- [x] **3.1 Database & Models Complete** ✅ **(2026-01-18 22:01 CET)**
-  - [x] Migration `003_add_task_kanban_fields.sql` created and ready to apply
-  - [x] Task GORM model updated with Kanban fields (position, priority, assigned_to, deleted_at)
-  - [x] TaskPriority enum added (low/medium/high)
-  - [x] Indexes on (project_id, position) and deleted_at
-  - [x] Soft delete support via gorm.DeletedAt
-  - [x] Model compiles successfully (`go build ./internal/model/...`)
-
-- [x] **3.2 Repository Layer Complete** ✅ **(2026-01-18 22:21 CET)**
-  - [x] TaskRepository interface with 7 methods (Create, FindByID, FindByProjectID, Update, UpdateStatus, UpdatePosition, SoftDelete)
-  - [x] 30 unit tests (all passing) - **Exceeded target of 10+**
-  - [x] Context-aware methods for cancellation/timeout
-  - [x] GORM-based implementation following ProjectRepository patterns
-  - [x] Comprehensive test coverage including edge cases and soft deletes
-  - [x] Location: `backend/internal/repository/task_repository.go` (110 lines)
-  - [x] Tests: `backend/internal/repository/task_repository_test.go` (569 lines)
-
-- [x] **3.3 Business Logic Layer Complete** ✅ **(2026-01-18 22:27 CET)**
-  - [x] TaskService with 6 core methods (CreateTask, GetTask, ListProjectTasks, UpdateTask, MoveTask, DeleteTask)
-  - [x] State machine validation implemented (validTransitions map + isValidTransition helper)
-  - [x] Input validation helpers (validateTaskTitle, validateTaskPriority)
-  - [x] 35 unit tests (all passing) - **Exceeded target of 20+ by 75%**
-  - [x] Sentinel errors (ErrTaskNotFound, ErrInvalidTaskTitle, ErrInvalidTaskPriority, ErrInvalidStateTransition)
-  - [x] Authorization checks via project ownership
-  - [x] Location: `backend/internal/service/task_service.go` (290 lines)
-  - [x] Tests: `backend/internal/service/task_service_test.go` (683 lines)
-
-- [x] **3.4 API Handlers Complete** ✅ **(2026-01-18 22:45 CET)**
-  - [x] 6 CRUD endpoints + WebSocket endpoint
-  - [x] Request/Response DTOs with validation
-  - [x] 35 unit tests (all passing) - **Exceeded target of 15+**
-
-- [x] **3.5 Integration Complete** ✅ **(2026-01-18 22:45 CET)**
-  - [x] Routes wired up in main.go
-  - [x] TaskService initialized with dependencies
-
-- [x] **3.6 Testing Complete** ✅ **(2026-01-18 22:45 CET)**
-  - [x] 100 task-related unit tests (repository: 30, service: 35, handlers: 35) - **Exceeded target of 45+ by 122%**
-  - [ ] Integration test for complete task lifecycle (deferred)
-
-- [x] **3.7 Types & API Client Complete** ✅ **(2026-01-18 23:05 CET)**
-  - [x] TypeScript interfaces for tasks
-  - [x] 6 API client methods implemented
-
-- [x] **3.8 Kanban Board Components Complete** ✅ **(2026-01-18 23:10 CET)**
-  - [x] KanbanBoard with drag-and-drop (230 lines, updated)
-  - [x] KanbanColumn component (59 lines)
-  - [x] TaskCard component (58 lines)
-  - [x] Full @dnd-kit integration with optimistic updates
-  - [x] Pattern compliance verified (ESLint, Prettier, TypeScript strict mode)
-  - [x] Build succeeds (`npm run build` passes)
-
-- [x] **3.9 Task Detail & Forms Complete** ✅ **(2026-01-18 23:30 CET)**
-  - [x] TaskDetailPanel for viewing/editing (452 lines)
-  - [x] CreateTaskModal with validation (214 lines)
-  - [x] KanbanBoard integration (+50 lines)
-  - [x] ESLint passes (--max-warnings 0)
-  - [x] Prettier formatted
-  - [x] TypeScript build succeeds
-  - [x] Two-step delete confirmation
-  - [x] Inline edit mode with save/cancel
-  - [x] Smooth slide-in animations (Tailwind)
-
-- [x] **3.10 Real-time Updates Complete** ✅ **(2026-01-19 00:15 CET)**
-  - [x] Backend WebSocket streaming endpoint (`/api/projects/:id/tasks/stream`)
-  - [x] TaskBroadcaster connection manager (thread-safe, monotonic versioning)
-  - [x] Event broadcasting on CRUD operations (created, updated, moved, deleted)
-  - [x] useTaskUpdates hook with exponential backoff + message versioning
-  - [x] KanbanBoard integration with real-time updates + optimistic UI
-  - [x] Connection status indicators and error handling
-  - [x] 289 backend tests pass, frontend builds successfully
-
-- [x] **3.11 Routes & Navigation Complete** ✅ **(2026-01-19 00:45 CET)**
-  - [x] ProjectDetailPage updated with tasks link (already implemented in Phase 3.8)
-  - [x] Task routes added to App.tsx (already implemented in Phase 3.8)
-  - [x] ESLint passes (fixed warnings in test/setup files)
-  - [x] TypeScript build succeeds (tsc + vite build)
-  - [x] Backend tests pass (289 tests, no regressions)
-  - [x] Production build succeeds (294.13 kB bundle)
-
-- [ ] **Manual E2E Testing**
-  - [ ] User can create tasks
-  - [ ] User can drag tasks between columns
-  - [ ] State machine validation working (invalid transitions rejected)
-  - [ ] Task detail panel shows/edits task
-  - [ ] Real-time updates work across browser tabs
-  - [ ] User can delete tasks
-
----
-
-## Phase 3 Dependencies
-
-**Required Before Starting:**
-- ✅ Phase 2 complete (project management working)
-- ✅ PostgreSQL running
-- ✅ Kubernetes cluster accessible (kind or other)
-
-**External Dependencies:**
-- React drag-and-drop library: `@dnd-kit/core` + `@dnd-kit/sortable`
-- No additional Go dependencies needed (uses existing Gin, GORM, WebSocket)
-
----
-
-## Deferred to Later Phases
-
-**Not in Phase 3 scope:**
-- Task assignment to specific users (add in Phase 7 if needed)
-- Task dependencies / subtasks (future enhancement)
-- Task comments / activity log (future enhancement)
-- File attachments to tasks (Phase 4 integration)
-- AI execution from tasks (Phase 5)
-
----
-
-## Notes & Considerations
-
-### Drag-and-Drop Library
-- **Recommended:** `@dnd-kit/core` (modern, accessible, TypeScript support)
-- **Alternative:** `react-beautiful-dnd` (older, widely used)
-- **Features needed:** Vertical reordering within columns, moving between columns
-
-### Position Management
-- **Strategy:** Integer position field (0, 1, 2, ...)
-- **On drag:** Update dragged task's position, reorder other tasks in affected columns
-- **Optimization:** Batch position updates if needed (future)
-
-### State Machine Enforcement
-- **Backend validation:** Reject invalid state transitions in TaskService
-- **Frontend UX:** Disable invalid drag targets (e.g., can't drag from TODO to DONE)
-- **Error handling:** Show user-friendly message if transition rejected
-
-### Real-time Updates
-- **WebSocket events:** `task.created`, `task.updated`, `task.deleted`, `task.moved`
-- **Payload:** Full task object (id, project_id, title, state, position, etc.)
-- **Merge strategy:** Replace existing task in local state by ID
-
-### Performance
-- **Task count:** Assume <100 tasks per project for MVP (no pagination needed)
-- **WebSocket:** Single connection per project, broadcast to all connected clients
-- **Optimistic updates:** Update UI immediately, rollback on API error
-
-### Phase 3.9 Notes (Completed 2026-01-18 23:30 CET)
-
-**Implementation Highlights:**
-- **CreateTaskModal (214 lines)**: Replicates CreateProjectModal pattern exactly
-  - Form validation with inline error messages
-  - Color-coded priority dropdown (red/yellow/green)
-  - API integration with loading states
-  - Tasks always created in TODO column (backend enforces this)
-- **TaskDetailPanel (452 lines)**: Custom sliding panel implementation
-  - Smooth Tailwind slide-in animation (translate-x)
-  - View mode: Full metadata display with priority badges
-  - Edit mode: Inline form with save/cancel
-  - Delete flow: Two-step confirmation ("Delete Task" → "Are you sure?")
-  - ESC key support + backdrop click-to-close
-  - Loading/error states with retry functionality
-- **KanbanBoard Integration**: 
-  - Modal state management (isCreateModalOpen)
-  - Panel state management (selectedTaskId)
-  - Optimistic UI updates with error rollback
-  - Proper callback chains for create/update/delete
-
-**Code Quality:**
-- ✅ ESLint passes (--max-warnings 0)
-- ✅ Prettier formatted
-- ✅ TypeScript build succeeds (tsc + vite)
-- ✅ Pattern compliance verified (no deviations)
-- ✅ 666 new lines of production code
-
-**Manual Testing Required:**
-- Create task via modal (any column → task appears in TODO)
-- View task details (click TaskCard → panel slides in)
-- Edit task inline (modify title/description/priority → save)
-- Delete with confirmation (two-step: Delete → Confirm)
-- Keyboard/UX (ESC closes, backdrop click closes)
-
-### Phase 3.10 Notes (Completed 2026-01-19 00:15 CET)
-
-**Implementation Highlights:**
-- **TaskBroadcaster (287 lines)**: WebSocket connection manager
-  - Thread-safe connection pool (sync.RWMutex) with per-project tracking
-  - Monotonic version counter ensures message ordering across reconnects
-  - Automatic dead client cleanup on write failures
-  - Broadcast events to all connected clients for a project
-- **WebSocket Streaming Endpoint**: Full streaming (not single-shot like ProjectStatus)
-  - Initial snapshot send (all tasks + current version) on connect
-  - Keep-alive pings every 30s with pong handler (60s read deadline)
-  - Read goroutine for client messages (handles disconnect detection)
-  - Graceful cleanup on connection close
-- **useTaskUpdates Hook (181 lines)**: Best-practice WebSocket client
-  - Exponential backoff with full jitter: `min(30s, 1s × 2^attempt) + random`
-  - Message versioning: ignores stale messages (version <= lastSeen)
-  - Event handling: snapshot (full state), created, updated, moved, deleted
-  - Auto-resync on reconnect (server sends snapshot)
-  - Connection state tracking + manual reconnect function
-- **KanbanBoard Integration**: Real-time + optimistic updates
-  - WebSocket provides authoritative state via `wsTasks`
-  - Local optimistic updates overlay on top via `localTasks`
-  - Failed operations revert immediately with error banner
-  - Connection indicators: green dot (live), red dot (offline), yellow pulsing (reconnecting)
-  - Error banners: WebSocket (with reconnect button), move failures (auto-dismiss 5s)
-
-**Code Quality:**
-- ✅ ESLint passes (--max-warnings 0)
-- ✅ Prettier formatted
-- ✅ TypeScript build succeeds (tsc + vite)
-- ✅ Backend tests: 289 passing (no regressions)
-- ✅ Pattern compliance: follows useProjectStatus hook pattern
-- ✅ 508 total new lines of production code
-
-**Manual Testing Required:**
-- Open project in two browser tabs
-- Create/move/edit/delete tasks in tab 1 → observe instant updates in tab 2
-- Check connection status indicator (green dot = live)
-- Test reconnection: kill backend → restart → verify auto-reconnect
-- Verify optimistic updates: drag task → instant UI update → server confirmation
-- Test error handling: invalid state transition → see error banner → rollback
-
----
-
-## Next Phase Preview
-
-**Phase 4: File Explorer (Weeks 7-8)**
-
-### Objectives
-- File browser sidecar integration
-- File tree component
-- Monaco editor for code editing
-- Multi-file support with tabs
-
-### Key Features
-- Browse project workspace files
-- Edit files with syntax highlighting
-- Save changes to workspace
-- Real-time file sync across tabs
-
----
-
-**Phase 3 Start Date:** TBD  
-**Target Completion:** TBD (flexible, 3-developer team)  
-**Author:** Sisyphus (OpenCode AI Agent)
-
----
-
-**Last Updated:** 2026-01-19 11:07 CET
+**Last Updated:** 2026-01-19 12:33 CET

@@ -1,15 +1,15 @@
 # OPENCODE PROJECT MANAGER - AGENT KNOWLEDGE BASE
 
-**Generated:** 2026-01-19 09:38:00  
+**Generated:** 2026-01-19 12:33:00  
 **Branch:** main  
 **Project:** Go backend + React frontend + K8s orchestration
-**Status:** ✅ Phase 1 Complete + ✅ Phase 2 Complete + ✅ Phase 3 Complete → 🚧 Phase 4.1-4.5 Complete (File Browser Sidecar - Backend Integration Ready)
+**Status:** ✅ Phase 1-4 Complete → 🚧 Phase 5 Planning (OpenCode Integration)
 
 ---
 
 ## OVERVIEW
 
-Multi-module monorepo: Go API server, React SPA, 2 Go sidecars (file-browser, session-proxy), K8s manifests. Project management system with AI-powered coding via OpenCode agents. All critical issues resolved. **Phase 1 + Phase 2 + Phase 3 COMPLETE** - Full project management with Kubernetes pod lifecycle, real-time WebSocket updates, task management with Kanban board. **Phase 4 IN PROGRESS** - File Explorer (4.1-4.5 Complete: File Browser Sidecar with Backend Integration - Ready for Frontend Development).
+Multi-module monorepo: Go API server, React SPA, 2 Go sidecars (file-browser, session-proxy), K8s manifests. Project management system with AI-powered coding via OpenCode agents. All critical issues resolved. **Phase 1 + Phase 2 + Phase 3 + Phase 4 COMPLETE** - Full project management with Kubernetes pod lifecycle, real-time WebSocket updates, task management with Kanban board, and file explorer with Monaco editor. **Phase 5 PLANNING** - OpenCode Integration for AI-powered task execution.
 
 ---
 
@@ -370,36 +370,13 @@ make docker-push-dev        # Build and push development
     - Components: KanbanBoard (183 lines), KanbanColumn (59 lines), TaskCard (58 lines)
     - Features: Optimistic updates, error rollback, priority colors, responsive layout
     - Real-time: WebSocket streaming with exponential backoff, task detail panel, create modal
-22. **Phase 4.1 complete (2026-01-19 08:37)** - File Browser Sidecar Setup:
-    - Sidecar: Production-ready Go 1.24 service with structured logging (slog)
-    - Service layer: Complete CRUD operations with path traversal prevention
-    - API handlers: 6 HTTP endpoints with centralized error handling
-    - Docker: 20.8MB image with HEALTHCHECK (30s interval, wget-based)
-    - Tests: 58 comprehensive unit tests (24 service + 34 handler) - all passing
-    - Security: Path validation (rejects ..), 10MB file size limits enforced
-    - Health: 3 endpoints (/healthz, /health, /ready), graceful shutdown (10s timeout)
-23. **Phase 4.2 complete (2026-01-19 08:50)** - File Watcher with Real-time Broadcasting:
-    - Watcher: fsnotify-based recursive directory watching with WebSocket broadcast
-    - Features: Event debouncing (100ms), monotonic versioning, thread-safe client registry
-    - WebSocket: /files/watch endpoint with ping/pong keep-alive (30s interval)
-    - Events: created, modified, deleted, renamed (mapped from fsnotify ops)
-    - Pattern: Follows backend TaskBroadcaster design (Phase 3.10)
-    - Tests: 16 unit tests (11 service + 5 handler) - all passing (2 skipped for integration)
-    - Total: 74 tests passing across file-browser sidecar (58 Phase 4.1 + 16 Phase 4.2)
-24. **Phase 4.4 complete (2026-01-19 09:33)** - Security & Validation with Hidden File Filtering:
-    - Security: Path traversal prevention (7 tests), file size limits (10MB, 4 tests), HTTP 413 mapping (2 tests)
-    - Hidden files: Default filtering (`.` prefix), query parameter `?include_hidden=true` (4 handler tests)
-    - Sensitive blocklist: 15 patterns always blocked (`.env`, `credentials.json`, etc.) - 3 tests
-    - Implementation: `sensitiveFiles` map + filtering logic in `buildTree()` (lines 24-38, 91-99)
-    - Tests: 10 new comprehensive tests (6 service + 4 handler) - all passing
-    - Total: 80 tests passing across file-browser sidecar (30 service + 39 handler + 11 watcher)
-    - Files: +323 lines (34 service + 2 handler + 182 service tests + 105 handler tests)
-25. **Phase 4.5 complete (2026-01-19 09:38)** - Kubernetes Integration & Deployment:
-    - Pod template: Added file-browser sidecar to project pod spec (backend/internal/service/pod_template.go)
-    - Resource limits: 50Mi/100Mi memory, 50m/100m CPU (optimized for sidecar workload)
-    - Health probes: Liveness (5s initial, 10s period), Readiness (3s initial, 5s period) - both HTTP GET /healthz:3001
-    - Shared volume: /workspace PVC mount (read-write access)
-    - Environment: WORKSPACE_DIR=/workspace, PORT=3001
-    - Docker image: 21.1MB (multi-stage build, Alpine base, HEALTHCHECK verified)
-    - Verification: Backend compiles, all tests pass, no regressions
-    - Files modified: pod_template.go (+53 lines for file-browser container with probes)
+22. **Phase 4 complete (2026-01-19 12:25)** - File Explorer with Monaco editor:
+    - File-Browser Sidecar: Production-ready Go service (21.1MB, 80 tests passing)
+    - Backend Integration: HTTP/WebSocket proxy layer (22 tests passing)
+    - Kubernetes: 3-container pod spec (opencode-server + file-browser + session-proxy)
+    - Frontend: File tree + Monaco editor + tabs (1,264 lines, 14+ languages supported)
+    - Security: Path traversal prevention, 10MB file size limits, sensitive file blocking
+    - Real-time: WebSocket file watching with fsnotify, exponential backoff reconnection
+    - Total: 106 backend tests passing, 2,100 lines of production code
+    - Archived to: PHASE4.md (complete implementation summary)
+23. **Current phase:** Phase 5 - OpenCode Integration (Planning)

@@ -65,7 +65,7 @@ func NewKubernetesService(kubeconfig, namespace string, config *KubernetesConfig
 	if config == nil {
 		config = &KubernetesConfig{
 			Namespace:         namespace,
-			OpenCodeImage:     "registry.legal-suite.com/opencode/server:latest",
+			OpenCodeImage:     "registry.legal-suite.com/opencode/app:latest",
 			FileBrowserImage:  "registry.legal-suite.com/opencode/file-browser-sidecar:latest",
 			SessionProxyImage: "registry.legal-suite.com/opencode/session-proxy-sidecar:latest",
 			WorkspaceSize:     "1Gi",

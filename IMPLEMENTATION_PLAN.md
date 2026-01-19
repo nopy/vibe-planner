@@ -238,23 +238,345 @@ frontend/
 ## Phase 5: OpenCode Integration (Weeks 9-10)
 
 ### Objectives
-- ✅ Execute tasks via OpenCode
-- ✅ Stream output to frontend
-- ✅ Task state transitions based on session events
-- ✅ Error handling
+- Execute tasks via OpenCode AI agent
+- Stream real-time output to frontend via SSE
+- Task state transitions based on session lifecycle events
+- Session management and error handling with retry logic
 
-### Key Endpoints
-- `POST /api/projects/:id/tasks/:taskId/execute` → spawn session
-- `GET /api/projects/:id/tasks/:taskId/output` → SSE stream
-- `WebSocket /ws/tasks/:id/output` → real-time output
+### Architecture
 
-### Key Files
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Frontend (React)                                               │
+│  ├─ TaskCard "Execute" button                                  │
+│  ├─ ExecutionPanel (streaming output view)                     │
+│  └─ ExecutionHistory (past runs)                               │
+└─────────────────┬───────────────────────────────────────────────┘
+                  │ HTTP/SSE
+┌─────────────────▼───────────────────────────────────────────────┐
+│  Backend API (Go)                                               │
+│  ├─ POST /api/projects/:id/tasks/:taskId/execute               │
+│  ├─ GET  /api/projects/:id/tasks/:taskId/output (SSE stream)   │
+│  ├─ POST /api/projects/:id/tasks/:taskId/stop                  │
+│  └─ GET  /api/projects/:id/sessions (list active sessions)     │
+└─────────────────┬───────────────────────────────────────────────┘
+                  │ HTTP (internal)
+┌─────────────────▼───────────────────────────────────────────────┐
+│  OpenCode Server Sidecar (:3003)                                │
+│  ├─ POST /sessions (start new session)                         │
+│  ├─ GET  /sessions/:id/stream (SSE output)                     │
+│  ├─ POST /sessions/:id/stop (terminate session)                │
+│  └─ GET  /sessions/:id/status (session health)                 │
+└─────────────────┬───────────────────────────────────────────────┘
+                  │ reads/writes
+┌─────────────────▼───────────────────────────────────────────────┐
+│  Project Workspace (PVC /workspace)                             │
+│  - Source code files (managed by file-browser)                  │
+│  - OpenCode configuration (.opencode/config.json)               │
+│  - Session history and logs (.opencode/sessions/)               │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Backend Implementation
+
+#### 5.1 Session Management Service
+**Status:** 📋 Planned
+
+**Tasks:**
+- Session Model (`internal/model/session.go`)
+  - Fields: ID, TaskID, ProjectID, Status, StartedAt, CompletedAt, Error
+  - Status enum: PENDING, RUNNING, COMPLETED, FAILED, CANCELLED
+  - GORM relationships to Task and Project
+
+- Session Repository (`internal/repository/session_repository.go`)
+  - CreateSession(session *Session) error
+  - GetSessionByID(id uuid.UUID) (*Session, error)
+  - GetActiveSessionsForProject(projectID uuid.UUID) ([]*Session, error)
+  - UpdateSessionStatus(id uuid.UUID, status SessionStatus) error
+
+- Session Service (`internal/service/session_service.go`)
+  - StartSession(taskID uuid.UUID, prompt string) (*Session, error)
+  - StopSession(sessionID uuid.UUID) error
+  - GetSessionStatus(sessionID uuid.UUID) (*Session, error)
+  - CallOpenCodeAPI(podIP string, endpoint string) (response, error)
+
+**Success Criteria:**
+- Session CRUD operations working
+- Can communicate with OpenCode sidecar via HTTP
+- Session lifecycle tracked in database
+- At least 20 unit tests passing
+
+#### 5.2 Task Execution API
+**Status:** 📋 Planned
+
+**Tasks:**
+- Execute Endpoint (`POST /api/projects/:id/tasks/:taskId/execute`)
+  - Extract project pod IP from Kubernetes API
+  - Create session via SessionService
+  - Start OpenCode session on sidecar
+  - Update task status to IN_PROGRESS
+  - Return session ID to client
+
+- Output Stream Endpoint (`GET /api/projects/:id/tasks/:taskId/output`)
+  - Server-Sent Events (SSE) endpoint
+  - Proxy SSE stream from OpenCode sidecar
+  - Forward events to frontend in real-time
+  - Handle connection cleanup on close
+
+- Stop Execution (`POST /api/projects/:id/tasks/:taskId/stop`)
+  - Call OpenCode sidecar stop endpoint
+  - Update session status to CANCELLED
+  - Update task status back to TODO
+
+**Success Criteria:**
+- Can start OpenCode session from API call
+- SSE stream proxies output in real-time
+- Can stop running sessions
+- Task state transitions working (TODO → IN_PROGRESS)
+- At least 15 integration tests passing
+
+#### 5.3 OpenCode Sidecar Integration
+**Status:** 📋 Planned
+
+**Tasks:**
+- Pod Template Update (`internal/service/pod_template.go`)
+  - Add fourth container (opencode-server)
+  - Mount workspace PVC to /workspace
+  - Set environment variables (WORKSPACE_DIR, PORT=3003)
+  - Configure resource limits (CPU: 200m-500m, Memory: 256Mi-512Mi)
+  - Add liveness/readiness probes
+
+- Health Check Configuration
+  - Liveness: HTTP GET /health on port 3003
+  - Readiness: HTTP GET /ready on port 3003
+  - Initial delay: 15s (OpenCode server startup time)
+
+**Success Criteria:**
+- Project pods spawn with 4 containers (main + file-browser + session-proxy + opencode-server)
+- OpenCode sidecar starts successfully and responds to health checks
+- Workspace volume accessible to all containers
+- All backend tests still passing (no regressions)
+
+### Frontend Implementation
+
+#### 5.4 Execute Task UI
+**Status:** 📋 Planned
+
+**Tasks:**
+- TaskCard Updates (`components/Kanban/TaskCard.tsx`)
+  - Add "Execute" button (lightning bolt icon)
+  - Show execution status badge (running/completed/failed)
+  - Disable button when task is already running
+
+- Task Detail Panel (`components/Kanban/TaskDetailPanel.tsx`)
+  - Add "Execute Task" button in header
+  - Show execution history section
+  - Display current session status
+
+- API Client (`services/api.ts`)
+  - executeTask(projectId, taskId) → Promise<{ sessionId: string }>
+  - stopTaskExecution(projectId, taskId, sessionId) → Promise<void>
+
+**Success Criteria:**
+- "Execute" button visible on all task cards
+- Button disabled when execution in progress
+- Visual feedback for execution state changes
+- API client methods implemented and typed
+
+#### 5.5 Real-time Output Streaming
+**Status:** 📋 Planned
+
+**Tasks:**
+- Execution Output Panel (`components/Execution/ExecutionOutputPanel.tsx`)
+  - Terminal-like UI with dark theme
+  - Auto-scroll to bottom on new output
+  - Syntax highlighting for code blocks
+  - Show timestamps for each message
+
+- SSE Hook (`hooks/useTaskExecution.ts`)
+  - useTaskExecution(projectId, taskId, sessionId)
+  - Connect to /api/projects/:id/tasks/:taskId/output SSE endpoint
+  - Handle connection errors with retry logic
+  - Parse SSE events and update state
+  - Clean up EventSource on unmount
+
+- Event Types
+  - `output`: Regular console output
+  - `error`: Error messages (red text)
+  - `status`: Session status changes (pending→running→completed)
+  - `done`: Session completed successfully
+
+**Success Criteria:**
+- SSE connection established successfully
+- Output streams in real-time
+- Auto-scroll works smoothly
+- Connection cleanup on component unmount
+- Graceful error handling with retry
+
+#### 5.6 Execution History
+**Status:** 📋 Planned
+
+**Tasks:**
+- Execution History List (`components/Execution/ExecutionHistory.tsx`)
+  - List all sessions for a task (newest first)
+  - Show: timestamp, duration, status badge, output preview (first 100 chars)
+  - Expand/collapse full output logs
+
+- API Endpoint (Backend)
+  - GET /api/projects/:id/tasks/:taskId/sessions
+  - Returns: Array of sessions with metadata and output summaries
+
+- API Client (Frontend)
+  - getTaskExecutionHistory(projectId, taskId) → Promise<Session[]>
+
+**Success Criteria:**
+- Can view past execution history
+- Session metadata displayed correctly
+- Can expand/collapse full logs
+- Sorted by most recent first
+
+### Testing & Verification
+
+#### 5.7 Integration Testing
+**Status:** 📋 Planned
+
+**Tasks:**
+- Backend Integration Tests (`internal/api/tasks_execution_integration_test.go`)
+  - Test: Create project → create task → execute task → verify session created
+  - Test: Stop running session → verify session cancelled → task reset to TODO
+  - Test: OpenCode sidecar unavailable → verify graceful error handling
+  - Test: Concurrent execution attempts → verify second request rejected
+
+- Manual E2E Testing Checklist:
+  - Create project and wait for pod to be Running
+  - Create task with description "Add a README file"
+  - Click "Execute" button on task card
+  - Verify task status changes to IN_PROGRESS
+  - Verify execution output streams in real-time
+  - Wait for session completion
+  - Verify task state transitions to AI_REVIEW
+  - Check execution history shows completed session
+  - Verify README file created in workspace (via File Explorer)
+
+**Success Criteria:**
+- At least 10 integration tests passing
+- E2E workflow verified manually
+- Error handling tested and working
+
+### Key Files to Create/Modify
+
+**Backend:**
 ```
 backend/
-├── internal/service/opencode.go
-├── internal/api/tasks.go (extend)
-└── internal/model/session.go
+├── internal/model/session.go                              # NEW
+├── internal/repository/session_repository.go              # NEW
+├── internal/repository/session_repository_test.go         # NEW
+├── internal/service/session_service.go                    # NEW
+├── internal/service/session_service_test.go               # NEW
+├── internal/service/pod_template.go                       # MODIFY (add 4th container)
+├── internal/api/tasks.go                                  # MODIFY (add 3 endpoints)
+├── internal/api/tasks_execution_test.go                   # NEW
+└── internal/api/tasks_execution_integration_test.go       # NEW
 ```
+
+**Frontend:**
+```
+frontend/
+├── src/components/Kanban/TaskCard.tsx                     # MODIFY (add Execute button)
+├── src/components/Kanban/TaskDetailPanel.tsx              # MODIFY (add Execute section)
+├── src/components/Execution/ExecutionOutputPanel.tsx      # NEW
+├── src/components/Execution/ExecutionHistory.tsx          # NEW
+├── src/hooks/useTaskExecution.ts                          # NEW
+├── src/services/api.ts                                    # MODIFY (add execution methods)
+└── src/types/index.ts                                     # MODIFY (add Session types)
+```
+
+### Success Metrics
+
+**Phase 5 is complete when:**
+
+1. **Backend:**
+   - Session model, repository, service implemented (20+ tests)
+   - Task execution API endpoints working (15+ tests)
+   - OpenCode sidecar added to pod template
+   - All 4 containers starting successfully in project pods
+   - SSE streaming functional
+
+2. **Frontend:**
+   - "Execute" button on task cards
+   - Real-time output streaming with SSE
+   - Execution history display
+   - All TypeScript types defined
+   - No console errors
+
+3. **Integration:**
+   - Can execute task end-to-end
+   - Output streams in real-time
+   - Task state transitions working
+   - Can view execution history
+   - OpenCode session logs persisted
+
+4. **Testing:**
+   - 35+ new unit tests passing (backend)
+   - 10+ integration tests passing
+   - Manual E2E checklist completed
+   - All existing tests still passing (no regressions)
+
+### Dependencies
+
+**Required Before Starting:**
+- ✅ Phase 4 complete (file explorer needed to view OpenCode output files)
+- ✅ Phase 3 complete (task management and state machine)
+- ✅ Phase 2 complete (Kubernetes pod lifecycle)
+
+**External Dependencies:**
+- OpenCode server Docker image (verify availability in registry)
+- SSE support in Gin framework (use `gin.Context.Stream()`)
+- EventSource API (browser native, no additional libraries)
+
+### Deferred Items (Phase 5+)
+
+Items not critical for MVP but valuable for future:
+
+1. **Session Persistence:**
+   - Store full session output logs in database
+   - Compress old logs after 30 days
+   - Add pagination for execution history
+
+2. **Execution Queueing:**
+   - Queue tasks when OpenCode server is busy
+   - Show queue position to user
+   - Automatic retry on transient failures
+
+3. **Multi-session Support:**
+   - Allow multiple OpenCode sessions per project
+   - Resource limits to prevent overload
+   - Priority queueing for tasks
+
+4. **Advanced Monitoring:**
+   - Grafana dashboards for session metrics
+   - Alert on failed sessions
+   - Track token usage per session
+
+### Technical Notes
+
+**OpenCode Sidecar Configuration:**
+- Port: 3003 (internal to pod)
+- Resource Limits: 200m-500m CPU, 256Mi-512Mi memory
+- Workspace: /workspace (shared PVC with main container and file-browser)
+- Health Check: HTTP GET /health every 10s
+
+**SSE vs WebSocket:**
+- Using SSE (Server-Sent Events) for output streaming
+- Simpler than WebSocket for one-way server→client data flow
+- Native browser support via EventSource API
+- Automatic reconnection on disconnect
+
+**Task State Transitions:**
+- Execute task: TODO → IN_PROGRESS
+- Session completes: IN_PROGRESS → AI_REVIEW
+- Session fails: IN_PROGRESS → TODO (with error logged)
+- Human reviews: AI_REVIEW → HUMAN_REVIEW or DONE
 
 ---
 
