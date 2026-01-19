@@ -867,7 +867,7 @@ Phase 6 adds configuration management for customizing OpenCode agent behavior pe
 
 #### 6.4 Config Validation Logic
 
-**Status:** 📋 Planned
+**Status:** ✅ Complete (2026-01-19)
 
 **Objective:** Comprehensive validation for model providers, API endpoints, and tools configuration.
 
@@ -884,41 +884,35 @@ Phase 6 adds configuration management for customizing OpenCode agent behavior pe
    package service
    
    type ModelInfo struct {
-       Provider    string
-       Name        string
-       MaxTokens   int
-       ContextSize int
-       Pricing     map[string]float64 // input/output per 1M tokens
+       Provider     string
+       Name         string
+       MaxTokens    int                // Maximum tokens the model can generate
+       ContextSize  int                // Maximum context window size
+       Pricing      map[string]float64 // Pricing per 1M tokens (input/output)
+       Description  string             // Human-readable description
+       Capabilities []string           // List of capabilities
    }
    
    var SupportedModels = []ModelInfo{
-       // OpenAI
-       {Provider: "openai", Name: "gpt-4o", MaxTokens: 128000, ContextSize: 128000, Pricing: map[string]float64{"input": 2.50, "output": 10.00}},
-       {Provider: "openai", Name: "gpt-4o-mini", MaxTokens: 128000, ContextSize: 128000, Pricing: map[string]float64{"input": 0.15, "output": 0.60}},
-       {Provider: "openai", Name: "gpt-4", MaxTokens: 8192, ContextSize: 8192, Pricing: map[string]float64{"input": 30.00, "output": 60.00}},
+       // OpenAI Models (5 models)
+       {Provider: "openai", Name: "gpt-4o", MaxTokens: 128000, ContextSize: 128000, ...},
+       {Provider: "openai", Name: "gpt-4o-mini", MaxTokens: 128000, ContextSize: 128000, ...},
+       {Provider: "openai", Name: "gpt-4", MaxTokens: 8192, ContextSize: 8192, ...},
+       {Provider: "openai", Name: "gpt-4-turbo", MaxTokens: 4096, ContextSize: 128000, ...},
+       {Provider: "openai", Name: "gpt-3.5-turbo", MaxTokens: 4096, ContextSize: 16385, ...},
        
-       // Anthropic
-       {Provider: "anthropic", Name: "claude-3-opus-20240229", MaxTokens: 4096, ContextSize: 200000, Pricing: map[string]float64{"input": 15.00, "output": 75.00}},
-       {Provider: "anthropic", Name: "claude-3-sonnet-20240229", MaxTokens: 4096, ContextSize: 200000, Pricing: map[string]float64{"input": 3.00, "output": 15.00}},
+       // Anthropic Models (4 models)
+       {Provider: "anthropic", Name: "claude-3-opus-20240229", MaxTokens: 4096, ContextSize: 200000, ...},
+       {Provider: "anthropic", Name: "claude-3-sonnet-20240229", MaxTokens: 4096, ContextSize: 200000, ...},
+       {Provider: "anthropic", Name: "claude-3-haiku-20240307", MaxTokens: 4096, ContextSize: 200000, ...},
+       {Provider: "anthropic", Name: "claude-3.5-sonnet-20240620", MaxTokens: 8192, ContextSize: 200000, ...},
    }
    
-   func IsValidModel(provider, name string) bool {
-       for _, model := range SupportedModels {
-           if model.Provider == provider && model.Name == name {
-               return true
-           }
-       }
-       return false
-   }
-   
-   func GetModelMaxTokens(provider, name string) int {
-       for _, model := range SupportedModels {
-           if model.Provider == provider && model.Name == name {
-               return model.MaxTokens
-           }
-       }
-       return 0
-   }
+   func IsValidModel(provider, name string) bool
+   func GetModelInfo(provider, name string) *ModelInfo
+   func GetModelMaxTokens(provider, name string) int
+   func GetProviderModels(provider string) []*ModelInfo
+   func GetAllProviders() []string
    ```
 
 3. **Add Validation Tests:**
@@ -928,17 +922,37 @@ Phase 6 adds configuration management for customizing OpenCode agent behavior pe
    - Test invalid tool names fail
    - Test custom endpoint URL validation
 
-**Files to Create:**
-- `backend/internal/service/model_registry.go`
-- `backend/internal/service/model_registry_test.go`
+**Files Created:**
+- `backend/internal/service/model_registry.go` (~170 lines)
+- `backend/internal/service/model_registry_test.go` (~220 lines, 39 tests)
 
-**Files to Modify:**
-- `backend/internal/service/config_service.go` (use model registry)
+**Files Modified:**
+- `backend/internal/service/config_service.go` (updated validateConfig to use model registry)
+- `backend/internal/service/config_service_test.go` (added 7 provider-specific max_tokens tests)
 
 **Success Criteria:**
-- [ ] Model registry comprehensive (OpenAI + Anthropic models)
-- [ ] Validation catches all invalid configurations
-- [ ] Validation tests pass (15-20 tests)
+- [x] Model registry comprehensive (OpenAI: 5 models + Anthropic: 4 models = 9 total)
+- [x] Validation catches all invalid configurations (model-specific + general bounds)
+- [x] Validation tests pass (39 model registry tests + 44 config service tests = 83 total)
+- [x] Provider-specific max_tokens validation working (7 new tests)
+
+**Completion Summary:**
+- **Test Coverage:** 83 tests (39 model registry + 44 config service including 7 new provider-specific tests)
+- **Model Registry Features:**
+  - 9 supported models (5 OpenAI + 4 Anthropic) with full metadata
+  - Fast lookup via internal map (built on init)
+  - Pricing, context size, capabilities, and descriptions included
+  - Helper functions: IsValidModel, GetModelInfo, GetModelMaxTokens, GetProviderModels, GetAllProviders
+- **Validation Enhancements:**
+  - Two-tier max_tokens validation: general bounds (1-128000) + model-specific limits
+  - Model name validation via registry (replaces hardcoded maps)
+  - Custom provider skips model-specific validation (only general bounds)
+  - Error messages include model-specific context (e.g., "exceeds model limit (8192) for gpt-4")
+- **Test Enhancements:**
+  - 7 new tests for provider-specific max_tokens validation (exceeds/within limits for GPT-4, GPT-4o-mini, Claude 3 Opus, custom provider)
+  - Updated existing test (TestValidateConfig_MaxTokensTooHigh) to use custom provider
+  - All model registry functions tested (IsValidModel, GetModelInfo, GetModelMaxTokens, GetProviderModels, GetAllProviders)
+  - Registry integrity tests (all models have required fields, unique, context >= max_tokens)
 
 ---
 

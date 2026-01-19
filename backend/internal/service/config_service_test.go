@@ -456,7 +456,7 @@ func TestValidateConfig_InvalidOpenAIModel(t *testing.T) {
 	err := service.validateConfig(config)
 
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid OpenAI model")
+	assert.Contains(t, err.Error(), "invalid model")
 }
 
 func TestValidateConfig_InvalidAnthropicModel(t *testing.T) {
@@ -471,7 +471,7 @@ func TestValidateConfig_InvalidAnthropicModel(t *testing.T) {
 	err := service.validateConfig(config)
 
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid Anthropic model")
+	assert.Contains(t, err.Error(), "invalid model")
 }
 
 func TestValidateConfig_TemperatureTooLow(t *testing.T) {
@@ -521,7 +521,11 @@ func TestValidateConfig_MaxTokensTooHigh(t *testing.T) {
 	key := generateEncryptionKey()
 	service, _ := NewConfigService(repository.ConfigRepository(mockRepo), key)
 
+	httpsEndpoint := "https://api.custom.com/v1"
 	config := createValidConfig()
+	config.ModelProvider = "custom"
+	config.ModelName = "custom-model"
+	config.APIEndpoint = &httpsEndpoint
 	config.MaxTokens = 200000
 
 	err := service.validateConfig(config)
@@ -729,4 +733,119 @@ func TestEncryptDecrypt_LongString(t *testing.T) {
 	decrypted, err := service.decryptAPIKey(encrypted)
 	assert.NoError(t, err)
 	assert.Equal(t, longKey, decrypted)
+}
+
+// Test provider-specific max_tokens validation
+
+func TestValidateConfig_MaxTokens_ExceedsModelLimit_GPT4(t *testing.T) {
+	mockRepo := new(MockConfigRepository)
+	key := generateEncryptionKey()
+	service, _ := NewConfigService(repository.ConfigRepository(mockRepo), key)
+
+	config := createValidConfig()
+	config.ModelProvider = "openai"
+	config.ModelName = "gpt-4"
+	config.MaxTokens = 10000 // Exceeds gpt-4 limit of 8192
+
+	err := service.validateConfig(config)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "max_tokens")
+	assert.Contains(t, err.Error(), "exceeds model limit")
+}
+
+func TestValidateConfig_MaxTokens_WithinModelLimit_GPT4(t *testing.T) {
+	mockRepo := new(MockConfigRepository)
+	key := generateEncryptionKey()
+	service, _ := NewConfigService(repository.ConfigRepository(mockRepo), key)
+
+	config := createValidConfig()
+	config.ModelProvider = "openai"
+	config.ModelName = "gpt-4"
+	config.MaxTokens = 8192 // Exactly at the limit
+
+	err := service.validateConfig(config)
+
+	assert.NoError(t, err)
+}
+
+func TestValidateConfig_MaxTokens_ExceedsModelLimit_GPT4oMini(t *testing.T) {
+	mockRepo := new(MockConfigRepository)
+	key := generateEncryptionKey()
+	service, _ := NewConfigService(repository.ConfigRepository(mockRepo), key)
+
+	config := createValidConfig()
+	config.ModelProvider = "openai"
+	config.ModelName = "gpt-4o-mini"
+	config.MaxTokens = 129000 // Exceeds gpt-4o-mini limit of 128000
+
+	err := service.validateConfig(config)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "max_tokens")
+	assert.Contains(t, err.Error(), "exceeds model limit")
+}
+
+func TestValidateConfig_MaxTokens_WithinModelLimit_GPT4oMini(t *testing.T) {
+	mockRepo := new(MockConfigRepository)
+	key := generateEncryptionKey()
+	service, _ := NewConfigService(repository.ConfigRepository(mockRepo), key)
+
+	config := createValidConfig()
+	config.ModelProvider = "openai"
+	config.ModelName = "gpt-4o-mini"
+	config.MaxTokens = 128000 // Exactly at the limit
+
+	err := service.validateConfig(config)
+
+	assert.NoError(t, err)
+}
+
+func TestValidateConfig_MaxTokens_ExceedsModelLimit_Claude3Opus(t *testing.T) {
+	mockRepo := new(MockConfigRepository)
+	key := generateEncryptionKey()
+	service, _ := NewConfigService(repository.ConfigRepository(mockRepo), key)
+
+	config := createValidConfig()
+	config.ModelProvider = "anthropic"
+	config.ModelName = "claude-3-opus-20240229"
+	config.MaxTokens = 5000 // Exceeds claude-3-opus limit of 4096
+
+	err := service.validateConfig(config)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "max_tokens")
+	assert.Contains(t, err.Error(), "exceeds model limit")
+}
+
+func TestValidateConfig_MaxTokens_WithinModelLimit_Claude3Opus(t *testing.T) {
+	mockRepo := new(MockConfigRepository)
+	key := generateEncryptionKey()
+	service, _ := NewConfigService(repository.ConfigRepository(mockRepo), key)
+
+	config := createValidConfig()
+	config.ModelProvider = "anthropic"
+	config.ModelName = "claude-3-opus-20240229"
+	config.MaxTokens = 4096 // Exactly at the limit
+
+	err := service.validateConfig(config)
+
+	assert.NoError(t, err)
+}
+
+func TestValidateConfig_MaxTokens_CustomProvider_NoModelLimit(t *testing.T) {
+	mockRepo := new(MockConfigRepository)
+	key := generateEncryptionKey()
+	service, _ := NewConfigService(repository.ConfigRepository(mockRepo), key)
+
+	httpsEndpoint := "https://api.custom.com/v1"
+	config := createValidConfig()
+	config.ModelProvider = "custom"
+	config.ModelName = "llama-3-70b"
+	config.APIEndpoint = &httpsEndpoint
+	config.MaxTokens = 128000 // Should only check general bounds, not model-specific
+
+	err := service.validateConfig(config)
+
+	assert.NoError(t, err)
 }

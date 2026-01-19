@@ -117,7 +117,7 @@ func (s *ConfigService) GetDecryptedAPIKey(ctx context.Context, projectID uuid.U
 
 // validateConfig validates configuration fields
 func (s *ConfigService) validateConfig(config *model.OpenCodeConfig) error {
-	// Validate model provider
+	// Validate model provider (allow openai, anthropic, custom)
 	validProviders := map[string]bool{
 		"openai":    true,
 		"anthropic": true,
@@ -127,27 +127,17 @@ func (s *ConfigService) validateConfig(config *model.OpenCodeConfig) error {
 		return fmt.Errorf("invalid model provider: %s", config.ModelProvider)
 	}
 
-	// Validate model name based on provider
-	if config.ModelProvider == "openai" {
-		validModels := map[string]bool{
-			"gpt-4o":        true,
-			"gpt-4o-mini":   true,
-			"gpt-4":         true,
-			"gpt-3.5-turbo": true,
+	// Validate model name using model registry (for known providers)
+	if config.ModelProvider != "custom" {
+		if !IsValidModel(config.ModelProvider, config.ModelName) {
+			return fmt.Errorf("invalid model %s for provider %s", config.ModelName, config.ModelProvider)
 		}
-		if !validModels[config.ModelName] {
-			return fmt.Errorf("invalid OpenAI model: %s", config.ModelName)
-		}
-	}
 
-	if config.ModelProvider == "anthropic" {
-		validModels := map[string]bool{
-			"claude-3-opus-20240229":   true,
-			"claude-3-sonnet-20240229": true,
-			"claude-3-haiku-20240307":  true,
-		}
-		if !validModels[config.ModelName] {
-			return fmt.Errorf("invalid Anthropic model: %s", config.ModelName)
+		// Validate max_tokens against model-specific limits
+		modelInfo := GetModelInfo(config.ModelProvider, config.ModelName)
+		if modelInfo != nil && config.MaxTokens > modelInfo.MaxTokens {
+			return fmt.Errorf("max_tokens (%d) exceeds model limit (%d) for %s",
+				config.MaxTokens, modelInfo.MaxTokens, config.ModelName)
 		}
 	}
 
@@ -156,7 +146,7 @@ func (s *ConfigService) validateConfig(config *model.OpenCodeConfig) error {
 		return errors.New("temperature must be between 0 and 2")
 	}
 
-	// Validate max_tokens
+	// Validate max_tokens (general bounds)
 	if config.MaxTokens <= 0 || config.MaxTokens > 128000 {
 		return errors.New("max_tokens must be between 1 and 128000")
 	}
