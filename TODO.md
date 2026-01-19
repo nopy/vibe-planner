@@ -1,8 +1,8 @@
 # OpenCode Project Manager - TODO List
 
-**Last Updated:** 2026-01-19 18:45 CET  
+**Last Updated:** 2026-01-19 19:02 CET  
 **Current Phase:** Phase 7 - Two-Way Interactions (Weeks 13-14)  
-**Status:** 🚧 READY TO START - Phase 7 Planning  
+**Status:** 🚧 IN PROGRESS - Phase 7.1 COMPLETE  
 **Branch:** main
 
 ---
@@ -20,10 +20,11 @@ See archived phases:
 - [PHASE6.md](./PHASE6.md) - OpenCode Configuration UI (Complete 2026-01-19 18:31)
 
 **Total Project Stats:**
-- ✅ **383 tests passing** (231 backend + 152 frontend)
+- ✅ **400 tests passing** (248 backend + 152 frontend)
 - ✅ **6 phases complete** (Auth, Projects, Tasks, Files, Execution, Config)
+- ✅ **Phase 7.1 complete** (Interaction Model & Repository - 17 new tests)
 - ✅ **Production-ready features:** Authentication, CRUD, real-time updates, file editing, config management
-- ✅ **Next:** Enable chat-like interaction with AI during task execution
+- ✅ **Next:** Phase 7.2 - Interaction Service
 
 ---
 
@@ -81,7 +82,7 @@ See archived phases:
 
 #### 7.1 Interaction Model & Repository
 
-**Status:** 📋 Planned
+**Status:** ✅ COMPLETE (2026-01-19 19:02)
 
 **Objective:** Create database schema and repository layer for user-AI interactions.
 
@@ -190,10 +191,17 @@ See archived phases:
 - JSONB type from config model (reuse)
 
 **Success Criteria:**
-- [ ] Migration runs successfully
-- [ ] Repository tests pass (target: 15-20)
-- [ ] Foreign key constraints enforced
-- [ ] Message ordering correct (oldest first)
+- [x] Migration runs successfully ✅
+- [x] Repository tests pass (17 tests passing) ✅
+- [x] Foreign key constraints enforced ✅
+- [x] Message ordering correct (oldest first) ✅
+
+**Completed Implementation:**
+- ✅ Migration 006_add_interactions.up.sql (interactions table with indexes, constraints, triggers)
+- ✅ Migration 006_add_interactions.down.sql (rollback)
+- ✅ Model: `backend/internal/model/interaction.go` (GORM tags, JSONB metadata support)
+- ✅ Repository: `backend/internal/repository/interaction_repository.go` (5 methods: Create, FindByID, FindByTaskID, FindBySessionID, DeleteByTaskID)
+- ✅ Tests: `backend/internal/repository/interaction_repository_test.go` (17 comprehensive unit tests, all passing)
 
 ---
 
