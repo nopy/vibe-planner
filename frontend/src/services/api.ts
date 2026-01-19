@@ -1,11 +1,13 @@
 import axios from 'axios'
 
 import type {
+  CreateConfigRequest,
   CreateProjectRequest,
   CreateTaskRequest,
   ExecuteTaskResponse,
   FileInfo,
   MoveTaskRequest,
+  OpenCodeConfig,
   Project,
   Session,
   Task,
@@ -156,4 +158,26 @@ export async function deleteFile(projectId: string, path: string): Promise<void>
 
 export async function createDirectory(projectId: string, path: string): Promise<void> {
   await api.post(`/projects/${projectId}/files/mkdir`, { path })
+}
+
+export async function getActiveConfig(projectId: string): Promise<OpenCodeConfig> {
+  const response = await api.get<OpenCodeConfig>(`/projects/${projectId}/config`)
+  return response.data
+}
+
+export async function createOrUpdateConfig(
+  projectId: string,
+  data: CreateConfigRequest
+): Promise<OpenCodeConfig> {
+  const response = await api.post<OpenCodeConfig>(`/projects/${projectId}/config`, data)
+  return response.data
+}
+
+export async function getConfigHistory(projectId: string): Promise<OpenCodeConfig[]> {
+  const response = await api.get<OpenCodeConfig[]>(`/projects/${projectId}/config/versions`)
+  return response.data
+}
+
+export async function rollbackConfig(projectId: string, version: number): Promise<void> {
+  await api.post(`/projects/${projectId}/config/rollback/${version}`)
 }

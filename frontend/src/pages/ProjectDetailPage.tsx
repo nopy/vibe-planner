@@ -329,9 +329,12 @@ export function ProjectDetailPage() {
                 <p className="text-blue-600 font-medium">Files</p>
                 <p className="text-sm text-gray-500 mt-1">Browse and edit files</p>
               </button>
-              <div className="border border-gray-200 rounded-lg p-6 text-center opacity-50 cursor-not-allowed">
+              <button
+                onClick={() => navigate(`/projects/${id}/config`)}
+                className="border border-blue-200 rounded-lg p-6 text-center hover:bg-blue-50 hover:border-blue-300 transition"
+              >
                 <svg
-                  className="w-8 h-8 mx-auto mb-2 text-gray-400"
+                  className="w-8 h-8 mx-auto mb-2 text-blue-600"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -349,9 +352,9 @@ export function ProjectDetailPage() {
                     d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                   />
                 </svg>
-                <p className="text-gray-500 font-medium">Configuration</p>
-                <p className="text-sm text-gray-400 mt-1">Coming soon</p>
-              </div>
+                <p className="text-blue-600 font-medium">Configuration</p>
+                <p className="text-sm text-gray-500 mt-1">AI model settings</p>
+              </button>
             </div>
           </div>
         </div>

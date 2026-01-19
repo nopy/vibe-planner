@@ -6,6 +6,7 @@ import { LoginPage } from '@/pages/LoginPage'
 import { OidcCallbackPage } from '@/pages/OidcCallbackPage'
 import { ProjectDetailPage } from '@/pages/ProjectDetailPage'
 import { FileExplorerPage } from '@/pages/FileExplorerPage'
+import { ConfigPage } from '@/pages/ConfigPage'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { ProjectList } from '@/components/Projects/ProjectList'
 import { KanbanBoard } from '@/components/Kanban/KanbanBoard'
@@ -56,6 +57,16 @@ function App() {
               <ProtectedRoute>
                 <AppLayout>
                   <FileExplorerPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/projects/:id/config"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <ConfigPage />
                 </AppLayout>
               </ProtectedRoute>
             }

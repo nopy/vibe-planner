@@ -49,16 +49,48 @@ export interface Task {
 export interface OpenCodeConfig {
   id: string
   project_id: string
-  model: string
-  provider: string
-  provider_api_key_encrypted?: string
-  tools?: Record<string, unknown>
-  instructions?: string
+  version: number
+  is_active: boolean
+  
+  // Model configuration
+  model_provider: string
+  model_name: string
+  model_version?: string
+  
+  // Provider configuration
+  api_endpoint?: string
+  api_key?: string // Only for create/update requests
   temperature: number
   max_tokens: number
-  is_active: boolean
-  version: number
+  
+  // Tools configuration
+  enabled_tools: string[]
+  tools_config?: Record<string, unknown>
+  
+  // System configuration
+  system_prompt?: string
+  max_iterations: number
+  timeout_seconds: number
+  
+  // Metadata
+  created_by: string
   created_at: string
+  updated_at: string
+}
+
+export interface CreateConfigRequest {
+  model_provider: string
+  model_name: string
+  model_version?: string
+  api_endpoint?: string
+  api_key?: string
+  temperature: number
+  max_tokens: number
+  enabled_tools: string[]
+  tools_config?: Record<string, unknown>
+  system_prompt?: string
+  max_iterations: number
+  timeout_seconds: number
 }
 
 export interface OpenCodeSession {
