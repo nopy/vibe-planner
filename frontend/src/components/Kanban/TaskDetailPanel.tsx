@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 
 import { ExecutionHistory } from '@/components/Kanban/ExecutionHistory'
 import { ExecutionOutputPanel } from '@/components/Kanban/ExecutionOutputPanel'
+import { InteractionPanel } from '@/components/Interactions/InteractionPanel'
 import { getTask, updateTask, deleteTask } from '@/services/api'
 import type { Task, UpdateTaskRequest, TaskPriority } from '@/types'
 
@@ -35,6 +36,7 @@ export function TaskDetailPanel({
   const [isDeleting, setIsDeleting] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'details' | 'output' | 'interact'>('details')
 
   const [editFormData, setEditFormData] = useState<{
     title: string
@@ -408,7 +410,51 @@ export function TaskDetailPanel({
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-6">
+            <div className="flex h-full flex-col">
+              <div className="flex border-b border-gray-200">
+                <button
+                  onClick={() => setActiveTab('details')}
+                  className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    activeTab === 'details'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  Details
+                </button>
+                <button
+                  onClick={() => setActiveTab('output')}
+                  className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    activeTab === 'output'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  Output
+                </button>
+                <button
+                  onClick={() => setActiveTab('interact')}
+                  className={`flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    activeTab === 'interact'
+                      ? 'border-purple-600 text-purple-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+                    />
+                  </svg>
+                  Interact
+                </button>
+              </div>
+
+              {activeTab === 'details' && (
+                <div className="flex-1 overflow-y-auto p-6">
+                  <div className="grid grid-cols-2 gap-6">
               <div className="col-span-2">
                 <label className="block text-sm font-medium text-gray-500">Title</label>
                 <p className="mt-1 text-gray-900 text-lg font-medium">{task.title}</p>
@@ -500,8 +546,31 @@ export function TaskDetailPanel({
 
               {taskId && <ExecutionHistory projectId={projectId} taskId={taskId} />}
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {activeTab === 'output' && taskId && (
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <ExecutionOutputPanel
+              projectId={projectId}
+              taskId={taskId}
+              sessionId={sessionId}
+              isExecuting={isExecuting}
+            />
+            <div className="border-t border-gray-200">
+              <ExecutionHistory projectId={projectId} taskId={taskId} />
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'interact' && taskId && (
+          <div className="flex-1 overflow-hidden">
+            <InteractionPanel projectId={projectId} taskId={taskId} />
+          </div>
+        )}
+      </div>
+    )}
+  </div>
 
         {!isEditing && task && !isLoading && (
           <div className="p-6 border-t border-gray-200">
