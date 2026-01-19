@@ -1,8 +1,8 @@
 # OpenCode Project Manager - TODO List
 
-**Last Updated:** 2026-01-19 18:31 CET  
+**Last Updated:** 2026-01-19 18:36 CET  
 **Current Phase:** Phase 6 - OpenCode Config (Weeks 11-12)  
-**Status:** ✅ Phase 6 COMPLETE - Ready for Phase 7  
+**Status:** ✅ Phase 6 COMPLETE (including 6.15 API Documentation) - Ready for Phase 7  
 **Branch:** main
 
 ---
@@ -1837,13 +1837,74 @@ Two comprehensive integration test functions were already implemented in Phase 6
 
 #### 6.15 API Documentation
 
-**Status:** 📋 Planned
+**Status:** ✅ Complete (2026-01-19)
 
-**Tasks:**
-- Document all 4 config endpoints in API_SPECIFICATION.md
-- Add request/response examples
-- Document validation rules
-- Document error codes
+**Objective:** Document all configuration management API endpoints in API_SPECIFICATION.md.
+
+**Completion Summary:**
+- **File Created:** `API_SPECIFICATION.md` (258 lines of comprehensive documentation)
+- **Documentation Scope:**
+  - All 4 configuration endpoints fully documented:
+    1. GET /api/projects/:id/config (Get Active Configuration)
+    2. POST /api/projects/:id/config (Create/Update Configuration)
+    3. GET /api/projects/:id/config/versions (List Configuration History)
+    4. POST /api/projects/:id/config/rollback/:version (Rollback Configuration)
+  - Each endpoint includes:
+    - HTTP method and full path
+    - Authentication requirements (JWT)
+    - Path parameters table
+    - Request body schema (with all fields from CreateConfigRequest)
+    - Response schema (with all fields from OpenCodeConfig)
+    - Success response examples (200/201) with realistic sample JSON
+    - Error response examples (400, 401, 404, 500) with actual error messages
+  - Validation Rules section with comprehensive table:
+    - Model Providers: openai, anthropic, custom
+    - Temperature: 0.0-2.0 (default 0.7)
+    - Max Tokens: 1-128,000 (model-specific limits apply)
+    - Max Iterations: 1-50 (default 10)
+    - Timeout Seconds: 60-3,600 (default 300)
+    - API Endpoint: HTTPS required for custom provider
+    - Enabled Tools: file_ops, web_search, code_exec, terminal (array, required)
+  - Supported Models section with two tables:
+    - OpenAI: 5 models (gpt-4o, gpt-4o-mini, gpt-4, gpt-4-turbo, gpt-3.5-turbo)
+    - Anthropic: 4 models (claude-3-opus, claude-3-sonnet, claude-3-haiku, claude-3.5-sonnet)
+    - Each with Max Tokens, Context Size, Input/Output Pricing ($/1M tokens)
+  - Configuration Versioning section explaining:
+    - Immutability (every update creates new version)
+    - Activation (only one active config per project)
+    - Audit Trail (rollback creates new version with old data)
+    - Security (AES-256-GCM API key encryption, never exposed in responses)
+  - Error Codes section with table:
+    - 400 Bad Request (invalid UUID, validation failures, binding errors)
+    - 401 Unauthorized (missing/invalid JWT)
+    - 404 Not Found (config/version not found)
+    - 500 Internal Server Error (database errors, service errors)
+    - Each with example JSON response
+
+**Technical Details:**
+- Base URL: http://localhost:8090
+- Authentication: JWT required (Authorization: Bearer <token>)
+- All field names, types, and constraints extracted from source code:
+  - backend/internal/api/config.go (CreateConfigRequest struct)
+  - backend/internal/model/opencode_config.go (OpenCodeConfig struct)
+  - backend/internal/service/model_registry.go (9 supported models)
+- Documentation follows REST API best practices:
+  - Clear section hierarchy (##, ###, ####)
+  - Consistent formatting (tables, code blocks, bold/italic)
+  - Realistic examples (matching actual schema)
+  - Professional technical writing style
+
+**Files Created:**
+- ✅ `API_SPECIFICATION.md` (258 lines)
+
+**Success Criteria:**
+- [x] All 4 config endpoints documented with full examples
+- [x] Request/response schemas complete (all fields from source structs)
+- [x] Validation rules documented with constraints table
+- [x] Error codes documented with example JSON responses
+- [x] Supported models table with pricing and limits
+- [x] Configuration versioning behavior explained
+- [x] Professional formatting with proper markdown structure
 
 ---
 
@@ -1877,6 +1938,7 @@ Two comprehensive integration test functions were already implemented in Phase 6
 - [x] Configuration options documented (model registry with metadata)
 - [x] INTEGRATION_TESTING.md updated with Phase 6 scenarios
 - [x] TODO.md updated with Phase 6.14 completion summary
+- [x] API_SPECIFICATION.md created with Phase 6 config endpoints (6.15 Complete)
 
 ---
 
