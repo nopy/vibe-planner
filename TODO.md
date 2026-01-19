@@ -1386,246 +1386,170 @@ All three components were implemented by the frontend-ui-ux-engineer agent as pa
 
 #### 6.10 ConfigHistory Component
 
-**Status:** 📋 Planned
+**Status:** ✅ Complete (2026-01-19)
 
 **Objective:** Display configuration version history with rollback capability.
 
-**Tasks:**
-1. **Create ConfigHistory Component (`frontend/src/components/Config/ConfigHistory.tsx`):**
-   ```typescript
-   import React, { useState, useEffect } from 'react';
-   import { api } from '../../services/api';
-   import type { OpenCodeConfig } from '../../types';
-   
-   interface ConfigHistoryProps {
-     projectId: string;
-     currentVersion?: number;
-     onRollback: (version: number) => Promise<void>;
-   }
-   
-   export const ConfigHistory: React.FC<ConfigHistoryProps> = ({
-     projectId,
-     currentVersion,
-     onRollback,
-   }) => {
-     const [versions, setVersions] = useState<OpenCodeConfig[]>([]);
-     const [loading, setLoading] = useState(true);
-     const [expandedVersion, setExpandedVersion] = useState<number | null>(null);
-     
-     useEffect(() => {
-       const fetchVersions = async () => {
-         try {
-           const response = await api.get(`/api/projects/${projectId}/config/versions`);
-           setVersions(response.data);
-         } catch (err) {
-           console.error('Failed to fetch config versions:', err);
-         } finally {
-           setLoading(false);
-         }
-       };
-       
-       fetchVersions();
-     }, [projectId]);
-     
-     const handleRollback = async (version: number) => {
-       if (window.confirm(`Rollback to version ${version}? This will create a new version with the old configuration.`)) {
-         await onRollback(version);
-       }
-     };
-     
-     if (loading) return <div>Loading history...</div>;
-     if (versions.length === 0) return null;
-     
-     return (
-       <div className="border-t border-gray-200 pt-4">
-         <h3 className="text-lg font-semibold text-gray-800 mb-4">Configuration History</h3>
-         
-         <div className="space-y-2">
-           {versions.map((version) => (
-             <div
-               key={version.version}
-               className={`border rounded-lg p-3 ${
-                 version.is_active ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-               }`}
-             >
-               <div className="flex justify-between items-center">
-                 <div className="flex items-center space-x-3">
-                   <span className="font-semibold text-gray-800">
-                     Version {version.version}
-                   </span>
-                   {version.is_active && (
-                     <span className="px-2 py-1 text-xs font-semibold text-blue-800 bg-blue-200 rounded">
-                       Active
-                     </span>
-                   )}
-                   <span className="text-sm text-gray-500">
-                     {new Date(version.created_at).toLocaleString()}
-                   </span>
-                 </div>
-                 
-                 <div className="flex items-center space-x-2">
-                   <button
-                     onClick={() => setExpandedVersion(
-                       expandedVersion === version.version ? null : version.version
-                     )}
-                     className="text-sm text-blue-600 hover:underline"
-                   >
-                     {expandedVersion === version.version ? 'Hide' : 'Details'}
-                   </button>
-                   
-                   {!version.is_active && (
-                     <button
-                       onClick={() => handleRollback(version.version)}
-                       className="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
-                     >
-                       Rollback
-                     </button>
-                   )}
-                 </div>
-               </div>
-               
-               {expandedVersion === version.version && (
-                 <div className="mt-3 pt-3 border-t border-gray-200 text-sm space-y-1">
-                   <div><strong>Provider:</strong> {version.model_provider}</div>
-                   <div><strong>Model:</strong> {version.model_name}</div>
-                   <div><strong>Temperature:</strong> {version.temperature}</div>
-                   <div><strong>Max Tokens:</strong> {version.max_tokens}</div>
-                   <div><strong>Tools:</strong> {version.enabled_tools.join(', ')}</div>
-                 </div>
-               )}
-             </div>
-           ))}
-         </div>
-       </div>
-     );
-   };
-   ```
+**Implementation Summary:**
+Created `frontend/src/components/Config/ConfigHistory.tsx` (185 lines) with comprehensive version history UI:
 
-**Files to Create:**
-- `frontend/src/components/Config/ConfigHistory.tsx`
+**Key Features:**
+1. **Version List:**
+   - Fetches config history via `getConfigHistory(projectId)` API
+   - Displays versions in reverse chronological order (newest first)
+   - Loading spinner during data fetch
+   - Error state with red banner
+   - Empty state message when no history exists
+
+2. **Visual Design:**
+   - Active version: Blue border + blue background + "Active" badge
+   - Inactive versions: Gray border + white background
+   - Hover effect on inactive versions (gray-50 background)
+   - Version badges: Circular with version number (v1, v2, etc.)
+   - Active badge: Blue circle with white text
+   - Inactive badge: Gray circle with dark text
+
+3. **Rollback Functionality:**
+   - Rollback button only shown for inactive versions
+   - Confirmation dialog with clear warning message
+   - Disabled state during rollback operation
+   - Calls `onRollback(version)` callback prop
+   - Error handling with console logging
+
+4. **Expandable Details:**
+   - Collapse/expand button with rotating chevron icon
+   - Expanded view shows:
+     - Temperature setting
+     - Max tokens setting
+     - Enabled tools (with badges)
+     - Created by (user email)
+   - Grid layout for settings (2 columns)
+   - Tools displayed as white badges with gray borders
+   - Empty state for no enabled tools
+
+5. **State Management:**
+   - `history`: Array of OpenCodeConfig objects
+   - `isLoading`: Loading state (true during API call)
+   - `error`: Error message string or null
+   - `expandedVersion`: Currently expanded version number or null
+   - `isRollingBack`: Disabled state during rollback
+
+**Props Interface:**
+```typescript
+interface ConfigHistoryProps {
+  projectId: string;
+  onRollback: (version: number) => Promise<void>;
+}
+```
+
+**Files Created:**
+- ✅ `frontend/src/components/Config/ConfigHistory.tsx` (185 lines)
 
 **Success Criteria:**
-- [ ] Versions displayed in reverse chronological order
-- [ ] Active version highlighted
-- [ ] Rollback confirmation dialog works
-- [ ] Details expand/collapse correctly
+- ✅ Versions displayed in reverse chronological order
+- ✅ Active version highlighted with blue styling
+- ✅ Rollback confirmation dialog works (window.confirm)
+- ✅ Details expand/collapse correctly with animated chevron
+- ✅ Loading spinner shown during API calls
+- ✅ Error handling with user-friendly messages
+- ✅ Responsive grid layout for settings
+- ✅ Tools displayed as badges with proper styling
 
 ---
 
 #### 6.11 useConfig Hook
 
-**Status:** 📋 Planned
+**Status:** ✅ Complete (2026-01-19)
 
 **Objective:** Custom React hook for configuration API interactions.
 
-**Tasks:**
-1. **Create useConfig Hook (`frontend/src/hooks/useConfig.ts`):**
-   ```typescript
-   import { useState, useEffect } from 'react';
-   import { api } from '../services/api';
-   import type { OpenCodeConfig } from '../types';
-   
-   export const useConfig = (projectId: string) => {
-     const [config, setConfig] = useState<OpenCodeConfig | null>(null);
-     const [loading, setLoading] = useState(true);
-     const [error, setError] = useState<string | null>(null);
-     
-     const fetchConfig = async () => {
-       try {
-         setLoading(true);
-         setError(null);
-         const response = await api.get(`/api/projects/${projectId}/config`);
-         setConfig(response.data);
-       } catch (err: any) {
-         if (err.response?.status === 404) {
-           setConfig(null); // No config yet
-         } else {
-           setError(err.message || 'Failed to load configuration');
-         }
-       } finally {
-         setLoading(false);
-       }
-     };
-     
-     useEffect(() => {
-       fetchConfig();
-     }, [projectId]);
-     
-     const updateConfig = async (newConfig: OpenCodeConfig) => {
-       try {
-         setLoading(true);
-         setError(null);
-         const response = await api.post(`/api/projects/${projectId}/config`, newConfig);
-         setConfig(response.data);
-       } catch (err: any) {
-         setError(err.response?.data?.error || 'Failed to update configuration');
-         throw err;
-       } finally {
-         setLoading(false);
-       }
-     };
-     
-     const rollbackConfig = async (version: number) => {
-       try {
-         setLoading(true);
-         setError(null);
-         await api.post(`/api/projects/${projectId}/config/rollback/${version}`);
-         await fetchConfig(); // Reload config
-       } catch (err: any) {
-         setError(err.response?.data?.error || 'Failed to rollback configuration');
-         throw err;
-       } finally {
-         setLoading(false);
-       }
-     };
-     
-     return {
-       config,
-       loading,
-       error,
-       updateConfig,
-       rollbackConfig,
-       refetch: fetchConfig,
-     };
-   };
-   ```
+**Implementation Summary:**
+Created `frontend/src/hooks/useConfig.ts` (99 lines) with complete configuration management logic:
 
-2. **Add Config Types to Types File (`frontend/src/types/index.ts`):**
+**Key Features:**
+1. **State Management:**
+   - `config`: OpenCodeConfig object or null
+   - `loading`: Boolean flag for async operations
+   - `error`: Error message string or null
+   - All states managed with React useState
+
+2. **fetchConfig Function:**
+   - Wrapped with useCallback for memoization (dependency: projectId)
+   - Calls `getActiveConfig(projectId)` API
+   - Handles 404 gracefully (sets config to null, no error)
+   - Sets error message for other failures
+   - Console logging for debugging (`[useConfig] Failed to fetch config`)
+   - Extracts error message from `err.response?.data?.error`
+
+3. **useEffect Auto-Fetch:**
+   - Calls fetchConfig on mount
+   - Re-fetches when projectId changes
+   - Dependency array: [fetchConfig]
+
+4. **updateConfig Function:**
+   - Accepts `CreateConfigRequest` data
+   - Returns `Promise<OpenCodeConfig>` (new config)
+   - Calls `createOrUpdateConfig(projectId, data)` API
+   - Updates local config state on success
+   - Throws error after logging for component handling
+   - Loading state management (setLoading true/false)
+
+5. **rollbackConfig Function:**
+   - Accepts version number
+   - Returns `Promise<void>`
+   - Calls `rollbackConfigApi(projectId, version)` API
+   - Triggers full refetch after rollback (await fetchConfig())
+   - Error propagation for component handling
+
+6. **Return Interface:**
    ```typescript
-   export interface OpenCodeConfig {
-     id: string;
-     project_id: string;
-     version: number;
-     is_active: boolean;
-     model_provider: string;
-     model_name: string;
-     model_version?: string;
-     api_endpoint?: string;
-     api_key?: string; // Only for create/update requests
-     temperature: number;
-     max_tokens: number;
-     enabled_tools: string[];
-     tools_config?: Record<string, any>;
-     system_prompt?: string;
-     max_iterations: number;
-     timeout_seconds: number;
-     created_by: string;
-     created_at: string;
-     updated_at: string;
+   interface UseConfigReturn {
+     config: OpenCodeConfig | null;
+     loading: boolean;
+     error: string | null;
+     updateConfig: (data: CreateConfigRequest) => Promise<OpenCodeConfig>;
+     rollbackConfig: (version: number) => Promise<void>;
+     refetch: () => Promise<void>;
    }
    ```
 
-**Files to Create:**
-- `frontend/src/hooks/useConfig.ts`
+**API Integration:**
+- Uses `getActiveConfig`, `createOrUpdateConfig`, `rollbackConfigApi` from `@/services/api`
+- Proper TypeScript types from `@/types` (OpenCodeConfig, CreateConfigRequest)
 
-**Files to Modify:**
-- `frontend/src/types/index.ts` (add OpenCodeConfig interface)
+**Error Handling:**
+- 404 on fetch: Sets config to null (no error state)
+- Other fetch errors: Sets error message from response or default
+- Update errors: Logs, sets error, and re-throws for component handling
+- Rollback errors: Logs, sets error, and re-throws
+
+**Usage Example:**
+```typescript
+const { config, loading, error, updateConfig, rollbackConfig, refetch } = useConfig(projectId);
+
+// Update config
+await updateConfig({ model_provider: 'openai', model_name: 'gpt-4o', ... });
+
+// Rollback to version 3
+await rollbackConfig(3);
+
+// Manual refetch
+await refetch();
+```
+
+**Files Created:**
+- ✅ `frontend/src/hooks/useConfig.ts` (99 lines)
+
+**Files Modified:**
+- ✅ `frontend/src/types/index.ts` (OpenCodeConfig interface already added in Phase 6.6)
 
 **Success Criteria:**
-- [ ] Hook loads config on mount
-- [ ] updateConfig creates new version
-- [ ] rollbackConfig triggers refetch
-- [ ] Error handling works correctly
+- ✅ Hook loads config on mount via useEffect
+- ✅ updateConfig creates new version and updates local state
+- ✅ rollbackConfig triggers automatic refetch
+- ✅ Error handling works correctly (404 vs other errors)
+- ✅ All functions wrapped with useCallback for performance
+- ✅ TypeScript strict mode compliance
 
 ---
 

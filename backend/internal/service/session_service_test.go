@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -320,19 +321,41 @@ func TestSessionService_StartSession_AlreadyActive(t *testing.T) {
 }
 
 func TestSessionService_callOpenCodeStart_ErrorHandling(t *testing.T) {
-	service := &sessionService{
-		httpClient: nil, // Will cause error
+	errorServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"error":"OpenCode start failed"}`))
+	}))
+	defer errorServer.Close()
+
+	serverURL := errorServer.URL[7:]
+	if colonIdx := strings.Index(serverURL, ":"); colonIdx > 0 {
+		serverURL = serverURL[:colonIdx]
 	}
 
-	err := service.callOpenCodeStart(context.Background(), "10.0.0.1", uuid.New(), "test")
+	service := &sessionService{
+		httpClient: &http.Client{},
+	}
+
+	err := service.callOpenCodeStart(context.Background(), serverURL, uuid.New(), "test")
 	assert.Error(t, err)
 }
 
 func TestSessionService_callOpenCodeStop_ErrorHandling(t *testing.T) {
-	service := &sessionService{
-		httpClient: nil, // Will cause error
+	errorServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"error":"OpenCode stop failed"}`))
+	}))
+	defer errorServer.Close()
+
+	serverURL := errorServer.URL[7:]
+	if colonIdx := strings.Index(serverURL, ":"); colonIdx > 0 {
+		serverURL = serverURL[:colonIdx]
 	}
 
-	err := service.callOpenCodeStop(context.Background(), "10.0.0.1", uuid.New())
+	service := &sessionService{
+		httpClient: &http.Client{},
+	}
+
+	err := service.callOpenCodeStop(context.Background(), serverURL, uuid.New())
 	assert.Error(t, err)
 }
