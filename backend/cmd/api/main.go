@@ -42,6 +42,7 @@ func main() {
 	taskRepo := repository.NewTaskRepository(database)
 	sessionRepo := repository.NewSessionRepository(database)
 	configRepo := repository.NewConfigRepository(database)
+	interactionRepo := repository.NewInteractionRepository(database)
 
 	k8sService, err := service.NewKubernetesService(
 		cfg.Kubeconfig,
@@ -56,6 +57,7 @@ func main() {
 	sessionService := service.NewSessionService(sessionRepo, taskRepo, projectRepo, k8sService)
 	projectService := service.NewProjectService(projectRepo, k8sService)
 	taskService := service.NewTaskService(taskRepo, projectRepo, sessionService)
+	interactionService := service.NewInteractionService(interactionRepo, taskRepo, projectRepo, sessionRepo)
 
 	configService, err := service.NewConfigService(configRepo, cfg.EncryptionKey)
 	if err != nil {
@@ -74,8 +76,9 @@ func main() {
 	taskHandler := api.NewTaskHandler(taskService, projectRepo, k8sService)
 	fileHandler := api.NewFileHandler(projectRepo, k8sService)
 	configHandler := api.NewConfigHandler(configService)
+	interactionHandler := api.NewInteractionHandler(interactionService)
 
-	router := setupRouter(cfg, authHandler, projectHandler, taskHandler, fileHandler, configHandler, authMiddleware)
+	router := setupRouter(cfg, authHandler, projectHandler, taskHandler, fileHandler, configHandler, interactionHandler, authMiddleware)
 
 	// Setup static file serving for production (embedded frontend)
 	if cfg.Environment == "production" {
@@ -96,7 +99,7 @@ func main() {
 	}
 }
 
-func setupRouter(cfg *config.Config, authHandler *api.AuthHandler, projectHandler *api.ProjectHandler, taskHandler *api.TaskHandler, fileHandler *api.FileHandler, configHandler *api.ConfigHandler, authMiddleware *middleware.AuthMiddleware) *gin.Engine {
+func setupRouter(cfg *config.Config, authHandler *api.AuthHandler, projectHandler *api.ProjectHandler, taskHandler *api.TaskHandler, fileHandler *api.FileHandler, configHandler *api.ConfigHandler, interactionHandler *api.InteractionHandler, authMiddleware *middleware.AuthMiddleware) *gin.Engine {
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -152,6 +155,8 @@ func setupRouter(cfg *config.Config, authHandler *api.AuthHandler, projectHandle
 			projects.POST("/:id/tasks/:taskId/stop", taskHandler.StopTask)
 			projects.GET("/:id/tasks/:taskId/output", taskHandler.TaskOutputStream)
 			projects.GET("/:id/tasks/:taskId/sessions", taskHandler.GetTaskSessions)
+			projects.GET("/:id/tasks/:taskId/interactions", interactionHandler.GetTaskHistory)
+			projects.GET("/:id/tasks/:taskId/interact", interactionHandler.TaskInteractionWebSocket)
 
 			projects.GET("/:id/files/tree", fileHandler.GetTree)
 			projects.GET("/:id/files/content", fileHandler.GetContent)
