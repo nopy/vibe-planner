@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 
+import { ExecutionHistory } from '@/components/Kanban/ExecutionHistory'
 import { ExecutionOutputPanel } from '@/components/Kanban/ExecutionOutputPanel'
 import { getTask, updateTask, deleteTask } from '@/services/api'
 import type { Task, UpdateTaskRequest, TaskPriority } from '@/types'
@@ -496,6 +497,8 @@ export function TaskDetailPanel({
                   isExecuting={isExecuting}
                 />
               )}
+
+              {taskId && <ExecutionHistory projectId={projectId} taskId={taskId} />}
             </div>
           )}
         </div>

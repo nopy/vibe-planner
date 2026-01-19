@@ -7,6 +7,7 @@ import type {
   FileInfo,
   MoveTaskRequest,
   Project,
+  Session,
   Task,
   UpdateProjectRequest,
   UpdateTaskRequest,
@@ -115,6 +116,11 @@ export async function executeTask(
 
 export async function stopTaskExecution(projectId: string, taskId: string): Promise<void> {
   await api.post(`/projects/${projectId}/tasks/${taskId}/stop`)
+}
+
+export async function getTaskSessions(projectId: string, taskId: string): Promise<Session[]> {
+  const response = await api.get<Session[]>(`/projects/${projectId}/tasks/${taskId}/sessions`)
+  return response.data
 }
 
 export async function getFileTree(projectId: string, includeHidden = false): Promise<FileInfo> {

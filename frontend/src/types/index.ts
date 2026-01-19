@@ -143,3 +143,21 @@ export interface TaskExecutionState {
   sessionId: string | null
   error: string | null
 }
+
+export type SessionStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
+
+export interface Session {
+  id: string
+  task_id: string
+  project_id: string
+  status: SessionStatus
+  prompt?: string
+  output?: string
+  error?: string
+  started_at?: string
+  completed_at?: string
+  duration_ms: number
+  created_at: string
+  updated_at: string
+  deleted_at?: string
+}

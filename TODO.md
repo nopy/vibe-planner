@@ -1,8 +1,8 @@
 # OpenCode Project Manager - TODO List
 
-**Last Updated:** 2026-01-19 12:33 CET  
-**Current Phase:** Phase 5 - OpenCode Integration (Planning)  
-**Status:** Phase 4 Complete & Archived → Ready for Phase 5  
+**Last Updated:** 2026-01-19 14:54 CET  
+**Current Phase:** Phase 5 - OpenCode Integration (In Progress - Phase 5.6 Complete)  
+**Status:** Phase 4 Complete & Archived → Phase 5.6 Complete  
 **Branch:** main
 
 ---
@@ -433,79 +433,49 @@ Phase 5 integrates the OpenCode AI agent server into project pods for automated 
 ---
 
 #### 5.6 Execution History
-**Status:** 📋 Planned
+**Status:** ✅ COMPLETE (2026-01-19 14:54)
 
-**Objectives:**
-- Create execution output panel component
-- Stream real-time SSE events from backend
-- Display output with syntax highlighting and auto-scroll
+**Implementation Summary:**
+- ✅ Created ExecutionHistory.tsx component (245 lines)
+- ✅ Added Session interface and SessionStatus type to frontend types
+- ✅ Implemented getTaskSessions() API client method
+- ✅ Added GetTaskSessions handler in backend with authorization
+- ✅ Extended TaskService interface with GetTaskSessions method
+- ✅ Integrated ExecutionHistory into TaskDetailPanel
+- ✅ Updated mock implementations in test files
 
-**Tasks:**
-- [ ] **Execution Output Panel** (`components/Execution/ExecutionOutputPanel.tsx`)
-  - Terminal-like UI with dark theme
-  - Auto-scroll to bottom on new output
-  - Syntax highlighting for code blocks
-  - Show timestamps for each message
+**Files Created:**
+- `frontend/src/components/Kanban/ExecutionHistory.tsx` (245 lines)
 
-- [ ] **SSE Hook** (`hooks/useTaskExecution.ts`)
-  - useTaskExecution(projectId, taskId, sessionId)
-  - Connect to /api/projects/:id/tasks/:taskId/output SSE endpoint
-  - Handle connection errors with retry logic
-  - Parse SSE events and update state
-  - Clean up EventSource on unmount
-
-- [ ] **Event Types**
-  - `output`: Regular console output
-  - `error`: Error messages (red text)
-  - `status`: Session status changes (pending→running→completed)
-  - `done`: Session completed successfully
-
-**Files to Create:**
-- `frontend/src/components/Execution/ExecutionOutputPanel.tsx`
-- `frontend/src/hooks/useTaskExecution.ts`
-- `frontend/src/types/index.ts` (add ExecutionEvent, SessionStatus types)
+**Files Modified:**
+- `frontend/src/types/index.ts` (added Session interface, SessionStatus type)
+- `frontend/src/services/api.ts` (added getTaskSessions method)
+- `frontend/src/components/Kanban/TaskDetailPanel.tsx` (integrated ExecutionHistory)
+- `backend/internal/api/tasks.go` (added GetTaskSessions handler, 51 lines)
+- `backend/internal/service/task_service.go` (added interface method + implementation)
+- `backend/cmd/api/main.go` (wired new route: GET /api/projects/:id/tasks/:taskId/sessions)
+- `backend/internal/api/tasks_test.go` (added mock method)
+- `backend/internal/api/tasks_execution_test.go` (added mock method)
 
 **Success Criteria:**
-- [ ] SSE connection established successfully
-- [ ] Output streams in real-time
-- [ ] Auto-scroll works smoothly
-- [ ] Connection cleanup on component unmount
-- [ ] Graceful error handling with retry
+- [x] Can view past execution history ✅
+- [x] Session metadata displayed correctly ✅
+- [x] Can expand/collapse full logs ✅
+- [x] Sorted by most recent first ✅
+- [x] TypeScript compilation passes ✅
+- [x] ESLint zero warnings ✅
+- [x] Backend tests passing ✅
 
----
-
-#### 5.6 Execution History
-**Status:** 📋 Planned
-
-**Objectives:**
-- Show past execution sessions for each task
-- Display session duration, status, and output preview
-- Allow viewing full output logs for completed sessions
-
-**Tasks:**
-- [ ] **Execution History List** (`components/Execution/ExecutionHistory.tsx`)
-  - List all sessions for a task (newest first)
-  - Show: timestamp, duration, status badge, output preview (first 100 chars)
-  - Expand/collapse full output logs
-
-- [ ] **API Endpoint** (Backend)
-  - GET /api/projects/:id/tasks/:taskId/sessions
-  - Returns: Array of sessions with metadata and output summaries
-
-- [ ] **API Client** (Frontend)
-  - getTaskExecutionHistory(projectId, taskId) → Promise<Session[]>
-
-**Files to Create:**
-- `frontend/src/components/Execution/ExecutionHistory.tsx`
-- `backend/internal/api/tasks.go` (add sessions endpoint)
-
-**Success Criteria:**
-- [ ] Can view past execution history
-- [ ] Session metadata displayed correctly
-- [ ] Can expand/collapse full logs
-- [ ] Sorted by most recent first
-
-**Note:** Terminal UI with dark theme already implemented in ExecutionOutputPanel (Phase 5.5)
+**Features Implemented:**
+- Collapsible session cards (click to expand/collapse)
+- Color-coded status badges (green=completed, red=failed, gray=cancelled, yellow=pending, blue=running)
+- Session metadata: ID, timestamps (started_at, completed_at), duration
+- Output preview (first 200 chars when collapsed)
+- Full output display when expanded
+- Error messages display (if present)
+- Prompt display (original task instruction)
+- Auto-fetch sessions on component mount
+- Authorization checks in backend (user must own project)
 
 ---
 

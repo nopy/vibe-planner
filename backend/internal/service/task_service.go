@@ -53,6 +53,9 @@ type TaskService interface {
 
 	// StopTask stops execution of a task
 	StopTask(ctx context.Context, id, userID uuid.UUID) error
+
+	// GetTaskSessions returns execution history for a task
+	GetTaskSessions(ctx context.Context, id, userID uuid.UUID) ([]model.Session, error)
 }
 
 type taskService struct {
@@ -359,4 +362,18 @@ func (s *taskService) StopTask(ctx context.Context, id, userID uuid.UUID) error 
 	}
 
 	return nil
+}
+
+func (s *taskService) GetTaskSessions(ctx context.Context, id, userID uuid.UUID) ([]model.Session, error) {
+	task, err := s.GetTask(ctx, id, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	sessions, err := s.sessionService.GetSessionsByTaskID(ctx, task.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get task sessions: %w", err)
+	}
+
+	return sessions, nil
 }

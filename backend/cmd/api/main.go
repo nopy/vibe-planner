@@ -144,6 +144,7 @@ func setupRouter(cfg *config.Config, authHandler *api.AuthHandler, projectHandle
 			projects.POST("/:id/tasks/:taskId/execute", taskHandler.ExecuteTask)
 			projects.POST("/:id/tasks/:taskId/stop", taskHandler.StopTask)
 			projects.GET("/:id/tasks/:taskId/output", taskHandler.TaskOutputStream)
+			projects.GET("/:id/tasks/:taskId/sessions", taskHandler.GetTaskSessions)
 
 			projects.GET("/:id/files/tree", fileHandler.GetTree)
 			projects.GET("/:id/files/content", fileHandler.GetContent)

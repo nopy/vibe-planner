@@ -80,6 +80,14 @@ func (m *MockTaskService) StopTask(ctx context.Context, id, userID uuid.UUID) er
 	return args.Error(0)
 }
 
+func (m *MockTaskService) GetTaskSessions(ctx context.Context, id, userID uuid.UUID) ([]model.Session, error) {
+	args := m.Called(ctx, id, userID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]model.Session), args.Error(1)
+}
+
 type MockProjectRepo struct {
 	mock.Mock
 }

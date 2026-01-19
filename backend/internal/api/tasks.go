@@ -90,6 +90,39 @@ func (tb *TaskBroadcaster) Unregister(projectID uuid.UUID, conn *websocket.Conn)
 	conn.Close()
 }
 
+// GetTaskSessions returns execution history for a task
+// GET /api/projects/:id/tasks/:taskId/sessions
+func (h *TaskHandler) GetTaskSessions(c *gin.Context) {
+	userID := middleware.GetCurrentUserID(c)
+	if userID == uuid.Nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	taskIDParam := c.Param("taskId")
+	taskID, err := uuid.Parse(taskIDParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
+		return
+	}
+
+	sessions, err := h.taskService.GetTaskSessions(c.Request.Context(), taskID, userID)
+	if err != nil {
+		log.Printf("[GetTaskSessions] Failed to fetch sessions: %v", err)
+		switch {
+		case errors.Is(err, service.ErrTaskNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
+		case errors.Is(err, service.ErrUnauthorized):
+			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch execution history"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, sessions)
+}
+
 // Broadcast sends a task event to all connected clients for a project
 func (tb *TaskBroadcaster) Broadcast(projectID uuid.UUID, event TaskEvent) {
 	tb.mu.Lock()
