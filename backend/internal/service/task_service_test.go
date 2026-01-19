@@ -61,6 +61,70 @@ func (m *MockTaskRepository) SoftDelete(ctx context.Context, id uuid.UUID) error
 
 var _ repository.TaskRepository = (*MockTaskRepository)(nil)
 
+type MockSessionService struct {
+	mock.Mock
+}
+
+func (m *MockSessionService) StartSession(ctx context.Context, taskID uuid.UUID, prompt string) (*model.Session, error) {
+	args := m.Called(ctx, taskID, prompt)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.Session), args.Error(1)
+}
+
+func (m *MockSessionService) StopSession(ctx context.Context, sessionID uuid.UUID) error {
+	args := m.Called(ctx, sessionID)
+	return args.Error(0)
+}
+
+func (m *MockSessionService) GetSession(ctx context.Context, sessionID uuid.UUID) (*model.Session, error) {
+	args := m.Called(ctx, sessionID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.Session), args.Error(1)
+}
+
+func (m *MockSessionService) ListSessionsForTask(ctx context.Context, taskID uuid.UUID) ([]model.Session, error) {
+	args := m.Called(ctx, taskID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]model.Session), args.Error(1)
+}
+
+func (m *MockSessionService) ListActiveSessionsForProject(ctx context.Context, projectID uuid.UUID) ([]model.Session, error) {
+	args := m.Called(ctx, projectID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]model.Session), args.Error(1)
+}
+
+func (m *MockSessionService) UpdateSessionOutput(ctx context.Context, sessionID uuid.UUID, output string) error {
+	args := m.Called(ctx, sessionID, output)
+	return args.Error(0)
+}
+
+func (m *MockSessionService) GetActiveProjectSessions(ctx context.Context, projectID uuid.UUID) ([]model.Session, error) {
+	args := m.Called(ctx, projectID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]model.Session), args.Error(1)
+}
+
+func (m *MockSessionService) GetSessionsByTaskID(ctx context.Context, taskID uuid.UUID) ([]model.Session, error) {
+	args := m.Called(ctx, taskID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]model.Session), args.Error(1)
+}
+
+var _ SessionService = (*MockSessionService)(nil)
+
 func TestTaskService_CreateTask(t *testing.T) {
 	ctx := context.Background()
 	userID := uuid.New()
@@ -80,7 +144,8 @@ func TestTaskService_CreateTask(t *testing.T) {
 		mockTaskRepo.On("FindByProjectID", ctx, projectID).Return([]model.Task{}, nil)
 		mockTaskRepo.On("Create", ctx, mock.AnythingOfType("*model.Task")).Return(nil)
 
-		svc := NewTaskService(mockTaskRepo, mockProjectRepo)
+		mockSessionService := new(MockSessionService)
+		svc := NewTaskService(mockTaskRepo, mockProjectRepo, mockSessionService)
 		task, err := svc.CreateTask(ctx, projectID, userID, "Test Task", "Description", model.TaskPriorityMedium)
 
 		assert.NoError(t, err)
@@ -99,7 +164,8 @@ func TestTaskService_CreateTask(t *testing.T) {
 		mockTaskRepo := new(MockTaskRepository)
 		mockProjectRepo := new(MockProjectRepository)
 
-		svc := NewTaskService(mockTaskRepo, mockProjectRepo)
+		mockSessionService := new(MockSessionService)
+		svc := NewTaskService(mockTaskRepo, mockProjectRepo, mockSessionService)
 		task, err := svc.CreateTask(ctx, projectID, userID, "", "Description", model.TaskPriorityMedium)
 
 		assert.Error(t, err)
@@ -119,7 +185,8 @@ func TestTaskService_CreateTask(t *testing.T) {
 			longTitle = string(append([]byte(longTitle[:i]), 'a'))
 		}
 
-		svc := NewTaskService(mockTaskRepo, mockProjectRepo)
+		mockSessionService := new(MockSessionService)
+		svc := NewTaskService(mockTaskRepo, mockProjectRepo, mockSessionService)
 		task, err := svc.CreateTask(ctx, projectID, userID, longTitle, "Description", model.TaskPriorityMedium)
 
 		assert.Error(t, err)
@@ -132,7 +199,8 @@ func TestTaskService_CreateTask(t *testing.T) {
 		mockTaskRepo := new(MockTaskRepository)
 		mockProjectRepo := new(MockProjectRepository)
 
-		svc := NewTaskService(mockTaskRepo, mockProjectRepo)
+		mockSessionService := new(MockSessionService)
+		svc := NewTaskService(mockTaskRepo, mockProjectRepo, mockSessionService)
 		task, err := svc.CreateTask(ctx, projectID, userID, "Test Task", "Description", "invalid")
 
 		assert.Error(t, err)
@@ -147,7 +215,8 @@ func TestTaskService_CreateTask(t *testing.T) {
 
 		mockProjectRepo.On("FindByID", ctx, projectID).Return(nil, gorm.ErrRecordNotFound)
 
-		svc := NewTaskService(mockTaskRepo, mockProjectRepo)
+		mockSessionService := new(MockSessionService)
+		svc := NewTaskService(mockTaskRepo, mockProjectRepo, mockSessionService)
 		task, err := svc.CreateTask(ctx, projectID, userID, "Test Task", "Description", model.TaskPriorityMedium)
 
 		assert.Error(t, err)
@@ -170,7 +239,8 @@ func TestTaskService_CreateTask(t *testing.T) {
 
 		mockProjectRepo.On("FindByID", ctx, projectID).Return(project, nil)
 
-		svc := NewTaskService(mockTaskRepo, mockProjectRepo)
+		mockSessionService := new(MockSessionService)
+		svc := NewTaskService(mockTaskRepo, mockProjectRepo, mockSessionService)
 		task, err := svc.CreateTask(ctx, projectID, userID, "Test Task", "Description", model.TaskPriorityMedium)
 
 		assert.Error(t, err)
@@ -200,7 +270,8 @@ func TestTaskService_CreateTask(t *testing.T) {
 		mockTaskRepo.On("FindByProjectID", ctx, projectID).Return(existingTasks, nil)
 		mockTaskRepo.On("Create", ctx, mock.AnythingOfType("*model.Task")).Return(nil)
 
-		svc := NewTaskService(mockTaskRepo, mockProjectRepo)
+		mockSessionService := new(MockSessionService)
+		svc := NewTaskService(mockTaskRepo, mockProjectRepo, mockSessionService)
 		task, err := svc.CreateTask(ctx, projectID, userID, "New Task", "Description", model.TaskPriorityLow)
 
 		assert.NoError(t, err)
@@ -222,7 +293,8 @@ func TestTaskService_CreateTask(t *testing.T) {
 		mockTaskRepo.On("FindByProjectID", ctx, projectID).Return([]model.Task{}, nil)
 		mockTaskRepo.On("Create", ctx, mock.AnythingOfType("*model.Task")).Return(errors.New("db error"))
 
-		svc := NewTaskService(mockTaskRepo, mockProjectRepo)
+		mockSessionService := new(MockSessionService)
+		svc := NewTaskService(mockTaskRepo, mockProjectRepo, mockSessionService)
 		task, err := svc.CreateTask(ctx, projectID, userID, "Test Task", "Description", model.TaskPriorityHigh)
 
 		assert.Error(t, err)
@@ -256,7 +328,8 @@ func TestTaskService_GetTask(t *testing.T) {
 		mockTaskRepo.On("FindByID", ctx, taskID).Return(task, nil)
 		mockProjectRepo.On("FindByID", ctx, projectID).Return(project, nil)
 
-		svc := NewTaskService(mockTaskRepo, mockProjectRepo)
+		mockSessionService := new(MockSessionService)
+		svc := NewTaskService(mockTaskRepo, mockProjectRepo, mockSessionService)
 		result, err := svc.GetTask(ctx, taskID, userID)
 
 		assert.NoError(t, err)
@@ -273,7 +346,8 @@ func TestTaskService_GetTask(t *testing.T) {
 
 		mockTaskRepo.On("FindByID", ctx, taskID).Return(nil, gorm.ErrRecordNotFound)
 
-		svc := NewTaskService(mockTaskRepo, mockProjectRepo)
+		mockSessionService := new(MockSessionService)
+		svc := NewTaskService(mockTaskRepo, mockProjectRepo, mockSessionService)
 		result, err := svc.GetTask(ctx, taskID, userID)
 
 		assert.Error(t, err)
@@ -302,7 +376,8 @@ func TestTaskService_GetTask(t *testing.T) {
 		mockTaskRepo.On("FindByID", ctx, taskID).Return(task, nil)
 		mockProjectRepo.On("FindByID", ctx, projectID).Return(project, nil)
 
-		svc := NewTaskService(mockTaskRepo, mockProjectRepo)
+		mockSessionService := new(MockSessionService)
+		svc := NewTaskService(mockTaskRepo, mockProjectRepo, mockSessionService)
 		result, err := svc.GetTask(ctx, taskID, userID)
 
 		assert.Error(t, err)
@@ -333,7 +408,8 @@ func TestTaskService_ListProjectTasks(t *testing.T) {
 		mockProjectRepo.On("FindByID", ctx, projectID).Return(project, nil)
 		mockTaskRepo.On("FindByProjectID", ctx, projectID).Return(tasks, nil)
 
-		svc := NewTaskService(mockTaskRepo, mockProjectRepo)
+		mockSessionService := new(MockSessionService)
+		svc := NewTaskService(mockTaskRepo, mockProjectRepo, mockSessionService)
 		result, err := svc.ListProjectTasks(ctx, projectID, userID)
 
 		assert.NoError(t, err)
@@ -354,7 +430,8 @@ func TestTaskService_ListProjectTasks(t *testing.T) {
 		mockProjectRepo.On("FindByID", ctx, projectID).Return(project, nil)
 		mockTaskRepo.On("FindByProjectID", ctx, projectID).Return([]model.Task{}, nil)
 
-		svc := NewTaskService(mockTaskRepo, mockProjectRepo)
+		mockSessionService := new(MockSessionService)
+		svc := NewTaskService(mockTaskRepo, mockProjectRepo, mockSessionService)
 		result, err := svc.ListProjectTasks(ctx, projectID, userID)
 
 		assert.NoError(t, err)
@@ -367,7 +444,8 @@ func TestTaskService_ListProjectTasks(t *testing.T) {
 
 		mockProjectRepo.On("FindByID", ctx, projectID).Return(nil, gorm.ErrRecordNotFound)
 
-		svc := NewTaskService(mockTaskRepo, mockProjectRepo)
+		mockSessionService := new(MockSessionService)
+		svc := NewTaskService(mockTaskRepo, mockProjectRepo, mockSessionService)
 		result, err := svc.ListProjectTasks(ctx, projectID, userID)
 
 		assert.Error(t, err)
@@ -387,7 +465,8 @@ func TestTaskService_ListProjectTasks(t *testing.T) {
 
 		mockProjectRepo.On("FindByID", ctx, projectID).Return(project, nil)
 
-		svc := NewTaskService(mockTaskRepo, mockProjectRepo)
+		mockSessionService := new(MockSessionService)
+		svc := NewTaskService(mockTaskRepo, mockProjectRepo, mockSessionService)
 		result, err := svc.ListProjectTasks(ctx, projectID, userID)
 
 		assert.Error(t, err)
@@ -421,7 +500,8 @@ func TestTaskService_UpdateTask(t *testing.T) {
 		mockProjectRepo.On("FindByID", ctx, projectID).Return(project, nil)
 		mockTaskRepo.On("Update", ctx, mock.AnythingOfType("*model.Task")).Return(nil)
 
-		svc := NewTaskService(mockTaskRepo, mockProjectRepo)
+		mockSessionService := new(MockSessionService)
+		svc := NewTaskService(mockTaskRepo, mockProjectRepo, mockSessionService)
 		updates := map[string]interface{}{"title": "New Title"}
 		result, err := svc.UpdateTask(ctx, taskID, userID, updates)
 
@@ -449,7 +529,8 @@ func TestTaskService_UpdateTask(t *testing.T) {
 		mockProjectRepo.On("FindByID", ctx, projectID).Return(project, nil)
 		mockTaskRepo.On("Update", ctx, mock.AnythingOfType("*model.Task")).Return(nil)
 
-		svc := NewTaskService(mockTaskRepo, mockProjectRepo)
+		mockSessionService := new(MockSessionService)
+		svc := NewTaskService(mockTaskRepo, mockProjectRepo, mockSessionService)
 		updates := map[string]interface{}{"priority": "high"}
 		result, err := svc.UpdateTask(ctx, taskID, userID, updates)
 
@@ -476,7 +557,8 @@ func TestTaskService_UpdateTask(t *testing.T) {
 		mockTaskRepo.On("FindByID", ctx, taskID).Return(task, nil)
 		mockProjectRepo.On("FindByID", ctx, projectID).Return(project, nil)
 
-		svc := NewTaskService(mockTaskRepo, mockProjectRepo)
+		mockSessionService := new(MockSessionService)
+		svc := NewTaskService(mockTaskRepo, mockProjectRepo, mockSessionService)
 		updates := map[string]interface{}{"title": ""}
 		result, err := svc.UpdateTask(ctx, taskID, userID, updates)
 
@@ -504,7 +586,8 @@ func TestTaskService_UpdateTask(t *testing.T) {
 		mockTaskRepo.On("FindByID", ctx, taskID).Return(task, nil)
 		mockProjectRepo.On("FindByID", ctx, projectID).Return(project, nil)
 
-		svc := NewTaskService(mockTaskRepo, mockProjectRepo)
+		mockSessionService := new(MockSessionService)
+		svc := NewTaskService(mockTaskRepo, mockProjectRepo, mockSessionService)
 		updates := map[string]interface{}{"priority": "invalid"}
 		result, err := svc.UpdateTask(ctx, taskID, userID, updates)
 
@@ -540,7 +623,8 @@ func TestTaskService_MoveTask(t *testing.T) {
 		mockProjectRepo.On("FindByID", ctx, projectID).Return(project, nil)
 		mockTaskRepo.On("Update", ctx, mock.AnythingOfType("*model.Task")).Return(nil)
 
-		svc := NewTaskService(mockTaskRepo, mockProjectRepo)
+		mockSessionService := new(MockSessionService)
+		svc := NewTaskService(mockTaskRepo, mockProjectRepo, mockSessionService)
 		result, err := svc.MoveTask(ctx, taskID, userID, model.TaskStatusInProgress, 0)
 
 		assert.NoError(t, err)
@@ -568,7 +652,8 @@ func TestTaskService_MoveTask(t *testing.T) {
 		mockTaskRepo.On("FindByID", ctx, taskID).Return(task, nil)
 		mockProjectRepo.On("FindByID", ctx, projectID).Return(project, nil)
 
-		svc := NewTaskService(mockTaskRepo, mockProjectRepo)
+		mockSessionService := new(MockSessionService)
+		svc := NewTaskService(mockTaskRepo, mockProjectRepo, mockSessionService)
 		result, err := svc.MoveTask(ctx, taskID, userID, model.TaskStatusDone, 0)
 
 		assert.Error(t, err)
@@ -598,7 +683,8 @@ func TestTaskService_MoveTask(t *testing.T) {
 		mockProjectRepo.On("FindByID", ctx, projectID).Return(project, nil)
 		mockTaskRepo.On("Update", ctx, mock.AnythingOfType("*model.Task")).Return(nil)
 
-		svc := NewTaskService(mockTaskRepo, mockProjectRepo)
+		mockSessionService := new(MockSessionService)
+		svc := NewTaskService(mockTaskRepo, mockProjectRepo, mockSessionService)
 		result, err := svc.MoveTask(ctx, taskID, userID, model.TaskStatusTodo, 2)
 
 		assert.NoError(t, err)
@@ -632,7 +718,8 @@ func TestTaskService_DeleteTask(t *testing.T) {
 		mockProjectRepo.On("FindByID", ctx, projectID).Return(project, nil)
 		mockTaskRepo.On("SoftDelete", ctx, taskID).Return(nil)
 
-		svc := NewTaskService(mockTaskRepo, mockProjectRepo)
+		mockSessionService := new(MockSessionService)
+		svc := NewTaskService(mockTaskRepo, mockProjectRepo, mockSessionService)
 		err := svc.DeleteTask(ctx, taskID, userID)
 
 		assert.NoError(t, err)
@@ -646,7 +733,8 @@ func TestTaskService_DeleteTask(t *testing.T) {
 
 		mockTaskRepo.On("FindByID", ctx, taskID).Return(nil, gorm.ErrRecordNotFound)
 
-		svc := NewTaskService(mockTaskRepo, mockProjectRepo)
+		mockSessionService := new(MockSessionService)
+		svc := NewTaskService(mockTaskRepo, mockProjectRepo, mockSessionService)
 		err := svc.DeleteTask(ctx, taskID, userID)
 
 		assert.Error(t, err)
@@ -672,7 +760,8 @@ func TestTaskService_DeleteTask(t *testing.T) {
 		mockTaskRepo.On("FindByID", ctx, taskID).Return(task, nil)
 		mockProjectRepo.On("FindByID", ctx, projectID).Return(project, nil)
 
-		svc := NewTaskService(mockTaskRepo, mockProjectRepo)
+		mockSessionService := new(MockSessionService)
+		svc := NewTaskService(mockTaskRepo, mockProjectRepo, mockSessionService)
 		err := svc.DeleteTask(ctx, taskID, userID)
 
 		assert.Error(t, err)

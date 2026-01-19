@@ -67,7 +67,88 @@ func (m *MockTaskService) DeleteTask(ctx context.Context, id, userID uuid.UUID) 
 	return args.Error(0)
 }
 
-// Helper mirroring projects_test.go: injects currentUser into context
+func (m *MockTaskService) ExecuteTask(ctx context.Context, id, userID uuid.UUID) (*model.Session, error) {
+	args := m.Called(ctx, id, userID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.Session), args.Error(1)
+}
+
+func (m *MockTaskService) StopTask(ctx context.Context, id, userID uuid.UUID) error {
+	args := m.Called(ctx, id, userID)
+	return args.Error(0)
+}
+
+type MockProjectRepo struct {
+	mock.Mock
+}
+
+func (m *MockProjectRepo) Create(ctx context.Context, project *model.Project) error {
+	args := m.Called(ctx, project)
+	return args.Error(0)
+}
+
+func (m *MockProjectRepo) FindByID(ctx context.Context, id uuid.UUID) (*model.Project, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.Project), args.Error(1)
+}
+
+func (m *MockProjectRepo) FindByUserID(ctx context.Context, userID uuid.UUID) ([]model.Project, error) {
+	args := m.Called(ctx, userID)
+	return args.Get(0).([]model.Project), args.Error(1)
+}
+
+func (m *MockProjectRepo) Update(ctx context.Context, project *model.Project) error {
+	args := m.Called(ctx, project)
+	return args.Error(0)
+}
+
+func (m *MockProjectRepo) SoftDelete(ctx context.Context, id uuid.UUID) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+func (m *MockProjectRepo) UpdatePodStatus(ctx context.Context, id uuid.UUID, status string, podError string) error {
+	args := m.Called(ctx, id, status, podError)
+	return args.Error(0)
+}
+
+type MockK8sService struct {
+	mock.Mock
+}
+
+func (m *MockK8sService) CreateProjectPod(ctx context.Context, project *model.Project) error {
+	args := m.Called(ctx, project)
+	return args.Error(0)
+}
+
+func (m *MockK8sService) GetPodStatus(ctx context.Context, podName, namespace string) (string, error) {
+	args := m.Called(ctx, podName, namespace)
+	return args.String(0), args.Error(1)
+}
+
+func (m *MockK8sService) DeleteProjectPod(ctx context.Context, podName, namespace string) error {
+	args := m.Called(ctx, podName, namespace)
+	return args.Error(0)
+}
+
+func (m *MockK8sService) GetPodIP(ctx context.Context, podName, namespace string) (string, error) {
+	args := m.Called(ctx, podName, namespace)
+	return args.String(0), args.Error(1)
+}
+
+func (m *MockK8sService) WatchPodStatus(ctx context.Context, podName, namespace string) (<-chan string, error) {
+	args := m.Called(ctx, podName, namespace)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(<-chan string), args.Error(1)
+}
+
 func setupTaskTestRouter(handler *TaskHandler) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
@@ -88,7 +169,9 @@ func setupTaskTestRouter(handler *TaskHandler) *gin.Engine {
 
 func TestTaskHandler_CreateTask(t *testing.T) {
 	mockService := new(MockTaskService)
-	handler := NewTaskHandler(mockService)
+	mockProjectRepo := new(MockProjectRepo)
+	mockK8sService := new(MockK8sService)
+	handler := NewTaskHandler(mockService, mockProjectRepo, mockK8sService)
 	router := setupTaskTestRouter(handler)
 
 	router.POST("/projects/:id/tasks", handler.CreateTask)
@@ -265,7 +348,9 @@ func TestTaskHandler_CreateTask(t *testing.T) {
 
 func TestTaskHandler_GetTask(t *testing.T) {
 	mockService := new(MockTaskService)
-	handler := NewTaskHandler(mockService)
+	mockProjectRepo := new(MockProjectRepo)
+	mockK8sService := new(MockK8sService)
+	handler := NewTaskHandler(mockService, mockProjectRepo, mockK8sService)
 	router := setupTaskTestRouter(handler)
 
 	router.GET("/projects/:id/tasks/:taskId", handler.GetTask)
@@ -341,7 +426,9 @@ func TestTaskHandler_GetTask(t *testing.T) {
 
 func TestTaskHandler_ListProjectTasks(t *testing.T) {
 	mockService := new(MockTaskService)
-	handler := NewTaskHandler(mockService)
+	mockProjectRepo := new(MockProjectRepo)
+	mockK8sService := new(MockK8sService)
+	handler := NewTaskHandler(mockService, mockProjectRepo, mockK8sService)
 	router := setupTaskTestRouter(handler)
 
 	router.GET("/projects/:id/tasks", handler.ListTasks)
@@ -442,7 +529,9 @@ func TestTaskHandler_ListProjectTasks(t *testing.T) {
 
 func TestTaskHandler_UpdateTask(t *testing.T) {
 	mockService := new(MockTaskService)
-	handler := NewTaskHandler(mockService)
+	mockProjectRepo := new(MockProjectRepo)
+	mockK8sService := new(MockK8sService)
+	handler := NewTaskHandler(mockService, mockProjectRepo, mockK8sService)
 	router := setupTaskTestRouter(handler)
 
 	router.PATCH("/projects/:id/tasks/:taskId", handler.UpdateTask)
@@ -552,7 +641,9 @@ func TestTaskHandler_UpdateTask(t *testing.T) {
 
 func TestTaskHandler_MoveTask(t *testing.T) {
 	mockService := new(MockTaskService)
-	handler := NewTaskHandler(mockService)
+	mockProjectRepo := new(MockProjectRepo)
+	mockK8sService := new(MockK8sService)
+	handler := NewTaskHandler(mockService, mockProjectRepo, mockK8sService)
 	router := setupTaskTestRouter(handler)
 
 	router.PATCH("/projects/:id/tasks/:taskId/move", handler.MoveTask)
@@ -639,7 +730,9 @@ func TestTaskHandler_MoveTask(t *testing.T) {
 
 func TestTaskHandler_DeleteTask(t *testing.T) {
 	mockService := new(MockTaskService)
-	handler := NewTaskHandler(mockService)
+	mockProjectRepo := new(MockProjectRepo)
+	mockK8sService := new(MockK8sService)
+	handler := NewTaskHandler(mockService, mockProjectRepo, mockK8sService)
 	router := setupTaskTestRouter(handler)
 
 	router.DELETE("/projects/:id/tasks/:taskId", handler.DeleteTask)

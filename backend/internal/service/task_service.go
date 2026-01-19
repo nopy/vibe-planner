@@ -47,18 +47,26 @@ type TaskService interface {
 
 	// DeleteTask soft deletes a task with authorization check
 	DeleteTask(ctx context.Context, id, userID uuid.UUID) error
+
+	// ExecuteTask starts execution of a task via OpenCode session
+	ExecuteTask(ctx context.Context, id, userID uuid.UUID) (*model.Session, error)
+
+	// StopTask stops execution of a task
+	StopTask(ctx context.Context, id, userID uuid.UUID) error
 }
 
 type taskService struct {
-	taskRepo    repository.TaskRepository
-	projectRepo repository.ProjectRepository
+	taskRepo       repository.TaskRepository
+	projectRepo    repository.ProjectRepository
+	sessionService SessionService
 }
 
 // NewTaskService creates a new task service
-func NewTaskService(taskRepo repository.TaskRepository, projectRepo repository.ProjectRepository) TaskService {
+func NewTaskService(taskRepo repository.TaskRepository, projectRepo repository.ProjectRepository, sessionService SessionService) TaskService {
 	return &taskService{
-		taskRepo:    taskRepo,
-		projectRepo: projectRepo,
+		taskRepo:       taskRepo,
+		projectRepo:    projectRepo,
+		sessionService: sessionService,
 	}
 }
 
@@ -285,4 +293,70 @@ func isValidTransition(currentState, newState model.TaskStatus) bool {
 	}
 
 	return false
+}
+
+// ExecuteTask starts execution of a task via OpenCode session
+func (s *taskService) ExecuteTask(ctx context.Context, id, userID uuid.UUID) (*model.Session, error) {
+	task, err := s.GetTask(ctx, id, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	if task.Status != model.TaskStatusTodo {
+		return nil, fmt.Errorf("%w: can only execute tasks in TODO state, current state: %s", ErrInvalidStateTransition, task.Status)
+	}
+
+	prompt := fmt.Sprintf("Task: %s\n\nDescription:\n%s", task.Title, task.Description)
+
+	session, err := s.sessionService.StartSession(ctx, task.ID, prompt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to start session: %w", err)
+	}
+
+	task.Status = model.TaskStatusInProgress
+	if err := s.taskRepo.UpdateStatus(ctx, task.ID, task.Status); err != nil {
+		return nil, fmt.Errorf("failed to update task status: %w", err)
+	}
+
+	return session, nil
+}
+
+// StopTask stops execution of a task
+func (s *taskService) StopTask(ctx context.Context, id, userID uuid.UUID) error {
+	task, err := s.GetTask(ctx, id, userID)
+	if err != nil {
+		return err
+	}
+
+	if task.Status != model.TaskStatusInProgress {
+		return fmt.Errorf("%w: can only stop tasks in IN_PROGRESS state, current state: %s", ErrInvalidStateTransition, task.Status)
+	}
+
+	activeSessions, err := s.sessionService.GetSessionsByTaskID(ctx, task.ID)
+	if err != nil {
+		return fmt.Errorf("failed to get task sessions: %w", err)
+	}
+
+	var activeSessionID *uuid.UUID
+	for _, session := range activeSessions {
+		if session.Status == model.SessionStatusRunning || session.Status == model.SessionStatusPending {
+			activeSessionID = &session.ID
+			break
+		}
+	}
+
+	if activeSessionID == nil {
+		return fmt.Errorf("no active session found for task")
+	}
+
+	if err := s.sessionService.StopSession(ctx, *activeSessionID); err != nil {
+		return fmt.Errorf("failed to stop session: %w", err)
+	}
+
+	task.Status = model.TaskStatusTodo
+	if err := s.taskRepo.UpdateStatus(ctx, task.ID, task.Status); err != nil {
+		return fmt.Errorf("failed to update task status: %w", err)
+	}
+
+	return nil
 }

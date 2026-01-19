@@ -40,6 +40,7 @@ func main() {
 	userRepo := repository.NewUserRepository(database)
 	projectRepo := repository.NewProjectRepository(database)
 	taskRepo := repository.NewTaskRepository(database)
+	sessionRepo := repository.NewSessionRepository(database)
 
 	k8sService, err := service.NewKubernetesService(
 		cfg.Kubeconfig,
@@ -51,8 +52,9 @@ func main() {
 		log.Println("Project management features will be limited")
 	}
 
+	sessionService := service.NewSessionService(sessionRepo, taskRepo, projectRepo, k8sService)
 	projectService := service.NewProjectService(projectRepo, k8sService)
-	taskService := service.NewTaskService(taskRepo, projectRepo)
+	taskService := service.NewTaskService(taskRepo, projectRepo, sessionService)
 
 	authService, err := service.NewAuthService(cfg, userRepo)
 	if err != nil {
@@ -63,7 +65,7 @@ func main() {
 	authMiddleware := middleware.NewAuthMiddleware(cfg, userRepo)
 	authHandler := api.NewAuthHandler(authService)
 	projectHandler := api.NewProjectHandler(projectService)
-	taskHandler := api.NewTaskHandler(taskService)
+	taskHandler := api.NewTaskHandler(taskService, projectRepo, k8sService)
 	fileHandler := api.NewFileHandler(projectRepo, k8sService)
 
 	router := setupRouter(cfg, authHandler, projectHandler, taskHandler, fileHandler, authMiddleware)
@@ -140,6 +142,8 @@ func setupRouter(cfg *config.Config, authHandler *api.AuthHandler, projectHandle
 			projects.PATCH("/:id/tasks/:taskId/move", taskHandler.MoveTask)
 			projects.DELETE("/:id/tasks/:taskId", taskHandler.DeleteTask)
 			projects.POST("/:id/tasks/:taskId/execute", taskHandler.ExecuteTask)
+			projects.POST("/:id/tasks/:taskId/stop", taskHandler.StopTask)
+			projects.GET("/:id/tasks/:taskId/output", taskHandler.TaskOutputStream)
 
 			projects.GET("/:id/files/tree", fileHandler.GetTree)
 			projects.GET("/:id/files/content", fileHandler.GetContent)
