@@ -92,6 +92,11 @@ func (m *MockKubernetesService) WatchPodStatus(ctx context.Context, podName, nam
 	return args.Get(0).(<-chan string), args.Error(1)
 }
 
+func (m *MockKubernetesService) GetPodIP(ctx context.Context, podName, namespace string) (string, error) {
+	args := m.Called(ctx, podName, namespace)
+	return args.String(0), args.Error(1)
+}
+
 var _ KubernetesService = (*MockKubernetesService)(nil)
 
 func TestProjectService_CreateProject(t *testing.T) {

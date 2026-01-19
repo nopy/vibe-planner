@@ -64,8 +64,9 @@ func main() {
 	authHandler := api.NewAuthHandler(authService)
 	projectHandler := api.NewProjectHandler(projectService)
 	taskHandler := api.NewTaskHandler(taskService)
+	fileHandler := api.NewFileHandler(projectRepo, k8sService)
 
-	router := setupRouter(cfg, authHandler, projectHandler, taskHandler, authMiddleware)
+	router := setupRouter(cfg, authHandler, projectHandler, taskHandler, fileHandler, authMiddleware)
 
 	// Setup static file serving for production (embedded frontend)
 	if cfg.Environment == "production" {
@@ -86,7 +87,7 @@ func main() {
 	}
 }
 
-func setupRouter(cfg *config.Config, authHandler *api.AuthHandler, projectHandler *api.ProjectHandler, taskHandler *api.TaskHandler, authMiddleware *middleware.AuthMiddleware) *gin.Engine {
+func setupRouter(cfg *config.Config, authHandler *api.AuthHandler, projectHandler *api.ProjectHandler, taskHandler *api.TaskHandler, fileHandler *api.FileHandler, authMiddleware *middleware.AuthMiddleware) *gin.Engine {
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -139,6 +140,14 @@ func setupRouter(cfg *config.Config, authHandler *api.AuthHandler, projectHandle
 			projects.PATCH("/:id/tasks/:taskId/move", taskHandler.MoveTask)
 			projects.DELETE("/:id/tasks/:taskId", taskHandler.DeleteTask)
 			projects.POST("/:id/tasks/:taskId/execute", taskHandler.ExecuteTask)
+
+			projects.GET("/:id/files/tree", fileHandler.GetTree)
+			projects.GET("/:id/files/content", fileHandler.GetContent)
+			projects.GET("/:id/files/info", fileHandler.GetFileInfo)
+			projects.POST("/:id/files/write", fileHandler.WriteFile)
+			projects.DELETE("/:id/files", fileHandler.DeleteFile)
+			projects.POST("/:id/files/mkdir", fileHandler.CreateDirectory)
+			projects.GET("/:id/files/watch", fileHandler.FileChangesStream)
 		}
 	}
 

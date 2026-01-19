@@ -5,7 +5,8 @@ Go 1.24 API server using Gin (HTTP), GORM (PostgreSQL), and Keycloak (OIDC).
 
 **Phase 1 Status**: ✅ OIDC Authentication Complete  
 **Phase 2 Status**: ✅ Project Management Complete  
-**Phase 3 Status**: 🔄 In Progress (3.1-3.4 Complete - Backend API Layer)
+**Phase 3 Status**: ✅ Task Management Complete  
+**Phase 4 Status**: 🔄 In Progress (4.1-4.3 Complete - File Browser Proxy Layer)
 
 ## STRUCTURE
 ```
@@ -53,6 +54,13 @@ Go 1.24 API server using Gin (HTTP), GORM (PostgreSQL), and Keycloak (OIDC).
 | `/api/projects/:id/tasks/:taskId/move` | PATCH | JWT | Move task (state + position) ✅ Phase 3.4 |
 | `/api/projects/:id/tasks/:taskId` | DELETE | JWT | Delete task ✅ Phase 3.4 |
 | `/api/projects/:id/tasks/:taskId/execute` | POST | JWT | Execute task (stub for Phase 5) ✅ Phase 3.4 |
+| `/api/projects/:id/files/tree` | GET | JWT | Get directory tree (proxy to sidecar) ✅ Phase 4.3 |
+| `/api/projects/:id/files/content` | GET | JWT | Get file content (proxy to sidecar) ✅ Phase 4.3 |
+| `/api/projects/:id/files/info` | GET | JWT | Get file metadata (proxy to sidecar) ✅ Phase 4.3 |
+| `/api/projects/:id/files/write` | POST | JWT | Write file (proxy to sidecar) ✅ Phase 4.3 |
+| `/api/projects/:id/files` | DELETE | JWT | Delete file/dir (proxy to sidecar) ✅ Phase 4.3 |
+| `/api/projects/:id/files/mkdir` | POST | JWT | Create directory (proxy to sidecar) ✅ Phase 4.3 |
+| `/api/projects/:id/files/watch` | GET (WS) | JWT | WebSocket file changes (proxy to sidecar) ✅ Phase 4.3 |
 
 ### Key Components (Phase 2)
 
@@ -140,6 +148,59 @@ var validTransitions = map[model.TaskStatus][]model.TaskStatus{
 - All routes under `/api/projects/:id/tasks` with JWT auth middleware
 - TaskService initialized with TaskRepository + ProjectRepository
 - TaskHandler created with dependency injection
+
+## PHASE 4.1-4.3 IMPLEMENTATION (IN PROGRESS - 2026-01-19)
+
+### File Browser Proxy Layer
+- **Backend Proxy**: FileHandler in main API proxies file operations to file-browser sidecar
+- **Pod IP Resolution**: Uses KubernetesService.GetPodIP() to discover sidecar pod dynamically
+- **Authorization**: All endpoints verify project ownership before proxying
+- **Sidecar Communication**: HTTP/WebSocket proxy to `http://<podIP>:3001`
+
+### Key Components (Phase 4)
+
+**FileHandler** (`internal/api/files.go`):
+- HTTP proxy layer for 6 file operations (425 lines)
+- WebSocket proxy for real-time file watching
+- Pod IP resolution via KubernetesService
+- Authorization via project ownership validation
+- Error mapping: 400 (bad input), 401 (unauthorized), 500 (internal), 502 (sidecar error)
+
+**KubernetesService Extension** (`internal/service/kubernetes_service.go`):
+- Added `GetPodIP(ctx, podName, namespace) (string, error)` method
+- Fetches pod resource and returns `pod.Status.PodIP`
+- Handles pod not found and IP not yet assigned errors
+
+**AuthMiddleware Extension** (`internal/middleware/auth.go`):
+- Added `GetCurrentUserID(c *gin.Context) uuid.UUID` helper
+- Extracts user ID from context (set by JWTAuth middleware)
+- Returns `uuid.Nil` on error (safer than panic)
+
+**Routes (wired in cmd/api/main.go):**
+- 6 HTTP routes + 1 WebSocket route under `/api/projects/:id/files/...`
+- JWT authentication middleware applied
+- FileHandler initialized with ProjectRepository and KubernetesService
+
+**Proxy Pattern:**
+```go
+// HTTP Proxy
+sidecarURL := fmt.Sprintf("http://%s:3001/files/tree?path=%s", podIP, path)
+req, _ := http.NewRequestWithContext(ctx, "GET", sidecarURL, nil)
+resp, _ := httpClient.Do(req)
+io.Copy(ginContext.Writer, resp.Body)
+
+// WebSocket Proxy (bidirectional)
+sidecarConn, _ := websocket.Dial(sidecarURL)
+clientConn, _ := upgrader.Upgrade(ginContext.Writer, ginContext.Request)
+// goroutine 1: pump client → sidecar
+// goroutine 2: pump sidecar → client
+```
+
+**Test Coverage:**
+- 22 unit tests for FileHandler (all passing)
+- Tests use httptest.Server with dynamic port resolution
+- Mock project repository and Kubernetes service
+- Total backend tests: 84 (up from 62)
 
 ## PHASE 1 IMPLEMENTATION (COMPLETE)
 

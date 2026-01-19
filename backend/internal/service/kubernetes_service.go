@@ -30,6 +30,9 @@ type KubernetesService interface {
 
 	// WatchPodStatus watches for status changes of a pod
 	WatchPodStatus(ctx context.Context, podName, namespace string) (<-chan string, error)
+
+	// GetPodIP retrieves the IP address of a pod
+	GetPodIP(ctx context.Context, podName, namespace string) (string, error)
 }
 
 // kubernetesService implements the KubernetesService interface
@@ -260,4 +263,21 @@ func generatePodName(projectID uuid.UUID) string {
 func generatePVCName(projectID uuid.UUID) string {
 	shortID := projectID.String()[:8]
 	return fmt.Sprintf("workspace-%s", shortID)
+}
+
+// GetPodIP retrieves the IP address of a pod
+func (k *kubernetesService) GetPodIP(ctx context.Context, podName, namespace string) (string, error) {
+	pod, err := k.clientset.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return "", fmt.Errorf("pod not found")
+		}
+		return "", fmt.Errorf("failed to get pod: %w", err)
+	}
+
+	if pod.Status.PodIP == "" {
+		return "", fmt.Errorf("pod IP not yet assigned (pod may not be running)")
+	}
+
+	return pod.Status.PodIP, nil
 }

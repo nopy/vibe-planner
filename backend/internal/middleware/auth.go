@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 
 	"github.com/npinot/vibe/backend/internal/config"
 	"github.com/npinot/vibe/backend/internal/model"
@@ -102,4 +103,13 @@ func GetCurrentUser(c *gin.Context) (*model.User, error) {
 	}
 
 	return currentUser, nil
+}
+
+// GetCurrentUserID extracts the user ID from the context
+func GetCurrentUserID(c *gin.Context) uuid.UUID {
+	user, err := GetCurrentUser(c)
+	if err != nil {
+		return uuid.Nil
+	}
+	return user.ID
 }
