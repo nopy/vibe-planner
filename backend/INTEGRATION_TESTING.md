@@ -4,15 +4,15 @@ This document describes how to run the end-to-end integration tests for the Open
 
 ## Overview
 
-Integration tests verify the complete project lifecycle by testing:
-1. Project creation via API endpoints
-2. Kubernetes pod creation and status verification
-3. PersistentVolumeClaim (PVC) creation
-4. Project retrieval and listing
-5. Project deletion and cleanup (pod + PVC)
+Integration tests verify the complete application lifecycle by testing:
+1. **Project Management**: Project creation, Kubernetes pod orchestration, PVC creation, deletion and cleanup
+2. **Task Execution**: Task lifecycle, OpenCode session execution, real-time output streaming
+3. **Configuration Management**: Config versioning, API key encryption, rollback functionality
 
 **Test Files:**
-- `backend/internal/api/projects_integration_test.go` - Main integration test suite
+- `backend/internal/api/projects_integration_test.go` - Project lifecycle tests
+- `backend/internal/api/tasks_execution_integration_test.go` - Task execution tests
+- `backend/internal/api/config_integration_test.go` - Configuration management tests (Phase 6)
 
 ## Prerequisites
 
@@ -83,6 +83,9 @@ export DATABASE_URL="postgres://opencode:password@localhost:5432/opencode_dev"
 export KUBECONFIG="$HOME/.kube/config"  # Path to kubeconfig (omit for in-cluster)
 export K8S_NAMESPACE="opencode-test"    # Kubernetes namespace for tests
 
+# Configuration encryption key (for config integration tests)
+export CONFIG_ENCRYPTION_KEY="$(openssl rand -base64 32)"  # Generate 32-byte key for tests
+
 # Optional: Database migration path (if needed)
 export MIGRATION_PATH="../db/migrations"
 ```
@@ -109,6 +112,12 @@ go test -tags=integration -v -run TestProjectLifecycle ./internal/api
 
 # Run only the pod failure test
 go test -tags=integration -v -run TestProjectCreation_PodFailure ./internal/api
+
+# Run only the config lifecycle test
+go test -tags=integration -v -run TestConfigLifecycle ./internal/api
+
+# Run only the config encryption test
+go test -tags=integration -v -run TestConfigAPIKeyEncryption ./internal/api
 ```
 
 ### Skip Integration Tests (Default Behavior)
@@ -176,6 +185,50 @@ go test -v ./internal/api  # No build tag
 4. Verifies project status is set appropriately
 
 **Expected Duration:** ~5 seconds
+
+### 3. TestConfigLifecycle_Integration (Phase 6)
+
+**Complete configuration management lifecycle test:**
+
+1. **CreateInitialConfig**: POST /api/projects/:id/config
+   - Creates config with version=1 and API key encryption
+   - Verifies config saved and active
+
+2. **VerifyEncryption**: Direct database query
+   - Validates API key is encrypted in database (not plaintext)
+   - Confirms sanitization in API responses
+
+3. **UpdateConfig**: POST /api/projects/:id/config (again)
+   - Creates new version=2 with different model/settings
+   - Verifies version=1 deactivated automatically
+
+4. **GetConfigHistory**: GET /api/projects/:id/config/versions
+   - Retrieves all versions in reverse chronological order
+   - Verifies API keys sanitized in history
+
+5. **RollbackToVersion**: POST /api/projects/:id/config/rollback/:version
+   - Rolls back to version=1 by creating version=3 (copy of v1)
+   - Verifies version=2 deactivated
+
+6. **DeleteProjectAndVerifyCleanup**: DELETE /api/projects/:id
+   - Deletes project
+   - Verifies all configs cascade deleted via foreign key
+
+**Expected Duration:** ~3 seconds
+
+### 4. TestConfigAPIKeyEncryption_Integration (Phase 6)
+
+**Tests API key security and encryption:**
+
+1. **CreateConfigWithAPIKey**: Encrypt API key during config creation
+2. **VerifyNotPlaintext**: Query database and verify encrypted bytes don't contain plaintext
+3. **VerifyAPISanitization**: GetActiveConfig and GetConfigHistory return null API keys
+4. **GetDecryptedAPIKey**: Internal service method successfully decrypts original key
+5. **TestNoKeyScenario**: Config without API key returns error on decryption attempt
+6. **TestSpecialCharacters**: Encrypt/decrypt keys with special characters (round-trip)
+7. **TestNonDeterminism**: Verify same key encrypted twice produces different ciphertext (nonce randomness)
+
+**Expected Duration:** ~2 seconds
 
 ## Troubleshooting
 
@@ -307,8 +360,9 @@ kubectl delete pods --all -n opencode-test
 kubectl delete pvc --all -n opencode-test
 
 # Clean up database
-psql $TEST_DATABASE_URL -c "DELETE FROM projects WHERE name LIKE 'integration-test-%';"
-psql $TEST_DATABASE_URL -c "DELETE FROM users WHERE email LIKE 'test-%@integration.test';"
+psql $TEST_DATABASE_URL -c "DELETE FROM opencode_configs WHERE project_id IN (SELECT id FROM projects WHERE name LIKE 'config-integration-test-%');"
+psql $TEST_DATABASE_URL -c "DELETE FROM projects WHERE name LIKE 'integration-test-%' OR name LIKE 'config-integration-test-%';"
+psql $TEST_DATABASE_URL -c "DELETE FROM users WHERE email LIKE 'test-%@integration.test' OR email LIKE 'config-test-%@integration.test';"
 ```
 
 ## CI/CD Integration
@@ -381,5 +435,5 @@ jobs:
 
 ---
 
-**Last Updated:** 2026-01-17
+**Last Updated:** 2026-01-19
 **Maintainer:** Sisyphus (OpenCode AI Agent)
