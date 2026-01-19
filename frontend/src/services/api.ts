@@ -6,6 +6,8 @@ import type {
   CreateTaskRequest,
   ExecuteTaskResponse,
   FileInfo,
+  Interaction,
+  InteractionHistoryResponse,
   MoveTaskRequest,
   OpenCodeConfig,
   Project,
@@ -180,4 +182,14 @@ export async function getConfigHistory(projectId: string): Promise<OpenCodeConfi
 
 export async function rollbackConfig(projectId: string, version: number): Promise<void> {
   await api.post(`/projects/${projectId}/config/rollback/${version}`)
+}
+
+export async function getTaskInteractions(
+  projectId: string,
+  taskId: string
+): Promise<Interaction[]> {
+  const response = await api.get<InteractionHistoryResponse>(
+    `/projects/${projectId}/tasks/${taskId}/interactions`
+  )
+  return response.data.interactions
 }

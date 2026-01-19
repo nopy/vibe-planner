@@ -110,6 +110,31 @@ export interface OpenCodeSession {
 
 export type PodStatus = 'Pending' | 'Running' | 'Succeeded' | 'Failed' | 'Unknown'
 
+export type MessageType = 'user_message' | 'agent_response' | 'system_notification'
+export type WebSocketMessageType = MessageType | 'status_update' | 'error' | 'history'
+
+export interface Interaction {
+  id: string
+  task_id: string
+  session_id?: string
+  user_id: string
+  message_type: MessageType
+  content: string
+  metadata?: Record<string, unknown>
+  created_at: string
+}
+
+export interface InteractionMessage {
+  type: WebSocketMessageType
+  content: string
+  metadata?: Record<string, unknown>
+  timestamp: string
+}
+
+export interface InteractionHistoryResponse {
+  interactions: Interaction[]
+}
+
 export interface CreateProjectRequest {
   name: string
   description?: string

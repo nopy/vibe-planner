@@ -1,8 +1,8 @@
 # OpenCode Project Manager - TODO List
 
-**Last Updated:** 2026-01-19 19:25 CET  
+**Last Updated:** 2026-01-19 19:26 CET  
 **Current Phase:** Phase 7 - Two-Way Interactions (Weeks 13-14)  
-**Status:** 🚧 IN PROGRESS - Phase 7.1-7.3 COMPLETE  
+**Status:** 🚧 IN PROGRESS - Phase 7.1-7.5 COMPLETE  
 **Branch:** main
 
 ---
@@ -22,9 +22,9 @@ See archived phases:
 **Total Project Stats:**
 - ✅ **443 tests passing** (291 backend + 152 frontend)
 - ✅ **6 phases complete** (Auth, Projects, Tasks, Files, Execution, Config)
-- ✅ **Phase 7.1-7.3 complete** (Interaction Model, Repository, Service & API - 60 new tests)
+- ✅ **Phase 7.1-7.5 complete** (Interaction backend + frontend types/API - 60 new tests)
 - ✅ **Production-ready features:** Authentication, CRUD, real-time updates, file editing, config management, bidirectional messaging
-- ✅ **Next:** Phase 7.4 - Integration with Task Execution
+- ✅ **Next:** Phase 7.6 - useInteractions Hook (Frontend)
 
 ---
 
@@ -340,47 +340,30 @@ See archived phases:
 
 #### 7.5 Interaction Types & API Client
 
-**Status:** 📋 Planned
+**Status:** ✅ COMPLETE (2026-01-19 19:26)
 
 **Objective:** TypeScript types and API client methods for interactions.
 
-**Tasks:**
-1. **Add Interaction Types (`frontend/src/types/index.ts`):**
-   ```typescript
-   export interface Interaction {
-     id: string;
-     task_id: string;
-     session_id?: string;
-     user_id: string;
-     message_type: 'user_message' | 'agent_response' | 'system_notification';
-     content: string;
-     metadata?: Record<string, unknown>;
-     created_at: string;
-   }
-   
-   export interface InteractionMessage {
-     type: 'user_message' | 'agent_response' | 'status_update' | 'system_notification';
-     content: string;
-     metadata?: Record<string, unknown>;
-   }
-   ```
+**Completed Implementation:**
+- ✅ **Types:** `frontend/src/types/index.ts` - Added interaction types:
+  - `MessageType` = 'user_message' | 'agent_response' | 'system_notification'
+  - `WebSocketMessageType` = MessageType | 'status_update' | 'error' | 'history'
+  - `Interaction` interface (matches backend schema)
+  - `InteractionMessage` interface (WebSocket protocol)
+  - `InteractionHistoryResponse` interface
 
-2. **Add Interaction API Methods (`frontend/src/services/api.ts`):**
-   ```typescript
-   // Get interaction history for a task
-   export const getTaskInteractions = async (taskId: string): Promise<Interaction[]>
-   
-   // Note: WebSocket handled separately via useInteractions hook
-   ```
+- ✅ **API Client:** `frontend/src/services/api.ts` - Added method:
+  - `getTaskInteractions(projectId: string, taskId: string): Promise<Interaction[]>`
+  - Returns interaction history for a task via HTTP endpoint
 
-**Files to Modify:**
-- `frontend/src/types/index.ts`
-- `frontend/src/services/api.ts`
+**Files Modified:**
+- `frontend/src/types/index.ts` ✅
+- `frontend/src/services/api.ts` ✅
 
 **Success Criteria:**
-- [ ] TypeScript types defined
-- [ ] API methods implemented
-- [ ] Type safety verified
+- [x] TypeScript types defined ✅
+- [x] API methods implemented ✅
+- [x] Type safety verified ✅
 
 ---
 
