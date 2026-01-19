@@ -98,6 +98,115 @@ func TestGetTree(t *testing.T) {
 			t.Errorf("Expected status 403, got %d", w.Code)
 		}
 	})
+
+	t.Run("filters hidden files by default", func(t *testing.T) {
+		testDir := filepath.Join(tmpDir, "hidden-filter-test")
+		os.MkdirAll(testDir, 0755)
+		os.WriteFile(filepath.Join(testDir, "visible.txt"), []byte("visible"), 0644)
+		os.WriteFile(filepath.Join(testDir, ".hidden"), []byte("hidden"), 0644)
+		os.MkdirAll(filepath.Join(testDir, ".git"), 0755)
+
+		req := httptest.NewRequest("GET", "/files/tree?path=hidden-filter-test", nil)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status 200, got %d", w.Code)
+		}
+
+		var response map[string]interface{}
+		if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+			t.Fatalf("Failed to parse response: %v", err)
+		}
+
+		children := response["children"].([]interface{})
+		if len(children) != 1 {
+			t.Errorf("Expected 1 visible child, got %d", len(children))
+		}
+	})
+
+	t.Run("shows hidden files with include_hidden=true", func(t *testing.T) {
+		testDir := filepath.Join(tmpDir, "hidden-show-test")
+		os.MkdirAll(testDir, 0755)
+		os.WriteFile(filepath.Join(testDir, "visible.txt"), []byte("visible"), 0644)
+		os.WriteFile(filepath.Join(testDir, ".hidden"), []byte("hidden"), 0644)
+
+		req := httptest.NewRequest("GET", "/files/tree?path=hidden-show-test&include_hidden=true", nil)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status 200, got %d", w.Code)
+		}
+
+		var response map[string]interface{}
+		if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+			t.Fatalf("Failed to parse response: %v", err)
+		}
+
+		children := response["children"].([]interface{})
+		if len(children) != 2 {
+			t.Errorf("Expected 2 children (visible + hidden), got %d", len(children))
+		}
+	})
+
+	t.Run("blocks sensitive files even with include_hidden=true", func(t *testing.T) {
+		testDir := filepath.Join(tmpDir, "sensitive-block-test")
+		os.MkdirAll(testDir, 0755)
+		os.WriteFile(filepath.Join(testDir, ".env"), []byte("SECRET=value"), 0644)
+		os.WriteFile(filepath.Join(testDir, "credentials.json"), []byte("{}"), 0644)
+		os.WriteFile(filepath.Join(testDir, "safe.txt"), []byte("safe"), 0644)
+
+		req := httptest.NewRequest("GET", "/files/tree?path=sensitive-block-test&include_hidden=true", nil)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status 200, got %d", w.Code)
+		}
+
+		var response map[string]interface{}
+		if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+			t.Fatalf("Failed to parse response: %v", err)
+		}
+
+		children := response["children"].([]interface{})
+		if len(children) != 1 {
+			t.Errorf("Expected only 1 child (safe.txt), got %d", len(children))
+		}
+
+		if len(children) > 0 {
+			child := children[0].(map[string]interface{})
+			if child["name"] != "safe.txt" {
+				t.Errorf("Expected safe.txt, got %s", child["name"])
+			}
+		}
+	})
+
+	t.Run("include_hidden=false equivalent to default", func(t *testing.T) {
+		testDir := filepath.Join(tmpDir, "explicit-false-test")
+		os.MkdirAll(testDir, 0755)
+		os.WriteFile(filepath.Join(testDir, "visible.txt"), []byte("visible"), 0644)
+		os.WriteFile(filepath.Join(testDir, ".hidden"), []byte("hidden"), 0644)
+
+		req := httptest.NewRequest("GET", "/files/tree?path=explicit-false-test&include_hidden=false", nil)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status 200, got %d", w.Code)
+		}
+
+		var response map[string]interface{}
+		if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+			t.Fatalf("Failed to parse response: %v", err)
+		}
+
+		children := response["children"].([]interface{})
+		if len(children) != 1 {
+			t.Errorf("Expected 1 child (hidden filtered), got %d", len(children))
+		}
+	})
 }
 
 func TestGetContent(t *testing.T) {

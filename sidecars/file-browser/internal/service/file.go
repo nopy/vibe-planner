@@ -20,6 +20,24 @@ var (
 
 const MaxFileSize = 10 * 1024 * 1024
 
+// Sensitive files that should NEVER be shown, even with includeHidden=true
+var sensitiveFiles = map[string]bool{
+	".env":                        true,
+	".env.local":                  true,
+	".env.production":             true,
+	".env.development":            true,
+	"credentials.json":            true,
+	"secrets.yaml":                true,
+	"secrets.yml":                 true,
+	".aws":                        true,
+	".ssh":                        true,
+	"id_rsa":                      true,
+	"id_rsa.pub":                  true,
+	".npmrc":                      true,
+	".pypirc":                     true,
+	"docker-compose.override.yml": true,
+}
+
 type FileInfo struct {
 	Path        string      `json:"path"`
 	Name        string      `json:"name"`
@@ -59,7 +77,7 @@ func (s *FileService) validatePath(path string) (string, error) {
 	return fullPath, nil
 }
 
-func (s *FileService) GetTree(path string, maxDepth int) (*FileInfo, error) {
+func (s *FileService) GetTree(path string, maxDepth int, includeHidden bool) (*FileInfo, error) {
 	if maxDepth <= 0 {
 		return nil, ErrMaxDepthZero
 	}
@@ -69,10 +87,10 @@ func (s *FileService) GetTree(path string, maxDepth int) (*FileInfo, error) {
 		return nil, err
 	}
 
-	return s.buildTree(fullPath, 0, maxDepth)
+	return s.buildTree(fullPath, 0, maxDepth, includeHidden)
 }
 
-func (s *FileService) buildTree(path string, depth int, maxDepth int) (*FileInfo, error) {
+func (s *FileService) buildTree(path string, depth int, maxDepth int, includeHidden bool) (*FileInfo, error) {
 	if depth >= maxDepth {
 		return nil, nil
 	}
@@ -85,13 +103,25 @@ func (s *FileService) buildTree(path string, depth int, maxDepth int) (*FileInfo
 		return nil, fmt.Errorf("failed to stat path: %w", err)
 	}
 
+	name := filepath.Base(path)
+
+	// Always block sensitive files (even when includeHidden=true)
+	if sensitiveFiles[name] {
+		return nil, nil
+	}
+
+	// Filter hidden files (files starting with '.')
+	if !includeHidden && strings.HasPrefix(name, ".") && name != "." && name != ".." {
+		return nil, nil
+	}
+
 	relativePath := strings.TrimPrefix(path, s.WorkspaceDir)
 	if relativePath == "" {
 		relativePath = "/"
 	}
 
 	node := &FileInfo{
-		Name:        filepath.Base(path),
+		Name:        name,
 		Path:        relativePath,
 		IsDirectory: info.IsDir(),
 		Size:        info.Size(),
@@ -107,7 +137,7 @@ func (s *FileService) buildTree(path string, depth int, maxDepth int) (*FileInfo
 		children := make([]*FileInfo, 0, len(entries))
 		for _, entry := range entries {
 			childPath := filepath.Join(path, entry.Name())
-			if child, err := s.buildTree(childPath, depth+1, maxDepth); err == nil && child != nil {
+			if child, err := s.buildTree(childPath, depth+1, maxDepth, includeHidden); err == nil && child != nil {
 				children = append(children, child)
 			}
 		}

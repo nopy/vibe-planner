@@ -344,7 +344,7 @@ func TestFileServiceWithTempDir(t *testing.T) {
 			t.Fatalf("Failed to write file3: %v", err)
 		}
 
-		tree, err := service.GetTree("tree-test", 3)
+		tree, err := service.GetTree("tree-test", 3, false)
 		if err != nil {
 			t.Fatalf("Failed to get tree: %v", err)
 		}
@@ -363,16 +363,224 @@ func TestFileServiceWithTempDir(t *testing.T) {
 	})
 
 	t.Run("GetTree max depth zero", func(t *testing.T) {
-		_, err := service.GetTree("/", 0)
+		_, err := service.GetTree("/", 0, false)
 		if !errors.Is(err, ErrMaxDepthZero) {
 			t.Errorf("Expected ErrMaxDepthZero, got %v", err)
 		}
 	})
 
 	t.Run("GetTree on non-existent path", func(t *testing.T) {
-		_, err := service.GetTree("nonexistent-tree", 5)
+		_, err := service.GetTree("nonexistent-tree", 5, false)
 		if !errors.Is(err, ErrNotFound) {
 			t.Errorf("Expected ErrNotFound, got %v", err)
+		}
+	})
+
+	t.Run("GetTree filters hidden files by default", func(t *testing.T) {
+		err := service.CreateDirectory("hidden-test")
+		if err != nil {
+			t.Fatalf("Failed to create directory: %v", err)
+		}
+
+		err = service.WriteFile("hidden-test/visible.txt", "visible")
+		if err != nil {
+			t.Fatalf("Failed to write visible file: %v", err)
+		}
+
+		err = service.WriteFile("hidden-test/.hidden", "hidden")
+		if err != nil {
+			t.Fatalf("Failed to write hidden file: %v", err)
+		}
+
+		err = service.CreateDirectory("hidden-test/.git")
+		if err != nil {
+			t.Fatalf("Failed to create .git directory: %v", err)
+		}
+
+		tree, err := service.GetTree("hidden-test", 3, false)
+		if err != nil {
+			t.Fatalf("Failed to get tree: %v", err)
+		}
+
+		if len(tree.Children) != 1 {
+			t.Errorf("Expected 1 visible child, got %d", len(tree.Children))
+		}
+
+		if len(tree.Children) > 0 && tree.Children[0].Name != "visible.txt" {
+			t.Errorf("Expected visible.txt, got %s", tree.Children[0].Name)
+		}
+	})
+
+	t.Run("GetTree shows hidden files with includeHidden=true", func(t *testing.T) {
+		err := service.CreateDirectory("hidden-show-test")
+		if err != nil {
+			t.Fatalf("Failed to create directory: %v", err)
+		}
+
+		err = service.WriteFile("hidden-show-test/visible.txt", "visible")
+		if err != nil {
+			t.Fatalf("Failed to write visible file: %v", err)
+		}
+
+		err = service.WriteFile("hidden-show-test/.hidden", "hidden")
+		if err != nil {
+			t.Fatalf("Failed to write hidden file: %v", err)
+		}
+
+		tree, err := service.GetTree("hidden-show-test", 3, true)
+		if err != nil {
+			t.Fatalf("Failed to get tree: %v", err)
+		}
+
+		if len(tree.Children) != 2 {
+			t.Errorf("Expected 2 children (visible + hidden), got %d", len(tree.Children))
+		}
+	})
+
+	t.Run("GetTree blocks sensitive files even with includeHidden=true", func(t *testing.T) {
+		err := service.CreateDirectory("sensitive-test")
+		if err != nil {
+			t.Fatalf("Failed to create directory: %v", err)
+		}
+
+		err = service.WriteFile("sensitive-test/.env", "SECRET=password")
+		if err != nil {
+			t.Fatalf("Failed to write .env file: %v", err)
+		}
+
+		err = service.WriteFile("sensitive-test/.env.local", "SECRET2=password2")
+		if err != nil {
+			t.Fatalf("Failed to write .env.local file: %v", err)
+		}
+
+		err = service.WriteFile("sensitive-test/credentials.json", `{"key": "value"}`)
+		if err != nil {
+			t.Fatalf("Failed to write credentials.json: %v", err)
+		}
+
+		err = service.WriteFile("sensitive-test/regular.txt", "safe content")
+		if err != nil {
+			t.Fatalf("Failed to write regular file: %v", err)
+		}
+
+		tree, err := service.GetTree("sensitive-test", 3, true)
+		if err != nil {
+			t.Fatalf("Failed to get tree: %v", err)
+		}
+
+		if len(tree.Children) != 1 {
+			t.Errorf("Expected only 1 child (regular.txt, all sensitive blocked), got %d", len(tree.Children))
+		}
+
+		if len(tree.Children) > 0 && tree.Children[0].Name != "regular.txt" {
+			t.Errorf("Expected regular.txt, got %s", tree.Children[0].Name)
+		}
+	})
+
+	t.Run("GetTree blocks all sensitive file types", func(t *testing.T) {
+		err := service.CreateDirectory("all-sensitive-test")
+		if err != nil {
+			t.Fatalf("Failed to create directory: %v", err)
+		}
+
+		sensitiveFiles := []string{
+			".env",
+			".env.production",
+			".env.development",
+			"credentials.json",
+			"secrets.yaml",
+			"secrets.yml",
+			"id_rsa",
+			"id_rsa.pub",
+			".npmrc",
+			".pypirc",
+			"docker-compose.override.yml",
+		}
+
+		for _, filename := range sensitiveFiles {
+			err = service.WriteFile("all-sensitive-test/"+filename, "secret")
+			if err != nil {
+				t.Fatalf("Failed to write %s: %v", filename, err)
+			}
+		}
+
+		err = service.WriteFile("all-sensitive-test/safe.txt", "safe")
+		if err != nil {
+			t.Fatalf("Failed to write safe file: %v", err)
+		}
+
+		tree, err := service.GetTree("all-sensitive-test", 3, true)
+		if err != nil {
+			t.Fatalf("Failed to get tree: %v", err)
+		}
+
+		if len(tree.Children) != 1 {
+			t.Errorf("Expected only safe.txt to be visible, got %d children", len(tree.Children))
+		}
+	})
+
+	t.Run("GetTree handles dotfiles in subdirectories", func(t *testing.T) {
+		err := service.CreateDirectory("nested-hidden-test")
+		if err != nil {
+			t.Fatalf("Failed to create directory: %v", err)
+		}
+
+		err = service.CreateDirectory("nested-hidden-test/subdir")
+		if err != nil {
+			t.Fatalf("Failed to create subdir: %v", err)
+		}
+
+		err = service.WriteFile("nested-hidden-test/subdir/.hidden", "hidden")
+		if err != nil {
+			t.Fatalf("Failed to write nested hidden file: %v", err)
+		}
+
+		err = service.WriteFile("nested-hidden-test/subdir/visible.txt", "visible")
+		if err != nil {
+			t.Fatalf("Failed to write nested visible file: %v", err)
+		}
+
+		tree, err := service.GetTree("nested-hidden-test", 3, false)
+		if err != nil {
+			t.Fatalf("Failed to get tree: %v", err)
+		}
+
+		if len(tree.Children) != 1 || tree.Children[0].Name != "subdir" {
+			t.Errorf("Expected subdir child")
+		}
+
+		if len(tree.Children[0].Children) != 1 {
+			t.Errorf("Expected 1 visible file in subdir, got %d", len(tree.Children[0].Children))
+		}
+	})
+
+	t.Run("GetTree handles mixed hidden and visible subdirectories", func(t *testing.T) {
+		err := service.CreateDirectory("mixed-test")
+		if err != nil {
+			t.Fatalf("Failed to create directory: %v", err)
+		}
+
+		err = service.CreateDirectory("mixed-test/visible-dir")
+		if err != nil {
+			t.Fatalf("Failed to create visible-dir: %v", err)
+		}
+
+		err = service.CreateDirectory("mixed-test/.hidden-dir")
+		if err != nil {
+			t.Fatalf("Failed to create .hidden-dir: %v", err)
+		}
+
+		tree, err := service.GetTree("mixed-test", 3, false)
+		if err != nil {
+			t.Fatalf("Failed to get tree: %v", err)
+		}
+
+		if len(tree.Children) != 1 {
+			t.Errorf("Expected 1 visible directory, got %d", len(tree.Children))
+		}
+
+		if tree.Children[0].Name != "visible-dir" {
+			t.Errorf("Expected visible-dir, got %s", tree.Children[0].Name)
 		}
 	})
 }

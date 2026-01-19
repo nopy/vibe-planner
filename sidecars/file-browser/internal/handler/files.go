@@ -25,9 +25,11 @@ func (h *FileHandler) GetTree(c *gin.Context) {
 		path = "/"
 	}
 
+	includeHidden := c.Query("include_hidden") == "true"
+
 	maxDepth := 5
 
-	tree, err := h.fileService.GetTree(path, maxDepth)
+	tree, err := h.fileService.GetTree(path, maxDepth, includeHidden)
 	if err != nil {
 		h.handleError(c, err)
 		return
