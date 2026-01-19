@@ -24,9 +24,9 @@ export function useInteractions(projectId: string, taskId: string): UseInteracti
 
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectAttemptsRef = useRef(0)
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const reconnectTimeoutRef = useRef<number | null>(null)
   const shouldConnectRef = useRef(true)
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const typingTimeoutRef = useRef<number | null>(null)
 
   const connect = useCallback(() => {
     // Don't reconnect if already connected or connecting
@@ -208,6 +208,7 @@ export function useInteractions(projectId: string, taskId: string): UseInteracti
         const message: InteractionMessage = {
           type: 'user_message',
           content: content.trim(),
+          timestamp: new Date().toISOString(),
           metadata: {},
         }
 
