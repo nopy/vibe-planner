@@ -538,6 +538,184 @@ Monaco Editor → Language Server Protocol (LSP) → Linter Backend
 
 ---
 
+## 🤖 Phase 5 Deferred Improvements
+
+### P5.1 Session Persistence Enhancements
+
+**Impact:** Better performance for large execution histories  
+**Effort:** Medium (6-8 hours)  
+**Priority:** Medium
+
+**Current Implementation:**
+- Session output stored in memory during execution
+- Cleared after session completion
+- No historical log retrieval beyond database metadata
+
+**What to Implement:**
+```go
+// backend/internal/model/session.go
+
+type Session struct {
+    // ... existing fields ...
+    OutputLog     string `gorm:"type:text"` // Store full output
+    OutputLogGzip []byte `gorm:"type:bytea"` // Compressed logs for old sessions
+    CompressedAt  *time.Time
+}
+```
+
+**Features:**
+1. Store full session output logs in database
+2. Compress old logs (>30 days) using gzip to save space
+3. Add pagination for execution history (currently loads all sessions)
+4. Export session logs as downloadable text file
+
+**Files to Modify:**
+- `backend/internal/model/session.go` (add log storage fields)
+- `backend/internal/service/session_service.go` (compression logic)
+- `backend/internal/api/tasks_execution.go` (add download endpoint)
+- `db/migrations/006_session_logs.sql` (new migration)
+
+**Referenced in:** PHASE5.md (Deferred Items)
+
+---
+
+### P5.2 Execution Queueing System
+
+**Impact:** Prevent resource exhaustion, better UX for busy systems  
+**Effort:** High (2-3 days)  
+**Priority:** Medium
+
+**Current Implementation:**
+- Task execution fails if OpenCode server is busy
+- No queueing or retry mechanism
+- User must manually retry
+
+**What to Implement:**
+```go
+// backend/internal/service/task_queue_service.go
+
+type TaskQueue struct {
+    ProjectID uuid.UUID
+    Queue     []QueuedTask
+    MaxSize   int // Prevent unbounded growth
+}
+
+type QueuedTask struct {
+    TaskID    uuid.UUID
+    Priority  string // high, medium, low
+    QueuedAt  time.Time
+}
+
+func (s *TaskQueueService) Enqueue(projectID, taskID uuid.UUID, priority string) error
+func (s *TaskQueueService) Dequeue(projectID uuid.UUID) (*QueuedTask, error)
+func (s *TaskQueueService) GetPosition(taskID uuid.UUID) (int, error)
+```
+
+**Features:**
+1. Queue tasks when OpenCode server is busy (503 response)
+2. Show queue position to user in UI ("Position in queue: 3")
+3. Automatic retry on transient failures (network errors, timeouts)
+4. Priority queueing (high-priority tasks skip queue)
+
+**Files to Create:**
+- `backend/internal/service/task_queue_service.go`
+- `backend/internal/repository/task_queue_repository.go`
+- `frontend/src/components/Kanban/QueueIndicator.tsx`
+
+**Files to Modify:**
+- `backend/internal/api/tasks_execution.go` (queue on busy)
+- `frontend/src/components/Kanban/TaskCard.tsx` (show queue position)
+
+**Referenced in:** PHASE5.md (Deferred Items)
+
+---
+
+### P5.3 Multi-session Support
+
+**Impact:** Support concurrent task execution, better resource utilization  
+**Effort:** High (2-3 days)  
+**Priority:** Low
+
+**Current Implementation:**
+- One OpenCode session per project
+- Only one task can execute at a time per project
+- Acceptable for MVP
+
+**What to Implement:**
+```go
+// backend/internal/service/session_service.go
+
+type SessionPool struct {
+    ProjectID   uuid.UUID
+    MaxSessions int // e.g., 3 concurrent sessions
+    Active      map[uuid.UUID]*Session
+}
+
+func (s *SessionService) AcquireSession(projectID uuid.UUID) (*Session, error) {
+    // Get available session or create new (up to max)
+}
+
+func (s *SessionService) ReleaseSession(sessionID uuid.UUID) error {
+    // Return session to pool
+}
+```
+
+**Features:**
+1. Allow multiple OpenCode sessions per project (configurable limit)
+2. Resource limits to prevent overload (CPU, memory per session)
+3. Priority queueing for high-priority tasks
+4. Session affinity (prefer reusing warm sessions)
+
+**Files to Modify:**
+- `backend/internal/service/session_service.go` (pooling logic)
+- `backend/internal/service/kubernetes_service.go` (multi-session pod template)
+- `k8s/base/deployment.yaml` (resource limits)
+
+**Referenced in:** PHASE5.md (Deferred Items)
+
+---
+
+### P5.4 Advanced Monitoring
+
+**Impact:** Better observability, proactive issue detection  
+**Effort:** High (3-4 days)  
+**Priority:** Low
+
+**What to Implement:**
+1. **Grafana Dashboards:**
+   - Session success/failure rate over time
+   - Average session duration by project
+   - OpenCode server resource usage (CPU, memory)
+   - Task execution throughput
+
+2. **Alerting:**
+   - Alert on failed sessions (>5 failures in 10 minutes)
+   - Alert on high queue depth (>10 tasks waiting)
+   - Alert on resource exhaustion
+
+3. **Token Usage Tracking:**
+   ```go
+   type Session struct {
+       // ... existing fields ...
+       TokensUsed     int
+       TokensEstimate int
+       Cost           float64 // Estimated cost in USD
+   }
+   ```
+
+**Files to Create:**
+- `backend/internal/metrics/session_metrics.go` (Prometheus metrics)
+- `k8s/monitoring/grafana-dashboard.json`
+- `k8s/monitoring/prometheus-rules.yaml`
+
+**Dependencies:**
+- Prometheus operator in Kubernetes
+- Grafana deployment
+
+**Referenced in:** PHASE5.md (Deferred Items)
+
+---
+
 ## 🔐 Authentication & Security Improvements (Phase 1 Deferred)
 
 ### A1. Token Refresh Logic

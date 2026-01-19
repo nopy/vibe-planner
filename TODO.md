@@ -1,99 +1,46 @@
 # OpenCode Project Manager - TODO List
 
-**Last Updated:** 2026-01-19 14:56 CET  
-**Current Phase:** Phase 5 - OpenCode Integration (Complete - Phase 5.1-5.7 Complete)  
-**Status:** Phase 4 Complete & Archived → Phase 5 Complete  
+**Last Updated:** 2026-01-19 15:05 CET  
+**Current Phase:** Phase 6 - OpenCode Config (Weeks 11-12)  
+**Status:** Phase 5 Complete & Archived → Phase 6 Planning  
 **Branch:** main
 
 ---
 
-## ✅ Phase 1: OIDC Authentication - COMPLETE
+## ✅ Phases 1-5: COMPLETE
 
-**Completion Date:** 2026-01-16 21:28 CET  
-**Status:** All implementation complete, all E2E tests passing (7/7)
+🎉 **All foundational phases archived** - Ready for Phase 6 (OpenCode Config)!
 
-🎉 **Phase 1 archived to PHASE1.md** - Ready for Phase 2 development!
+See archived phases:
+- [PHASE1.md](./PHASE1.md) - OIDC Authentication (Complete 2026-01-16)
+- [PHASE2.md](./PHASE2.md) - Project Management with Kubernetes (Complete 2026-01-18)
+- [PHASE3.md](./PHASE3.md) - Task Management & Kanban Board (Complete 2026-01-19 00:45)
+- [PHASE4.md](./PHASE4.md) - File Explorer with Monaco Editor (Complete 2026-01-19 12:25)
+- [PHASE5.md](./PHASE5.md) - OpenCode Integration & Execution (Complete 2026-01-19 14:56)
 
-See [PHASE1.md](./PHASE1.md) for complete archive of Phase 1 tasks and resolution details.
-
----
-
-## ✅ Phase 2: Project Management - COMPLETE
-
-**Completion Date:** 2026-01-18 19:42 CET  
-**Status:** Backend + Frontend + Infrastructure complete (2.1-2.12)
-
-🎉 **Phase 2 archived to PHASE2.md** - Ready for Phase 3 development!
-
-**Key Achievements:**
-- ✅ Complete project CRUD operations with Kubernetes pod lifecycle
-- ✅ 55 backend unit tests (repository, service, API layers) - all passing
-- ✅ Integration tests for end-to-end project lifecycle
-- ✅ Full project management UI with real-time WebSocket updates
-- ✅ PostgreSQL deployment in Kubernetes
-- ✅ RBAC configured with granular permissions
-- ✅ `make kind-deploy` working end-to-end
-
-See [PHASE2.md](./PHASE2.md) for complete archive of Phase 2 tasks and implementation details.
+**Phase 5 Final Stats:**
+- ✅ 53 backend tests (session: 26, execution: 17, integration: 10)
+- ✅ 493 frontend lines (TaskCard, ExecutionOutputPanel, ExecutionHistory)
+- ✅ ~1,800 lines of production code (backend + frontend)
+- ✅ 4-container pod spec (main + file-browser + session-proxy + opencode-server)
 
 ---
 
-## ✅ Phase 3: Task Management & Kanban Board - COMPLETE
+## 🔄 Phase 6: OpenCode Config (Weeks 11-12)
 
-**Completion Date:** 2026-01-19 00:45 CET  
-**Status:** Backend + Frontend + Real-time Updates complete (3.1-3.11)
-
-🎉 **Phase 3 archived to PHASE3.md** - Ready for Phase 4 development!
-
-See [PHASE3.md](./PHASE3.md) for complete archive of Phase 3 tasks and implementation details.
-
-**Key Achievements:**
-- ✅ Complete task CRUD with state machine (TODO → IN_PROGRESS → AI_REVIEW → HUMAN_REVIEW → DONE)
-- ✅ 100 backend unit tests (repository: 30, service: 35, handlers: 35) - all passing
-- ✅ Full Kanban board UI with drag-and-drop (@dnd-kit)
-- ✅ Real-time WebSocket updates with exponential backoff
-- ✅ Task detail panel with inline editing
-- ✅ Optimistic UI updates with error rollback
-- ✅ 289 total backend tests passing (no regressions)
-
-See [PHASE3.md](./PHASE3.md) for complete archive of Phase 3 tasks and implementation details.
-
----
-
-## ✅ Phase 4: File Explorer - COMPLETE
-
-**Completion Date:** 2026-01-19 12:25 CET  
-**Status:** All implementation complete (4.1-4.12) → ⏳ Manual E2E Testing Pending
-
-🎉 **Phase 4 archived to PHASE4.md** - Ready for Phase 5 development!
-
-**Key Achievements:**
-- ✅ File-Browser Sidecar: Production-ready Go service (21.1MB, 80 tests)
-- ✅ Backend Integration: HTTP/WebSocket proxy layer (22 tests)
-- ✅ Kubernetes Deployment: 3-container pod spec with health probes
-- ✅ Frontend Components: File tree + Monaco editor + real-time (1,264 lines)
-- ✅ Security: Path traversal prevention + file size limits + sensitive file blocking
-- ✅ Real-time: WebSocket file watching with exponential backoff
-- ✅ Total: 106 backend tests passing, 2,100 lines of production code
-
-See [PHASE4.md](./PHASE4.md) for complete archive of Phase 4 tasks and implementation details.
-
----
-
-## 🔄 Phase 5: OpenCode Integration (Weeks 9-10)
-
-**Objective:** Integrate OpenCode server for AI-powered task execution with real-time output streaming.
+**Objective:** Implement OpenCode configuration management with versioning, model/provider selection, and tools customization.
 
 **Status:** 📋 PLANNING
 
 ### Overview
 
-Phase 5 integrates the OpenCode AI agent server into project pods for automated task execution:
-- OpenCode server sidecar running in each project pod
-- Session management API for starting/stopping AI sessions
-- Real-time output streaming via Server-Sent Events (SSE)
-- Task state transitions triggered by session lifecycle events
-- Error handling and retry mechanisms
+Phase 6 adds configuration management for customizing OpenCode agent behavior per project:
+- Model selection (GPT-4, GPT-4o, GPT-3.5-turbo, etc.)
+- Provider configuration (OpenAI, Anthropic, custom endpoints)
+- Tools/features toggles (web search, file editing, code execution)
+- Configuration versioning and history
+- Rollback to previous configurations
+- UI for configuration management
 
 ---
 
@@ -102,563 +49,1809 @@ Phase 5 integrates the OpenCode AI agent server into project pods for automated 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  Frontend (React)                                               │
-│  ├─ TaskCard "Execute" button                                  │
-│  ├─ ExecutionPanel (streaming output view)                     │
-│  └─ ExecutionHistory (past runs)                               │
+│  ├─ ConfigPanel (main config UI in Project Detail page)        │
+│  ├─ ModelSelector (dropdown with model options)                │
+│  ├─ ProviderConfig (API keys, endpoints, parameters)           │
+│  ├─ ToolsManagement (toggle features)                          │
+│  └─ ConfigHistory (version list with rollback)                 │
 └─────────────────┬───────────────────────────────────────────────┘
-                  │ HTTP/SSE
+                  │ HTTP
 ┌─────────────────▼───────────────────────────────────────────────┐
 │  Backend API (Go)                                               │
-│  ├─ POST /api/projects/:id/tasks/:taskId/execute               │
-│  ├─ GET  /api/projects/:id/tasks/:taskId/output (SSE stream)   │
-│  ├─ POST /api/projects/:id/tasks/:taskId/stop                  │
-│  └─ GET  /api/projects/:id/sessions (list active sessions)     │
+│  ├─ GET    /api/projects/:id/config (get active config)        │
+│  ├─ POST   /api/projects/:id/config (create/update config)     │
+│  ├─ GET    /api/projects/:id/config/versions (list versions)   │
+│  ├─ POST   /api/projects/:id/config/rollback/:version          │
+│  └─ DELETE /api/projects/:id/config/:version                   │
 └─────────────────┬───────────────────────────────────────────────┘
-                  │ HTTP (internal)
+                  │ read/write
 ┌─────────────────▼───────────────────────────────────────────────┐
-│  OpenCode Server Sidecar (:3003)                                │
-│  ├─ POST /sessions (start new session)                         │
-│  ├─ GET  /sessions/:id/stream (SSE output)                     │
-│  ├─ POST /sessions/:id/stop (terminate session)                │
-│  └─ GET  /sessions/:id/status (session health)                 │
-└─────────────────┬───────────────────────────────────────────────┘
-                  │ reads/writes
-┌─────────────────▼───────────────────────────────────────────────┐
-│  Project Workspace (PVC /workspace)                             │
-│  - Source code files (managed by file-browser)                  │
-│  - OpenCode configuration (.opencode/config.json)               │
-│  - Session history and logs (.opencode/sessions/)               │
+│  PostgreSQL Database                                            │
+│  ├─ opencode_configs (main config table)                       │
+│  ├─ config_versions (historical versions)                      │
+│  └─ Foreign key: project_id → projects.id                      │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+**Key Design Decisions:**
+1. **Versioning:** Every config change creates a new version (immutable history)
+2. **Active Config:** Only one active config per project at a time
+3. **Rollback:** Create new version with old config data (preserves audit trail)
+4. **Validation:** Backend validates config before saving (model availability, API key format, etc.)
+5. **Defaults:** New projects get default config (GPT-4o mini, all tools enabled)
 
 ---
 
 ### Backend Tasks
 
-#### 5.1 Session Management Service
-**Status:** ✅ **COMPLETE** (2026-01-19)
+#### 6.1 OpenCode Config Model & Repository
 
-**Objectives:**
-- ✅ Create session management service in backend
-- ✅ Track active OpenCode sessions per task
-- ✅ Handle session lifecycle (create, monitor, terminate)
+**Status:** 📋 Planned
+
+**Objective:** Define database schema and repository layer for OpenCode configuration storage.
 
 **Tasks:**
-- [x] **Session Model** (`internal/model/session.go`)
-  - ✅ Fields: ID, TaskID, ProjectID, Status, Prompt, Output, Error, StartedAt, CompletedAt, DurationMs
-  - ✅ Status enum: PENDING, RUNNING, COMPLETED, FAILED, CANCELLED
-  - ✅ GORM relationships to Task and Project
-  - ✅ Soft delete support (DeletedAt)
+1. **Create Config Migration (`db/migrations/005_add_opencode_configs.up.sql`):**
+   ```sql
+   CREATE TABLE opencode_configs (
+       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+       project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+       version INT NOT NULL DEFAULT 1,
+       is_active BOOLEAN NOT NULL DEFAULT true,
+       
+       -- Model configuration
+       model_provider VARCHAR(50) NOT NULL,  -- openai, anthropic, custom
+       model_name VARCHAR(100) NOT NULL,     -- gpt-4o, claude-3-opus, etc.
+       model_version VARCHAR(50),            -- optional model version
+       
+       -- Provider configuration
+       api_endpoint TEXT,                     -- custom endpoint (optional)
+       api_key_encrypted BYTEA,              -- encrypted API key
+       temperature DECIMAL(3,2) DEFAULT 0.7,
+       max_tokens INT DEFAULT 4096,
+       
+       -- Tools configuration (JSON)
+       enabled_tools JSONB NOT NULL DEFAULT '["file_ops", "web_search", "code_exec"]',
+       tools_config JSONB,                   -- tool-specific settings
+       
+       -- System configuration
+       system_prompt TEXT,                   -- optional custom system prompt
+       max_iterations INT DEFAULT 10,        -- max agent iterations
+       timeout_seconds INT DEFAULT 300,      -- session timeout
+       
+       -- Metadata
+       created_by UUID REFERENCES users(id),
+       created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+       updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+       
+       UNIQUE(project_id, version),
+       CHECK (version > 0),
+       CHECK (temperature >= 0 AND temperature <= 2),
+       CHECK (max_tokens > 0),
+       CHECK (max_iterations > 0)
+   );
+   
+   CREATE INDEX idx_opencode_configs_project_id ON opencode_configs(project_id);
+   CREATE INDEX idx_opencode_configs_active ON opencode_configs(project_id, is_active) WHERE is_active = true;
+   ```
 
-- [x] **Session Repository** (`internal/repository/session_repository.go`)
-  - ✅ Create(session *Session) error
-  - ✅ FindByID(id uuid.UUID) (*Session, error)
-  - ✅ FindByTaskID(taskID uuid.UUID) ([]Session, error)
-  - ✅ FindActiveSessionsForProject(projectID uuid.UUID) ([]Session, error)
-  - ✅ Update(session *Session) error
-  - ✅ UpdateStatus(id uuid.UUID, status SessionStatus) error
-  - ✅ UpdateOutput(id uuid.UUID, output string) error
-  - ✅ SoftDelete(id uuid.UUID) error
+2. **Create Config Model (`backend/internal/model/opencode_config.go`):**
+   ```go
+   package model
+   
+   import (
+       "database/sql/driver"
+       "encoding/json"
+       "time"
+       
+       "github.com/google/uuid"
+   )
+   
+   type OpenCodeConfig struct {
+       ID        uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+       ProjectID uuid.UUID `gorm:"type:uuid;not null;index" json:"project_id"`
+       Version   int       `gorm:"not null;default:1" json:"version"`
+       IsActive  bool      `gorm:"not null;default:true;index" json:"is_active"`
+       
+       // Model configuration
+       ModelProvider string  `gorm:"size:50;not null" json:"model_provider"`
+       ModelName     string  `gorm:"size:100;not null" json:"model_name"`
+       ModelVersion  *string `gorm:"size:50" json:"model_version,omitempty"`
+       
+       // Provider configuration
+       APIEndpoint      *string  `gorm:"type:text" json:"api_endpoint,omitempty"`
+       APIKeyEncrypted  []byte   `gorm:"type:bytea" json:"-"` // Never expose in JSON
+       Temperature      float64  `gorm:"type:decimal(3,2);default:0.7" json:"temperature"`
+       MaxTokens        int      `gorm:"default:4096" json:"max_tokens"`
+       
+       // Tools configuration
+       EnabledTools ToolsList `gorm:"type:jsonb;not null;default:'[\"file_ops\",\"web_search\",\"code_exec\"]'" json:"enabled_tools"`
+       ToolsConfig  JSONB     `gorm:"type:jsonb" json:"tools_config,omitempty"`
+       
+       // System configuration
+       SystemPrompt   *string `gorm:"type:text" json:"system_prompt,omitempty"`
+       MaxIterations  int     `gorm:"default:10" json:"max_iterations"`
+       TimeoutSeconds int     `gorm:"default:300" json:"timeout_seconds"`
+       
+       // Metadata
+       CreatedBy uuid.UUID `gorm:"type:uuid" json:"created_by"`
+       CreatedAt time.Time `gorm:"not null;default:now()" json:"created_at"`
+       UpdatedAt time.Time `gorm:"not null;default:now()" json:"updated_at"`
+   }
+   
+   // ToolsList for JSONB array storage
+   type ToolsList []string
+   
+   func (t ToolsList) Value() (driver.Value, error) {
+       return json.Marshal(t)
+   }
+   
+   func (t *ToolsList) Scan(value interface{}) error {
+       b, ok := value.([]byte)
+       if !ok {
+           return fmt.Errorf("type assertion to []byte failed")
+       }
+       return json.Unmarshal(b, t)
+   }
+   
+   // JSONB for generic JSON storage
+   type JSONB map[string]interface{}
+   
+   func (j JSONB) Value() (driver.Value, error) {
+       return json.Marshal(j)
+   }
+   
+   func (j *JSONB) Scan(value interface{}) error {
+       b, ok := value.([]byte)
+       if !ok {
+           return fmt.Errorf("type assertion to []byte failed")
+       }
+       if len(b) == 0 {
+           *j = make(JSONB)
+           return nil
+       }
+       return json.Unmarshal(b, j)
+   }
+   
+   // TableName specifies the table name for GORM
+   func (OpenCodeConfig) TableName() string {
+       return "opencode_configs"
+   }
+   ```
 
-- [x] **Session Service** (`internal/service/session_service.go`)
-  - ✅ StartSession(taskID uuid.UUID, prompt string) (*Session, error)
-  - ✅ StopSession(sessionID uuid.UUID) error
-  - ✅ GetSession(sessionID uuid.UUID) (*Session, error)
-  - ✅ GetSessionsByTaskID(taskID uuid.UUID) ([]Session, error)
-  - ✅ GetActiveProjectSessions(projectID uuid.UUID) ([]Session, error)
-  - ✅ UpdateSessionOutput(sessionID uuid.UUID, output string) error
-  - ✅ Internal: callOpenCodeStart/Stop(podIP, sessionID, prompt) error
+3. **Create Config Repository (`backend/internal/repository/config_repository.go`):**
+   ```go
+   package repository
+   
+   import (
+       "context"
+       
+       "github.com/google/uuid"
+       "github.com/npinot/vibe/backend/internal/model"
+       "gorm.io/gorm"
+   )
+   
+   type ConfigRepository struct {
+       db *gorm.DB
+   }
+   
+   func NewConfigRepository(db *gorm.DB) *ConfigRepository {
+       return &ConfigRepository{db: db}
+   }
+   
+   // GetActiveConfig retrieves the active configuration for a project
+   func (r *ConfigRepository) GetActiveConfig(ctx context.Context, projectID uuid.UUID) (*model.OpenCodeConfig, error) {
+       var config model.OpenCodeConfig
+       err := r.db.WithContext(ctx).
+           Where("project_id = ? AND is_active = true", projectID).
+           First(&config).Error
+       if err != nil {
+           return nil, err
+       }
+       return &config, nil
+   }
+   
+   // CreateConfig creates a new configuration version
+   func (r *ConfigRepository) CreateConfig(ctx context.Context, config *model.OpenCodeConfig) error {
+       return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+           // Deactivate all existing configs for this project
+           if err := tx.Model(&model.OpenCodeConfig{}).
+               Where("project_id = ?", config.ProjectID).
+               Update("is_active", false).Error; err != nil {
+               return err
+           }
+           
+           // Get next version number
+           var maxVersion int
+           tx.Model(&model.OpenCodeConfig{}).
+               Where("project_id = ?", config.ProjectID).
+               Select("COALESCE(MAX(version), 0)").
+               Scan(&maxVersion)
+           
+           config.Version = maxVersion + 1
+           config.IsActive = true
+           
+           return tx.Create(config).Error
+       })
+   }
+   
+   // GetConfigVersions lists all configuration versions for a project
+   func (r *ConfigRepository) GetConfigVersions(ctx context.Context, projectID uuid.UUID) ([]model.OpenCodeConfig, error) {
+       var configs []model.OpenCodeConfig
+       err := r.db.WithContext(ctx).
+           Where("project_id = ?", projectID).
+           Order("version DESC").
+           Find(&configs).Error
+       return configs, err
+   }
+   
+   // GetConfigByVersion retrieves a specific version of configuration
+   func (r *ConfigRepository) GetConfigByVersion(ctx context.Context, projectID uuid.UUID, version int) (*model.OpenCodeConfig, error) {
+       var config model.OpenCodeConfig
+       err := r.db.WithContext(ctx).
+           Where("project_id = ? AND version = ?", projectID, version).
+           First(&config).Error
+       if err != nil {
+           return nil, err
+       }
+       return &config, nil
+   }
+   
+   // DeleteConfig soft deletes a configuration version
+   func (r *ConfigRepository) DeleteConfig(ctx context.Context, id uuid.UUID) error {
+       return r.db.WithContext(ctx).Delete(&model.OpenCodeConfig{}, id).Error
+   }
+   ```
 
-- [x] **Database Migrations**
-  - ✅ `db/migrations/004_add_sessions.up.sql` - CREATE TABLE with indexes
-  - ✅ `db/migrations/004_add_sessions.down.sql` - DROP TABLE rollback
+4. **Create Repository Tests (`backend/internal/repository/config_repository_test.go`):**
+   - Test `GetActiveConfig()` returns active config
+   - Test `CreateConfig()` deactivates old configs and creates new version
+   - Test `GetConfigVersions()` returns ordered list
+   - Test `GetConfigByVersion()` retrieves specific version
+   - Test concurrent config creation handling
+   - Test foreign key constraints (project deletion)
+   - **Target:** 25-30 unit tests
 
-**Files Created:**
-- ✅ `backend/internal/model/session.go` (38 lines)
-- ✅ `backend/internal/repository/session_repository.go` (128 lines, 8 methods)
-- ✅ `backend/internal/repository/session_repository_test.go` (240 lines, 13 tests)
-- ✅ `backend/internal/service/session_service.go` (285 lines, 6 public methods)
-- ✅ `backend/internal/service/session_service_test.go` (326 lines, 13 tests)
-- ✅ `db/migrations/004_add_sessions.up.sql` (33 lines)
-- ✅ `db/migrations/004_add_sessions.down.sql` (12 lines)
+**Files to Create:**
+- `db/migrations/005_add_opencode_configs.up.sql`
+- `db/migrations/005_add_opencode_configs.down.sql`
+- `backend/internal/model/opencode_config.go`
+- `backend/internal/repository/config_repository.go`
+- `backend/internal/repository/config_repository_test.go`
 
-**Implementation Details:**
-- **Model**: Full GORM model with foreign keys, soft deletes, timestamps
-- **Repository**: 8 methods with context-aware queries and error wrapping
-- **Service**: Business logic with OpenCode API integration, concurrency control, duration tracking
-- **HTTP Client**: 30s timeout, context propagation, error handling
-- **State Machine**: PENDING → RUNNING → (COMPLETED | FAILED | CANCELLED)
-- **Concurrency**: Prevents multiple active sessions per task
-- **Custom Errors**: ErrSessionNotFound, ErrInvalidSessionStatus, ErrOpenCodeAPICall, ErrSessionAlreadyActive
-
-**Test Coverage:**
-- ✅ **26 total unit tests** (exceeds 20 minimum)
-  - Repository: 13 tests (Create, FindByID, FindByTaskID, FindActiveSessionsForProject, Update, UpdateStatus, UpdateOutput, SoftDelete)
-  - Service: 13 tests (GetSession, GetSessionsByTaskID, GetActiveProjectSessions, UpdateSessionOutput, StopSession, StartSession with error cases)
-- ✅ All code compiles successfully
-- ✅ No regressions in existing API/middleware tests
-- ⚠️ SQLite UUID issue in repository tests (expected, works with PostgreSQL)
+**Dependencies:**
+- `crypto/aes` for API key encryption
+- `encoding/json` for JSONB handling
 
 **Success Criteria:**
-- [x] Session CRUD operations working ✅
-- [x] Can communicate with OpenCode sidecar via HTTP ✅
-- [x] Session lifecycle tracked in database ✅
-- [x] At least 20 unit tests passing ✅ (26 created)
-
-**Known Limitations:**
-- Repository tests fail with in-memory SQLite (gen_random_uuid() syntax) - works with PostgreSQL
-- HTTP client not tested with mock server (deferred to Phase 5.2 integration tests)
-- Session output streaming not implemented (Phase 5.2)
-
-**Next Steps:** Phase 5.2 - Task Execution API
+- [ ] Migration runs successfully
+- [ ] Repository tests pass (25-30 tests)
+- [ ] Unique constraint on (project_id, version) enforced
+- [ ] API key encryption working
 
 ---
 
-#### 5.2 Task Execution API
-**Status:** ✅ **COMPLETE** (2026-01-19)
+#### 6.2 Config Service with Versioning
 
-**Objectives:**
-- Add task execution endpoints to main API
-- Integrate with session service
-- Trigger task state transitions based on execution events
+**Status:** 📋 Planned
+
+**Objective:** Implement business logic for configuration management with validation and encryption.
 
 **Tasks:**
-- [x] **Execute Endpoint** (`POST /api/projects/:id/tasks/:taskId/execute`)
-  - Extract project pod IP from Kubernetes API
-  - Create session via SessionService
-  - Start OpenCode session on sidecar
-  - Update task status to IN_PROGRESS
-  - Return session ID to client
+1. **Create Config Service (`backend/internal/service/config_service.go`):**
+   ```go
+   package service
+   
+   import (
+       "context"
+       "crypto/aes"
+       "crypto/cipher"
+       "crypto/rand"
+       "encoding/base64"
+       "errors"
+       "fmt"
+       "io"
+       
+       "github.com/google/uuid"
+       "github.com/npinot/vibe/backend/internal/model"
+       "github.com/npinot/vibe/backend/internal/repository"
+   )
+   
+   type ConfigService struct {
+       configRepo *repository.ConfigRepository
+       encryptionKey []byte // 32-byte AES-256 key
+   }
+   
+   func NewConfigService(configRepo *repository.ConfigRepository, encryptionKey string) (*ConfigService, error) {
+       // Decode base64 encryption key
+       key, err := base64.StdEncoding.DecodeString(encryptionKey)
+       if err != nil || len(key) != 32 {
+           return nil, errors.New("encryption key must be base64-encoded 32 bytes")
+       }
+       
+       return &ConfigService{
+           configRepo: configRepo,
+           encryptionKey: key,
+       }, nil
+   }
+   
+   // GetActiveConfig retrieves the active configuration for a project
+   func (s *ConfigService) GetActiveConfig(ctx context.Context, projectID uuid.UUID) (*model.OpenCodeConfig, error) {
+       config, err := s.configRepo.GetActiveConfig(ctx, projectID)
+       if err != nil {
+           return nil, fmt.Errorf("failed to get active config: %w", err)
+       }
+       
+       // Decrypt API key if present
+       if len(config.APIKeyEncrypted) > 0 {
+           // Note: Don't expose decrypted key in API response
+           // This is only for internal use (e.g., passing to OpenCode server)
+       }
+       
+       return config, nil
+   }
+   
+   // CreateOrUpdateConfig creates a new configuration version
+   func (s *ConfigService) CreateOrUpdateConfig(ctx context.Context, config *model.OpenCodeConfig, apiKey string) error {
+       // Validate configuration
+       if err := s.validateConfig(config); err != nil {
+           return fmt.Errorf("config validation failed: %w", err)
+       }
+       
+       // Encrypt API key if provided
+       if apiKey != "" {
+           encrypted, err := s.encryptAPIKey(apiKey)
+           if err != nil {
+               return fmt.Errorf("failed to encrypt API key: %w", err)
+           }
+           config.APIKeyEncrypted = encrypted
+       }
+       
+       // Create config (repository handles versioning)
+       if err := s.configRepo.CreateConfig(ctx, config); err != nil {
+           return fmt.Errorf("failed to create config: %w", err)
+       }
+       
+       return nil
+   }
+   
+   // RollbackToVersion activates a previous configuration version
+   func (s *ConfigService) RollbackToVersion(ctx context.Context, projectID uuid.UUID, version int) error {
+       // Get the old version
+       oldConfig, err := s.configRepo.GetConfigByVersion(ctx, projectID, version)
+       if err != nil {
+           return fmt.Errorf("config version %d not found: %w", version, err)
+       }
+       
+       // Create a new version with the old config data
+       newConfig := *oldConfig
+       newConfig.ID = uuid.Nil // Will be auto-generated
+       
+       return s.configRepo.CreateConfig(ctx, &newConfig)
+   }
+   
+   // GetConfigHistory retrieves all configuration versions
+   func (s *ConfigService) GetConfigHistory(ctx context.Context, projectID uuid.UUID) ([]model.OpenCodeConfig, error) {
+       configs, err := s.configRepo.GetConfigVersions(ctx, projectID)
+       if err != nil {
+           return nil, fmt.Errorf("failed to get config history: %w", err)
+       }
+       
+       // Sanitize: Remove encrypted API keys from response
+       for i := range configs {
+           configs[i].APIKeyEncrypted = nil
+       }
+       
+       return configs, nil
+   }
+   
+   // GetDecryptedAPIKey retrieves and decrypts the API key for internal use
+   func (s *ConfigService) GetDecryptedAPIKey(ctx context.Context, projectID uuid.UUID) (string, error) {
+       config, err := s.configRepo.GetActiveConfig(ctx, projectID)
+       if err != nil {
+           return "", err
+       }
+       
+       if len(config.APIKeyEncrypted) == 0 {
+           return "", errors.New("no API key configured")
+       }
+       
+       return s.decryptAPIKey(config.APIKeyEncrypted)
+   }
+   
+   // validateConfig validates configuration fields
+   func (s *ConfigService) validateConfig(config *model.OpenCodeConfig) error {
+       // Validate model provider
+       validProviders := map[string]bool{
+           "openai": true,
+           "anthropic": true,
+           "custom": true,
+       }
+       if !validProviders[config.ModelProvider] {
+           return fmt.Errorf("invalid model provider: %s", config.ModelProvider)
+       }
+       
+       // Validate model name based on provider
+       if config.ModelProvider == "openai" {
+           validModels := map[string]bool{
+               "gpt-4o": true,
+               "gpt-4o-mini": true,
+               "gpt-4": true,
+               "gpt-3.5-turbo": true,
+           }
+           if !validModels[config.ModelName] {
+               return fmt.Errorf("invalid OpenAI model: %s", config.ModelName)
+           }
+       }
+       
+       // Validate temperature range
+       if config.Temperature < 0 || config.Temperature > 2 {
+           return errors.New("temperature must be between 0 and 2")
+       }
+       
+       // Validate max_tokens
+       if config.MaxTokens <= 0 || config.MaxTokens > 128000 {
+           return errors.New("max_tokens must be between 1 and 128000")
+       }
+       
+       // Validate enabled_tools
+       validTools := map[string]bool{
+           "file_ops": true,
+           "web_search": true,
+           "code_exec": true,
+           "terminal": true,
+       }
+       for _, tool := range config.EnabledTools {
+           if !validTools[tool] {
+               return fmt.Errorf("invalid tool: %s", tool)
+           }
+       }
+       
+       return nil
+   }
+   
+   // encryptAPIKey encrypts an API key using AES-256-GCM
+   func (s *ConfigService) encryptAPIKey(plaintext string) ([]byte, error) {
+       block, err := aes.NewCipher(s.encryptionKey)
+       if err != nil {
+           return nil, err
+       }
+       
+       aesGCM, err := cipher.NewGCM(block)
+       if err != nil {
+           return nil, err
+       }
+       
+       nonce := make([]byte, aesGCM.NonceSize())
+       if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+           return nil, err
+       }
+       
+       ciphertext := aesGCM.Seal(nonce, nonce, []byte(plaintext), nil)
+       return ciphertext, nil
+   }
+   
+   // decryptAPIKey decrypts an encrypted API key
+   func (s *ConfigService) decryptAPIKey(ciphertext []byte) (string, error) {
+       block, err := aes.NewCipher(s.encryptionKey)
+       if err != nil {
+           return "", err
+       }
+       
+       aesGCM, err := cipher.NewGCM(block)
+       if err != nil {
+           return "", err
+       }
+       
+       nonceSize := aesGCM.NonceSize()
+       if len(ciphertext) < nonceSize {
+           return "", errors.New("ciphertext too short")
+       }
+       
+       nonce, ciphertext := ciphertext[:nonceSize], ciphertext[nonceSize:]
+       plaintext, err := aesGCM.Open(nil, nonce, ciphertext, nil)
+       if err != nil {
+           return "", err
+       }
+       
+       return string(plaintext), nil
+   }
+   ```
 
-- [x] **Output Stream Endpoint** (`GET /api/projects/:id/tasks/:taskId/output`)
-  - Server-Sent Events (SSE) endpoint
-  - Proxy SSE stream from OpenCode sidecar
-  - Forward events to frontend in real-time
-  - Handle connection cleanup on close
+2. **Create Service Tests (`backend/internal/service/config_service_test.go`):**
+   - Test `GetActiveConfig()` retrieves and sanitizes config
+   - Test `CreateOrUpdateConfig()` with valid config
+   - Test `CreateOrUpdateConfig()` validation failures
+   - Test API key encryption/decryption
+   - Test `RollbackToVersion()` creates new version from old
+   - Test `GetConfigHistory()` sanitizes API keys
+   - Test model validation (OpenAI, Anthropic, custom)
+   - Test temperature/max_tokens validation
+   - Test enabled_tools validation
+   - **Target:** 30-35 unit tests
 
-- [x] **Stop Execution** (`POST /api/projects/:id/tasks/:taskId/stop`)
-  - Call OpenCode sidecar stop endpoint
-  - Update session status to CANCELLED
-  - Update task status back to TODO
+**Files to Create:**
+- `backend/internal/service/config_service.go`
+- `backend/internal/service/config_service_test.go`
 
-**Files Modified:**
-- `internal/api/tasks.go` - Added ExecuteTask, StopTask, TaskOutputStream handlers (707 lines, +222)
-- `internal/service/task_service.go` - Added ExecuteTask, StopTask methods (370 lines, +81)
-- `backend/cmd/api/main.go` - Wired new endpoints with proper dependencies
-
-**Files Created:**
-- `internal/api/tasks_execution_test.go` - 17 unit tests (688 lines)
-
-**Implementation Summary:**
-- **ExecuteTask**: Validates task state (TODO only), creates session via SessionService, updates task to IN_PROGRESS, returns session_id + status
-- **StopTask**: Validates task state (IN_PROGRESS only), finds active session, calls SessionService.StopSession(), resets task to TODO
-- **TaskOutputStream**: SSE proxy endpoint, validates auth + ownership, resolves pod IP, proxies stream from `http://<podIP>:3003/sessions/<sessionID>/stream`
-- **Error Handling**: 400 (bad request), 401 (unauthorized), 403 (forbidden), 404 (not found), 409 (conflict), 500 (internal), 502 (sidecar error)
-- **Dependencies**: Updated TaskService constructor to accept SessionService, updated TaskHandler to accept ProjectRepository + KubernetesService
-
-**Test Coverage:**
-- ExecuteTask: 7 tests (success, not found, unauthorized, invalid state, session already active, invalid ID, internal error)
-- StopTask: 6 tests (success, not found, unauthorized, invalid state, invalid ID, internal error)
-- TaskOutputStream: 4 tests (missing session_id, invalid session_id, project not found, task belongs to different project)
-- Total: 17 unit tests, all passing
+**Environment Variables:**
+- `CONFIG_ENCRYPTION_KEY` (base64-encoded 32-byte key)
 
 **Success Criteria:**
-- [x] Can start OpenCode session from API call
-- [x] SSE stream proxies output in real-time
-- [x] Can stop running sessions
-- [x] Task state transitions working (TODO → IN_PROGRESS)
-- [x] 17 integration tests passing (exceeded 15 requirement)
+- [ ] Service tests pass (30-35 tests)
+- [ ] API key encryption/decryption working
+- [ ] Configuration validation comprehensive
+- [ ] Rollback preserves all config fields
 
 ---
 
-#### 5.3 OpenCode Sidecar Integration
-**Status:** ✅ **COMPLETE** (2026-01-19)
+#### 6.3 Config API Endpoints
 
-**Objectives:**
-- ✅ Add OpenCode server sidecar to project pod template
-- ✅ Configure sidecar with appropriate resource limits
-- ✅ Set up health probes and startup configuration
+**Status:** 📋 Planned
+
+**Objective:** Expose HTTP endpoints for configuration CRUD operations.
 
 **Tasks:**
-- [x] **Pod Template Update** (`internal/service/pod_template.go`)
-  - ✅ Added fourth container (opencode-server-sidecar)
-  - ✅ Mounted workspace PVC to /workspace
-  - ✅ Set environment variables (WORKSPACE_DIR=/workspace, PORT=3003, PROJECT_ID)
-  - ✅ Configured resource limits (CPU: 200m-500m, Memory: 256Mi-512Mi)
-  - ✅ Added liveness/readiness probes
+1. **Create Config Handler (`backend/internal/api/config.go`):**
+   ```go
+   package api
+   
+   import (
+       "net/http"
+       
+       "github.com/gin-gonic/gin"
+       "github.com/google/uuid"
+       "github.com/npinot/vibe/backend/internal/model"
+       "github.com/npinot/vibe/backend/internal/service"
+   )
+   
+   type ConfigHandler struct {
+       configService *service.ConfigService
+   }
+   
+   func NewConfigHandler(configService *service.ConfigService) *ConfigHandler {
+       return &ConfigHandler{configService: configService}
+   }
+   
+   // GetActiveConfig godoc
+   // @Summary Get active configuration
+   // @Description Retrieves the currently active OpenCode configuration for a project
+   // @Tags config
+   // @Produce json
+   // @Param id path string true "Project ID"
+   // @Success 200 {object} model.OpenCodeConfig
+   // @Failure 404 {object} gin.H{"error": "config not found"}
+   // @Router /api/projects/{id}/config [get]
+   func (h *ConfigHandler) GetActiveConfig(c *gin.Context) {
+       projectID, err := uuid.Parse(c.Param("id"))
+       if err != nil {
+           c.JSON(http.StatusBadRequest, gin.H{"error": "invalid project ID"})
+           return
+       }
+       
+       config, err := h.configService.GetActiveConfig(c.Request.Context(), projectID)
+       if err != nil {
+           c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+           return
+       }
+       
+       c.JSON(http.StatusOK, config)
+   }
+   
+   // CreateOrUpdateConfig godoc
+   // @Summary Create or update configuration
+   // @Description Creates a new configuration version (deactivating the old one)
+   // @Tags config
+   // @Accept json
+   // @Produce json
+   // @Param id path string true "Project ID"
+   // @Param config body CreateConfigRequest true "Configuration"
+   // @Success 201 {object} model.OpenCodeConfig
+   // @Failure 400 {object} gin.H{"error": "validation error"}
+   // @Router /api/projects/{id}/config [post]
+   func (h *ConfigHandler) CreateOrUpdateConfig(c *gin.Context) {
+       projectID, err := uuid.Parse(c.Param("id"))
+       if err != nil {
+           c.JSON(http.StatusBadRequest, gin.H{"error": "invalid project ID"})
+           return
+       }
+       
+       var req CreateConfigRequest
+       if err := c.ShouldBindJSON(&req); err != nil {
+           c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+           return
+       }
+       
+       // Get user from context (set by auth middleware)
+       userID := c.GetString("user_id")
+       createdBy, _ := uuid.Parse(userID)
+       
+       config := &model.OpenCodeConfig{
+           ProjectID:      projectID,
+           ModelProvider:  req.ModelProvider,
+           ModelName:      req.ModelName,
+           ModelVersion:   req.ModelVersion,
+           APIEndpoint:    req.APIEndpoint,
+           Temperature:    req.Temperature,
+           MaxTokens:      req.MaxTokens,
+           EnabledTools:   req.EnabledTools,
+           ToolsConfig:    req.ToolsConfig,
+           SystemPrompt:   req.SystemPrompt,
+           MaxIterations:  req.MaxIterations,
+           TimeoutSeconds: req.TimeoutSeconds,
+           CreatedBy:      createdBy,
+       }
+       
+       if err := h.configService.CreateOrUpdateConfig(c.Request.Context(), config, req.APIKey); err != nil {
+           c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+           return
+       }
+       
+       c.JSON(http.StatusCreated, config)
+   }
+   
+   // GetConfigHistory godoc
+   // @Summary List configuration versions
+   // @Description Retrieves all configuration versions for a project
+   // @Tags config
+   // @Produce json
+   // @Param id path string true "Project ID"
+   // @Success 200 {array} model.OpenCodeConfig
+   // @Router /api/projects/{id}/config/versions [get]
+   func (h *ConfigHandler) GetConfigHistory(c *gin.Context) {
+       projectID, err := uuid.Parse(c.Param("id"))
+       if err != nil {
+           c.JSON(http.StatusBadRequest, gin.H{"error": "invalid project ID"})
+           return
+       }
+       
+       configs, err := h.configService.GetConfigHistory(c.Request.Context(), projectID)
+       if err != nil {
+           c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+           return
+       }
+       
+       c.JSON(http.StatusOK, configs)
+   }
+   
+   // RollbackConfig godoc
+   // @Summary Rollback to previous version
+   // @Description Activates a previous configuration version by creating a new version
+   // @Tags config
+   // @Produce json
+   // @Param id path string true "Project ID"
+   // @Param version path int true "Version to rollback to"
+   // @Success 200 {object} gin.H{"message": "config rolled back"}
+   // @Failure 404 {object} gin.H{"error": "version not found"}
+   // @Router /api/projects/{id}/config/rollback/{version} [post]
+   func (h *ConfigHandler) RollbackConfig(c *gin.Context) {
+       projectID, err := uuid.Parse(c.Param("id"))
+       if err != nil {
+           c.JSON(http.StatusBadRequest, gin.H{"error": "invalid project ID"})
+           return
+       }
+       
+       var version int
+       if err := c.ShouldBindUri(&struct {
+           Version int `uri:"version" binding:"required,min=1"`
+       }{Version: version}); err != nil {
+           c.JSON(http.StatusBadRequest, gin.H{"error": "invalid version"})
+           return
+       }
+       
+       if err := h.configService.RollbackToVersion(c.Request.Context(), projectID, version); err != nil {
+           c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+           return
+       }
+       
+       c.JSON(http.StatusOK, gin.H{"message": "config rolled back successfully"})
+   }
+   
+   // Request/Response types
+   type CreateConfigRequest struct {
+       ModelProvider  string              `json:"model_provider" binding:"required,oneof=openai anthropic custom"`
+       ModelName      string              `json:"model_name" binding:"required"`
+       ModelVersion   *string             `json:"model_version,omitempty"`
+       APIEndpoint    *string             `json:"api_endpoint,omitempty"`
+       APIKey         string              `json:"api_key,omitempty"` // Not stored in response
+       Temperature    float64             `json:"temperature" binding:"min=0,max=2"`
+       MaxTokens      int                 `json:"max_tokens" binding:"min=1,max=128000"`
+       EnabledTools   []string            `json:"enabled_tools" binding:"required"`
+       ToolsConfig    model.JSONB         `json:"tools_config,omitempty"`
+       SystemPrompt   *string             `json:"system_prompt,omitempty"`
+       MaxIterations  int                 `json:"max_iterations" binding:"min=1,max=50"`
+       TimeoutSeconds int                 `json:"timeout_seconds" binding:"min=60,max=3600"`
+   }
+   ```
 
-- [x] **Health Check Configuration**
-  - ✅ Liveness: HTTP GET /health on port 3003 (initialDelay: 15s, period: 10s)
-  - ✅ Readiness: HTTP GET /ready on port 3003 (initialDelay: 10s, period: 5s)
-  - ✅ Initial delay: 15s for server startup
+2. **Register Routes (`backend/cmd/api/main.go`):**
+   ```go
+   // Config routes
+   configGroup := authGroup.Group("/projects/:id/config")
+   {
+       configGroup.GET("", configHandler.GetActiveConfig)
+       configGroup.POST("", configHandler.CreateOrUpdateConfig)
+       configGroup.GET("/versions", configHandler.GetConfigHistory)
+       configGroup.POST("/rollback/:version", configHandler.RollbackConfig)
+   }
+   ```
 
-- [x] **Volume Mounts**
-  - ✅ Shared workspace PVC: /workspace (read-write)
-  - ✅ Config directory: /workspace/.opencode (for session configs)
+3. **Create API Handler Tests (`backend/internal/api/config_test.go`):**
+   - Test `GET /api/projects/:id/config` returns active config
+   - Test `GET /api/projects/:id/config` with no config (404)
+   - Test `POST /api/projects/:id/config` with valid data
+   - Test `POST /api/projects/:id/config` with invalid model_provider
+   - Test `POST /api/projects/:id/config` with invalid temperature
+   - Test `GET /api/projects/:id/config/versions` returns ordered list
+   - Test `POST /api/projects/:id/config/rollback/:version` succeeds
+   - Test `POST /api/projects/:id/config/rollback/:version` with invalid version
+   - Test authentication required (401 without token)
+   - **Target:** 30-35 unit tests
 
-**Files Modified:**
-- ✅ `internal/service/kubernetes_service.go` (lines 45-56, 66-77) - Added OpenCodeServerImage field to config
-- ✅ `internal/service/pod_template.go` (lines 11, 151-229) - Added 4th container spec with full configuration
-- ✅ `internal/service/kubernetes_service_test.go` (lines 81-89, 107-116, 164-174, 224-226) - Updated tests to expect 4 containers
+**Files to Create:**
+- `backend/internal/api/config.go`
+- `backend/internal/api/config_test.go`
 
-**Implementation Details:**
-- **Container Name:** opencode-server-sidecar
-- **Image:** registry.legal-suite.com/opencode/opencode-server:latest (configurable)
-- **Port:** 3003 (HTTP API)
-- **Resource Requests:** CPU 200m, Memory 256Mi
-- **Resource Limits:** CPU 500m, Memory 512Mi
-- **Liveness Probe:** HTTP GET /health:3003 (initialDelay: 15s, period: 10s, timeout: 3s, successThreshold: 1, failureThreshold: 3)
-- **Readiness Probe:** HTTP GET /ready:3003 (initialDelay: 10s, period: 5s, timeout: 3s, successThreshold: 1, failureThreshold: 3)
-- **Environment Variables:** WORKSPACE_DIR=/workspace, PORT=3003, PROJECT_ID (from pod label)
-- **Volume Mounts:** workspace PVC at /workspace (read-write)
-
-**Test Coverage:**
-- ✅ TestBuildProjectPodSpec: Verifies 4-container pod spec generation
-- ✅ TestCreateProjectPod: Full integration test with fake Kubernetes client
-- ✅ All service tests passing (except pre-existing SessionService_StopSession nil pointer issue)
+**Files to Modify:**
+- `backend/cmd/api/main.go` (register routes)
 
 **Success Criteria:**
-- [x] Project pods spawn with 4 containers (opencode-server + file-browser + session-proxy + opencode-server-sidecar) ✅
-- [x] OpenCode sidecar configured with health checks ✅
-- [x] Workspace volume accessible to all containers ✅
-- [x] All backend tests still passing (no regressions) ✅ (only pre-existing SessionService failure)
+- [ ] API handler tests pass (30-35 tests)
+- [ ] All endpoints return correct status codes
+- [ ] Request validation working
+- [ ] API key never exposed in responses
+
+---
+
+#### 6.4 Config Validation Logic
+
+**Status:** 📋 Planned
+
+**Objective:** Comprehensive validation for model providers, API endpoints, and tools configuration.
+
+**Tasks:**
+1. **Extend Validation in ConfigService:**
+   - Validate OpenAI models against official list
+   - Validate Anthropic models (claude-3-opus, claude-3-sonnet, etc.)
+   - Validate custom endpoints (URL format, HTTPS requirement)
+   - Validate tools_config structure per tool type
+   - Add provider-specific constraints (e.g., OpenAI max_tokens limits)
+
+2. **Create Model Registry (`backend/internal/service/model_registry.go`):**
+   ```go
+   package service
+   
+   type ModelInfo struct {
+       Provider    string
+       Name        string
+       MaxTokens   int
+       ContextSize int
+       Pricing     map[string]float64 // input/output per 1M tokens
+   }
+   
+   var SupportedModels = []ModelInfo{
+       // OpenAI
+       {Provider: "openai", Name: "gpt-4o", MaxTokens: 128000, ContextSize: 128000, Pricing: map[string]float64{"input": 2.50, "output": 10.00}},
+       {Provider: "openai", Name: "gpt-4o-mini", MaxTokens: 128000, ContextSize: 128000, Pricing: map[string]float64{"input": 0.15, "output": 0.60}},
+       {Provider: "openai", Name: "gpt-4", MaxTokens: 8192, ContextSize: 8192, Pricing: map[string]float64{"input": 30.00, "output": 60.00}},
+       
+       // Anthropic
+       {Provider: "anthropic", Name: "claude-3-opus-20240229", MaxTokens: 4096, ContextSize: 200000, Pricing: map[string]float64{"input": 15.00, "output": 75.00}},
+       {Provider: "anthropic", Name: "claude-3-sonnet-20240229", MaxTokens: 4096, ContextSize: 200000, Pricing: map[string]float64{"input": 3.00, "output": 15.00}},
+   }
+   
+   func IsValidModel(provider, name string) bool {
+       for _, model := range SupportedModels {
+           if model.Provider == provider && model.Name == name {
+               return true
+           }
+       }
+       return false
+   }
+   
+   func GetModelMaxTokens(provider, name string) int {
+       for _, model := range SupportedModels {
+           if model.Provider == provider && model.Name == name {
+               return model.MaxTokens
+           }
+       }
+       return 0
+   }
+   ```
+
+3. **Add Validation Tests:**
+   - Test all supported models pass validation
+   - Test unsupported models fail validation
+   - Test max_tokens exceeding model limits fails
+   - Test invalid tool names fail
+   - Test custom endpoint URL validation
+
+**Files to Create:**
+- `backend/internal/service/model_registry.go`
+- `backend/internal/service/model_registry_test.go`
+
+**Files to Modify:**
+- `backend/internal/service/config_service.go` (use model registry)
+
+**Success Criteria:**
+- [ ] Model registry comprehensive (OpenAI + Anthropic models)
+- [ ] Validation catches all invalid configurations
+- [ ] Validation tests pass (15-20 tests)
+
+---
+
+#### 6.5 Integration Tests
+
+**Status:** 📋 Planned
+
+**Objective:** End-to-end tests for configuration lifecycle.
+
+**Tasks:**
+1. **Create Integration Test (`backend/internal/api/config_integration_test.go`):**
+   ```go
+   // +build integration
+   
+   package api
+   
+   import (
+       "testing"
+       
+       "github.com/stretchr/testify/assert"
+   )
+   
+   func TestConfigLifecycle_Integration(t *testing.T) {
+       // 1. Create project
+       // 2. Create initial config
+       // 3. Verify config saved with version=1
+       // 4. Update config (new model)
+       // 5. Verify new version=2, old version=1 deactivated
+       // 6. Get config history (should return 2 versions)
+       // 7. Rollback to version 1
+       // 8. Verify version=3 created with version=1 data
+       // 9. Delete project
+       // 10. Verify configs cascade deleted
+   }
+   
+   func TestConfigAPIKeyEncryption_Integration(t *testing.T) {
+       // 1. Create config with API key
+       // 2. Verify API key encrypted in database (not plaintext)
+       // 3. Retrieve config via API
+       // 4. Verify API key not exposed in response
+       // 5. Use internal service to decrypt key
+       // 6. Verify decrypted key matches original
+   }
+   ```
+
+2. **Documentation:**
+   - Update `INTEGRATION_TESTING.md` with config test instructions
+   - Document required environment variables for encryption
+
+**Files to Create:**
+- `backend/internal/api/config_integration_test.go`
+
+**Files to Modify:**
+- `backend/INTEGRATION_TESTING.md`
+
+**Success Criteria:**
+- [ ] Integration tests pass with real database
+- [ ] Config lifecycle tested end-to-end
+- [ ] API key encryption verified
 
 ---
 
 ### Frontend Tasks
 
-#### 5.4 Execute Task UI
-**Status:** ✅ **COMPLETE** (2026-01-19)
+#### 6.6 ConfigPanel Component
 
-**Objectives:**
-- ✅ Add "Execute" button to task cards and task detail panel
-- ✅ Show execution state visually (running/completed/failed)
-- ✅ Prevent concurrent executions on same task
+**Status:** 📋 Planned
+
+**Objective:** Main configuration UI component in Project Detail page.
 
 **Tasks:**
-- [x] **TaskCard Updates** (`components/Kanban/TaskCard.tsx`)
-  - ✅ Added "Execute" button with lightning bolt icon
-  - ✅ Shows execution status badge (running/completed/failed)
-  - ✅ Disables button when task is already running
-  - ✅ Only visible on TODO tasks
+1. **Create ConfigPanel Component (`frontend/src/components/Config/ConfigPanel.tsx`):**
+   ```typescript
+   import React, { useState, useEffect } from 'react';
+   import { useParams } from 'react-router-dom';
+   import { ModelSelector } from './ModelSelector';
+   import { ProviderConfig } from './ProviderConfig';
+   import { ToolsManagement } from './ToolsManagement';
+   import { ConfigHistory } from './ConfigHistory';
+   import { useConfig } from '../../hooks/useConfig';
+   import type { OpenCodeConfig } from '../../types';
+   
+   export const ConfigPanel: React.FC = () => {
+     const { id: projectId } = useParams<{ id: string }>();
+     const { config, loading, error, updateConfig, rollbackConfig } = useConfig(projectId!);
+     
+     const [editMode, setEditMode] = useState(false);
+     const [formData, setFormData] = useState<Partial<OpenCodeConfig>>({});
+     
+     useEffect(() => {
+       if (config) {
+         setFormData(config);
+       }
+     }, [config]);
+     
+     const handleSave = async () => {
+       try {
+         await updateConfig(formData as OpenCodeConfig);
+         setEditMode(false);
+       } catch (err) {
+         console.error('Failed to save config:', err);
+       }
+     };
+     
+     if (loading) return <div className="animate-pulse">Loading configuration...</div>;
+     if (error) return <div className="text-red-600">Error: {error}</div>;
+     
+     return (
+       <div className="bg-white shadow rounded-lg p-6 space-y-6">
+         <div className="flex justify-between items-center">
+           <h2 className="text-2xl font-bold text-gray-800">OpenCode Configuration</h2>
+           {!editMode ? (
+             <button
+               onClick={() => setEditMode(true)}
+               className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+             >
+               Edit Configuration
+             </button>
+           ) : (
+             <div className="space-x-2">
+               <button
+                 onClick={handleSave}
+                 className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+               >
+                 Save Changes
+               </button>
+               <button
+                 onClick={() => {
+                   setEditMode(false);
+                   setFormData(config!);
+                 }}
+                 className="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500"
+               >
+                 Cancel
+               </button>
+             </div>
+           )}
+         </div>
+         
+         {/* Model Selection */}
+         <ModelSelector
+           value={{ provider: formData.model_provider!, name: formData.model_name! }}
+           onChange={(provider, name) => {
+             setFormData({ ...formData, model_provider: provider, model_name: name });
+           }}
+           disabled={!editMode}
+         />
+         
+         {/* Provider Configuration */}
+         <ProviderConfig
+           provider={formData.model_provider!}
+           apiKey={formData.api_key}
+           apiEndpoint={formData.api_endpoint}
+           temperature={formData.temperature}
+           maxTokens={formData.max_tokens}
+           onChange={(field, value) => setFormData({ ...formData, [field]: value })}
+           disabled={!editMode}
+         />
+         
+         {/* Tools Management */}
+         <ToolsManagement
+           enabledTools={formData.enabled_tools || []}
+           toolsConfig={formData.tools_config}
+           onChange={(tools, config) => {
+             setFormData({ ...formData, enabled_tools: tools, tools_config: config });
+           }}
+           disabled={!editMode}
+         />
+         
+         {/* Configuration History */}
+         {!editMode && (
+           <ConfigHistory
+             projectId={projectId!}
+             currentVersion={config?.version}
+             onRollback={rollbackConfig}
+           />
+         )}
+       </div>
+     );
+   };
+   ```
 
-- [x] **Task Detail Panel** (`components/Kanban/TaskDetailPanel.tsx`)
-  - ✅ Added "Execute Task" button in header
-  - ✅ Shows execution history section
-  - ✅ Displays current session status with session ID and duration
+2. **Add ConfigPanel to Project Detail Page:**
+   - Add "Configuration" tab to project detail page
+   - Position after "Files" tab
+   - Show badge with active config version
 
-- [x] **API Client** (`services/api.ts`)
-  - ✅ executeTask(projectId, taskId) → Promise<{ session_id: string }>
-  - ✅ stopTaskExecution(projectId, taskId) → Promise<void>
+**Files to Create:**
+- `frontend/src/components/Config/ConfigPanel.tsx`
 
-**Files Modified:**
-- ✅ `frontend/src/types/index.ts` - Added ExecuteTaskResponse, TaskExecutionState interfaces
-- ✅ `frontend/src/services/api.ts` - Added executeTask, stopTaskExecution methods
-- ✅ `frontend/src/components/Kanban/TaskCard.tsx` - Added onExecute prop, isExecuting prop, execute button, execution badge
-- ✅ `frontend/src/components/Kanban/TaskDetailPanel.tsx` - Added onExecute/isExecuting props, execute button in header, execution status section
-- ✅ `frontend/src/components/Kanban/KanbanBoard.tsx` - Added execution state management, handleExecuteTask function, wire up props
-- ✅ `frontend/src/components/Kanban/KanbanColumn.tsx` - Pass through onExecute and executionStates props to TaskCard
-
-**Implementation Summary:**
-- **TypeScript Types**: Added ExecuteTaskResponse and TaskExecutionState to types/index.ts
-- **API Client**: Implemented executeTask() POST to /projects/:id/tasks/:taskId/execute, returns session_id
-- **TaskCard**: Lightning bolt button appears on TODO tasks only, shows "Running" badge with spinner when executing
-- **TaskDetailPanel**: Execute button in header (next to Edit), execution status section shows session ID and duration
-- **KanbanBoard**: Manages execution state per task (Record<taskId, TaskExecutionState>), clears state when task reaches terminal status
-- **State Management**: Optimistic UI with error rollback, automatic cleanup via WebSocket updates
-
-**Visual Features:**
-- Lightning bolt icon (⚡) for execute button
-- Blue "Running" badge with animated spinner
-- Execute button disabled during execution (opacity-50, cursor-not-allowed)
-- Execution status section with blue-50 background shows session ID in monospace font
-- Duration displayed in seconds when execution completes
-
-**Test Coverage:**
-- ✅ TypeScript compilation passes (npm run build)
-- ✅ ESLint passes with --max-warnings 0
-- ✅ All existing tests still passing (no regressions)
+**Files to Modify:**
+- `frontend/src/pages/ProjectDetailPage.tsx` (add config tab)
 
 **Success Criteria:**
-- [x] "Execute" button visible on all task cards (TODO status only) ✅
-- [x] Button disabled when execution in progress ✅
-- [x] Visual feedback for execution state changes ✅
-- [x] API client methods implemented and typed ✅
-
-**Next Steps:** Phase 5.5 - Real-time Output Streaming
+- [ ] ConfigPanel renders without errors
+- [ ] Edit mode toggles correctly
+- [ ] Save/Cancel buttons work
+- [ ] Integration with useConfig hook working
 
 ---
 
-#### 5.5 Real-time Output Streaming
-**Status:** ✅ COMPLETE (2026-01-19 14:07)
+#### 6.7 ModelSelector Component
 
-**Implementation Summary:**
-- ✅ Created `useTaskExecution` hook for SSE connection
-- ✅ Created `ExecutionOutputPanel` component with terminal UI
-- ✅ Integrated into `TaskDetailPanel`
-- ✅ Auto-scroll behavior implemented
-- ✅ Event color coding (output=gray, error=red, status=blue, done=green)
+**Status:** 📋 Planned
 
-**Files Created:**
-- `frontend/src/hooks/useTaskExecution.ts` (144 lines)
-- `frontend/src/components/Kanban/ExecutionOutputPanel.tsx` (104 lines)
-
-**Files Modified:**
-- `frontend/src/components/Kanban/TaskDetailPanel.tsx` (added ExecutionOutputPanel integration)
-- `frontend/src/components/Kanban/KanbanBoard.tsx` (pass sessionId to TaskDetailPanel)
-
-**Features:**
-- SSE connection to `/api/projects/:id/tasks/:taskId/output?session_id=...`
-- EventSource API for real-time streaming
-- 4 event types: `output`, `error`, `status`, `done`
-- Auto-scroll to bottom on new output
-- Terminal-like UI with macOS-style window controls
-- Connection status indicator (LIVE badge when streaming)
-- Timestamps for each event
-- Color-coded output by event type
-- Auto-start when sessionId becomes available
-- Graceful cleanup on unmount
-
-**Success Criteria:**
-- [x] SSE connection established successfully ✅
-- [x] Output streams in real-time ✅
-- [x] Auto-scroll works smoothly ✅
-- [x] Connection cleanup on component unmount ✅
-- [x] Graceful error handling with retry ✅
-- [x] TypeScript compilation passes ✅
-- [x] ESLint passes with zero warnings ✅
-
-**Next Steps:** Phase 5.6 - Execution History
-
----
-
-#### 5.6 Execution History
-**Status:** ✅ COMPLETE (2026-01-19 14:54)
-
-**Implementation Summary:**
-- ✅ Created ExecutionHistory.tsx component (245 lines)
-- ✅ Added Session interface and SessionStatus type to frontend types
-- ✅ Implemented getTaskSessions() API client method
-- ✅ Added GetTaskSessions handler in backend with authorization
-- ✅ Extended TaskService interface with GetTaskSessions method
-- ✅ Integrated ExecutionHistory into TaskDetailPanel
-- ✅ Updated mock implementations in test files
-
-**Files Created:**
-- `frontend/src/components/Kanban/ExecutionHistory.tsx` (245 lines)
-
-**Files Modified:**
-- `frontend/src/types/index.ts` (added Session interface, SessionStatus type)
-- `frontend/src/services/api.ts` (added getTaskSessions method)
-- `frontend/src/components/Kanban/TaskDetailPanel.tsx` (integrated ExecutionHistory)
-- `backend/internal/api/tasks.go` (added GetTaskSessions handler, 51 lines)
-- `backend/internal/service/task_service.go` (added interface method + implementation)
-- `backend/cmd/api/main.go` (wired new route: GET /api/projects/:id/tasks/:taskId/sessions)
-- `backend/internal/api/tasks_test.go` (added mock method)
-- `backend/internal/api/tasks_execution_test.go` (added mock method)
-
-**Success Criteria:**
-- [x] Can view past execution history ✅
-- [x] Session metadata displayed correctly ✅
-- [x] Can expand/collapse full logs ✅
-- [x] Sorted by most recent first ✅
-- [x] TypeScript compilation passes ✅
-- [x] ESLint zero warnings ✅
-- [x] Backend tests passing ✅
-
-**Features Implemented:**
-- Collapsible session cards (click to expand/collapse)
-- Color-coded status badges (green=completed, red=failed, gray=cancelled, yellow=pending, blue=running)
-- Session metadata: ID, timestamps (started_at, completed_at), duration
-- Output preview (first 200 chars when collapsed)
-- Full output display when expanded
-- Error messages display (if present)
-- Prompt display (original task instruction)
-- Auto-fetch sessions on component mount
-- Authorization checks in backend (user must own project)
-
----
-
-### Testing & Verification
-
-#### 5.7 Integration Testing
-**Status:** ✅ **COMPLETE** (2026-01-19)
-
-**Objectives:**
-- ✅ End-to-end test of task execution workflow
-- ✅ Verify SSE streaming works correctly
-- ✅ Test error scenarios and recovery
+**Objective:** Dropdown component for selecting AI model provider and model name.
 
 **Tasks:**
-- [x] **Backend Integration Tests** (`internal/api/tasks_execution_integration_test.go`)
-  - ✅ Test: Create project → create task → execute task → verify session created
-  - ✅ Test: Stop running session → verify session cancelled → task reset to TODO
-  - ✅ Test: OpenCode sidecar unavailable → verify graceful error handling
-  - ✅ Test: Concurrent execution attempts → verify second request rejected
-  - ✅ Test: Get task sessions (execution history)
-  - ✅ Test: Invalid task state (cannot execute DONE task)
-  - ✅ Test: Unauthorized access (other user cannot execute task)
-  - ✅ Test: Session list for project (multiple tasks)
-  - ✅ Test: Stop non-running task (validation)
-  - ✅ Test: Output stream validation (missing/invalid session_id)
+1. **Create ModelSelector Component (`frontend/src/components/Config/ModelSelector.tsx`):**
+   ```typescript
+   import React from 'react';
+   
+   interface ModelSelectorProps {
+     value: { provider: string; name: string };
+     onChange: (provider: string, name: string) => void;
+     disabled?: boolean;
+   }
+   
+   const MODEL_OPTIONS = {
+     openai: [
+       { name: 'gpt-4o', label: 'GPT-4o (128k context, $2.50/$10 per 1M tokens)' },
+       { name: 'gpt-4o-mini', label: 'GPT-4o Mini (128k context, $0.15/$0.60 per 1M tokens)', recommended: true },
+       { name: 'gpt-4', label: 'GPT-4 (8k context, $30/$60 per 1M tokens)' },
+       { name: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo (4k context, $0.50/$1.50 per 1M tokens)' },
+     ],
+     anthropic: [
+       { name: 'claude-3-opus-20240229', label: 'Claude 3 Opus (200k context, $15/$75 per 1M tokens)' },
+       { name: 'claude-3-sonnet-20240229', label: 'Claude 3 Sonnet (200k context, $3/$15 per 1M tokens)' },
+       { name: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku (200k context, $0.25/$1.25 per 1M tokens)' },
+     ],
+     custom: [],
+   };
+   
+   export const ModelSelector: React.FC<ModelSelectorProps> = ({ value, onChange, disabled }) => {
+     const handleProviderChange = (provider: string) => {
+       const firstModel = MODEL_OPTIONS[provider as keyof typeof MODEL_OPTIONS][0];
+       onChange(provider, firstModel?.name || '');
+     };
+     
+     return (
+       <div className="space-y-4">
+         <div>
+           <label className="block text-sm font-medium text-gray-700 mb-2">
+             AI Provider
+           </label>
+           <select
+             value={value.provider}
+             onChange={(e) => handleProviderChange(e.target.value)}
+             disabled={disabled}
+             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+           >
+             <option value="openai">OpenAI</option>
+             <option value="anthropic">Anthropic (Claude)</option>
+             <option value="custom">Custom Endpoint</option>
+           </select>
+         </div>
+         
+         {value.provider !== 'custom' && (
+           <div>
+             <label className="block text-sm font-medium text-gray-700 mb-2">
+               Model
+             </label>
+             <select
+               value={value.name}
+               onChange={(e) => onChange(value.provider, e.target.value)}
+               disabled={disabled}
+               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+             >
+               {MODEL_OPTIONS[value.provider as keyof typeof MODEL_OPTIONS].map((model) => (
+                 <option key={model.name} value={model.name}>
+                   {model.label}
+                   {model.recommended && ' (Recommended)'}
+                 </option>
+               ))}
+             </select>
+           </div>
+         )}
+         
+         {value.provider === 'custom' && (
+           <div>
+             <label className="block text-sm font-medium text-gray-700 mb-2">
+               Model Name
+             </label>
+             <input
+               type="text"
+               value={value.name}
+               onChange={(e) => onChange(value.provider, e.target.value)}
+               placeholder="e.g., llama-3-70b"
+               disabled={disabled}
+               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+             />
+           </div>
+         )}
+       </div>
+     );
+   };
+   ```
 
-- [ ] **Manual E2E Testing Checklist:** ⏳ Deferred (requires running K8s cluster)
-  - [ ] Create project and wait for pod to be Running
-  - [ ] Create task with description "Add a README file"
-  - [ ] Click "Execute" button on task card
-  - [ ] Verify task status changes to IN_PROGRESS
-  - [ ] Verify execution output streams in real-time
-  - [ ] Wait for session completion
-  - [ ] Verify task state transitions to AI_REVIEW
-  - [ ] Check execution history shows completed session
-  - [ ] Verify README file created in workspace (via File Explorer)
-
-**Files Created:**
-- ✅ `backend/internal/api/tasks_execution_integration_test.go` (665 lines, 10 integration tests)
-
-**Test Coverage:**
-- ✅ **10 integration tests** covering full task execution lifecycle
-- ✅ All integration tests compile successfully
-- ✅ No regressions in existing unit tests (API + middleware all passing)
-- ✅ Pre-existing SessionRepository/SessionService failures documented (SQLite UUID issue)
-
-**Implementation Summary:**
-- **TestTaskExecution_FullLifecycle_Integration**: Complete workflow (execute → verify session → verify task status)
-- **TestTaskExecution_StopSession_Integration**: Stop running session, verify CANCELLED status, task reset to TODO
-- **TestTaskExecution_ConcurrentExecutionPrevented_Integration**: Second execution rejected with 409 Conflict
-- **TestTaskExecution_OpenCodeSidecarUnavailable_Integration**: Graceful error handling when sidecar unavailable
-- **TestTaskExecution_GetTaskSessions_Integration**: Retrieve execution history for task
-- **TestTaskExecution_InvalidTaskState_Integration**: Cannot execute task in DONE state (400 Bad Request)
-- **TestTaskExecution_UnauthorizedAccess_Integration**: Other user cannot execute task (403 Forbidden)
-- **TestTaskExecution_SessionListForProject_Integration**: Multiple sessions for project
-- **TestTaskExecution_StopNonRunningTask_Integration**: Cannot stop task not IN_PROGRESS (400 Bad Request)
-- **TestTaskExecution_OutputStreamValidation_Integration**: SSE endpoint validation (missing/invalid session_id)
-
-**Test Infrastructure:**
-- Setup helper: `setupTaskExecutionIntegrationTest()` - creates DB, services, handlers, cleanup
-- Test data builders: `createTestUserForExecution()`, `createTestProject()`, `createTestTask()`
-- Following Phase 2 integration test patterns from `projects_integration_test.go`
-- Uses `//go:build integration` tag to isolate from unit tests
-- Requires PostgreSQL + Kubernetes cluster (skips if unavailable)
+**Files to Create:**
+- `frontend/src/components/Config/ModelSelector.tsx`
 
 **Success Criteria:**
-- [x] At least 10 integration tests created ✅ (exactly 10)
-- [x] All tests compile successfully ✅
-- [x] No regressions in existing tests ✅ (API + middleware all passing)
-- [ ] E2E workflow verified manually ⏳ (deferred - requires K8s cluster setup)
-
-**Known Limitations:**
-- Integration tests require PostgreSQL + Kubernetes cluster to run (skipped in CI)
-- Manual E2E testing deferred (requires full deployment environment)
-- Pre-existing SessionRepository/SessionService test failures (SQLite UUID syntax issue - works with PostgreSQL)
-
-**Next Steps:** Phase 5 Complete → Archive to PHASE5.md
+- [ ] Provider dropdown works correctly
+- [ ] Model options update when provider changes
+- [ ] Recommended badge shows for gpt-4o-mini
+- [ ] Custom endpoint shows text input
 
 ---
 
-### Success Criteria
+#### 6.8 ProviderConfig Component
 
-**Phase 5 is complete when:**
+**Status:** 📋 Planned
 
-1. **Backend:**
-   - [x] Session model, repository, service implemented (26 tests) ✅
-   - [x] Task execution API endpoints working (17 tests) ✅
-   - [x] OpenCode sidecar added to pod template ✅
-   - [x] All 4 containers starting successfully in project pods ✅
-   - [x] SSE streaming functional ✅
+**Objective:** Configuration fields for API keys, endpoints, temperature, and max_tokens.
 
-2. **Frontend:**
-   - [x] "Execute" button on task cards ✅
-   - [x] Real-time output streaming with SSE ✅
-   - [x] Execution history display ✅
-   - [x] All TypeScript types defined ✅
-   - [x] No console errors ✅
+**Tasks:**
+1. **Create ProviderConfig Component (`frontend/src/components/Config/ProviderConfig.tsx`):**
+   ```typescript
+   import React, { useState } from 'react';
+   
+   interface ProviderConfigProps {
+     provider: string;
+     apiKey?: string;
+     apiEndpoint?: string;
+     temperature: number;
+     maxTokens: number;
+     onChange: (field: string, value: any) => void;
+     disabled?: boolean;
+   }
+   
+   export const ProviderConfig: React.FC<ProviderConfigProps> = ({
+     provider,
+     apiKey,
+     apiEndpoint,
+     temperature,
+     maxTokens,
+     onChange,
+     disabled,
+   }) => {
+     const [showApiKey, setShowApiKey] = useState(false);
+     
+     return (
+       <div className="space-y-4 border-t border-gray-200 pt-4">
+         <h3 className="text-lg font-semibold text-gray-800">Provider Settings</h3>
+         
+         {/* API Key */}
+         <div>
+           <label className="block text-sm font-medium text-gray-700 mb-2">
+             API Key {provider === 'openai' && '(OpenAI)'}
+             {provider === 'anthropic' && '(Anthropic)'}
+           </label>
+           <div className="relative">
+             <input
+               type={showApiKey ? 'text' : 'password'}
+               value={apiKey || ''}
+               onChange={(e) => onChange('api_key', e.target.value)}
+               placeholder={provider === 'custom' ? 'Custom API key' : `sk-...`}
+               disabled={disabled}
+               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+             />
+             <button
+               type="button"
+               onClick={() => setShowApiKey(!showApiKey)}
+               className="absolute right-2 top-2 text-gray-500 hover:text-gray-700"
+             >
+               {showApiKey ? '🙈' : '👁️'}
+             </button>
+           </div>
+           <p className="text-xs text-gray-500 mt-1">
+             API key is encrypted and never shown in responses
+           </p>
+         </div>
+         
+         {/* Custom Endpoint (only for custom provider) */}
+         {provider === 'custom' && (
+           <div>
+             <label className="block text-sm font-medium text-gray-700 mb-2">
+               API Endpoint
+             </label>
+             <input
+               type="url"
+               value={apiEndpoint || ''}
+               onChange={(e) => onChange('api_endpoint', e.target.value)}
+               placeholder="https://api.example.com/v1/chat/completions"
+               disabled={disabled}
+               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+             />
+           </div>
+         )}
+         
+         {/* Temperature */}
+         <div>
+           <label className="block text-sm font-medium text-gray-700 mb-2">
+             Temperature: {temperature}
+           </label>
+           <input
+             type="range"
+             min="0"
+             max="2"
+             step="0.1"
+             value={temperature}
+             onChange={(e) => onChange('temperature', parseFloat(e.target.value))}
+             disabled={disabled}
+             className="w-full"
+           />
+           <div className="flex justify-between text-xs text-gray-500">
+             <span>Focused (0)</span>
+             <span>Balanced (1)</span>
+             <span>Creative (2)</span>
+           </div>
+         </div>
+         
+         {/* Max Tokens */}
+         <div>
+           <label className="block text-sm font-medium text-gray-700 mb-2">
+             Max Tokens
+           </label>
+           <input
+             type="number"
+             value={maxTokens}
+             onChange={(e) => onChange('max_tokens', parseInt(e.target.value))}
+             min="1"
+             max="128000"
+             disabled={disabled}
+             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+           />
+           <p className="text-xs text-gray-500 mt-1">
+             Maximum tokens to generate (higher = more expensive)
+           </p>
+         </div>
+       </div>
+     );
+   };
+   ```
 
-3. **Integration:**
-   - [x] Can execute task end-to-end ✅
-   - [x] Output streams in real-time ✅
-   - [x] Task state transitions working ✅
-   - [x] Can view execution history ✅
-   - [x] OpenCode session logs persisted ✅
+**Files to Create:**
+- `frontend/src/components/Config/ProviderConfig.tsx`
 
-4. **Testing:**
-   - [x] 43+ new unit tests passing (backend: 26 + 17) ✅
-   - [x] 10+ integration tests created ✅ (10 total)
-   - [ ] Manual E2E checklist completed ⏳ (deferred)
-   - [x] All existing tests still passing (no regressions) ✅
+**Success Criteria:**
+- [ ] API key input with show/hide toggle
+- [ ] Temperature slider with labels
+- [ ] Max tokens numeric input with validation
+- [ ] Custom endpoint shows only for custom provider
 
-**Status:** ✅ **Phase 5 COMPLETE** (2026-01-19)  
-**Total Implementation:** 53 new tests (26 session + 17 execution + 10 integration)  
-**Manual E2E Testing:** Deferred (requires K8s cluster deployment)
+---
+
+#### 6.9 ToolsManagement Component
+
+**Status:** 📋 Planned
+
+**Objective:** Toggle switches for enabling/disabling OpenCode tools (file_ops, web_search, code_exec, etc.).
+
+**Tasks:**
+1. **Create ToolsManagement Component (`frontend/src/components/Config/ToolsManagement.tsx`):**
+   ```typescript
+   import React from 'react';
+   
+   interface ToolsManagementProps {
+     enabledTools: string[];
+     toolsConfig?: Record<string, any>;
+     onChange: (tools: string[], config: Record<string, any>) => void;
+     disabled?: boolean;
+   }
+   
+   const AVAILABLE_TOOLS = [
+     { id: 'file_ops', name: 'File Operations', description: 'Read, write, and modify files in the workspace' },
+     { id: 'web_search', name: 'Web Search', description: 'Search the web for information' },
+     { id: 'code_exec', name: 'Code Execution', description: 'Execute code snippets (Python, JavaScript, etc.)' },
+     { id: 'terminal', name: 'Terminal Access', description: 'Run shell commands in the workspace' },
+   ];
+   
+   export const ToolsManagement: React.FC<ToolsManagementProps> = ({
+     enabledTools,
+     toolsConfig = {},
+     onChange,
+     disabled,
+   }) => {
+     const toggleTool = (toolId: string) => {
+       const newTools = enabledTools.includes(toolId)
+         ? enabledTools.filter((t) => t !== toolId)
+         : [...enabledTools, toolId];
+       onChange(newTools, toolsConfig);
+     };
+     
+     return (
+       <div className="space-y-4 border-t border-gray-200 pt-4">
+         <h3 className="text-lg font-semibold text-gray-800">Enabled Tools</h3>
+         
+         <div className="space-y-3">
+           {AVAILABLE_TOOLS.map((tool) => (
+             <div key={tool.id} className="flex items-start space-x-3">
+               <input
+                 type="checkbox"
+                 id={tool.id}
+                 checked={enabledTools.includes(tool.id)}
+                 onChange={() => toggleTool(tool.id)}
+                 disabled={disabled}
+                 className="mt-1 h-5 w-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+               />
+               <label htmlFor={tool.id} className="flex-1 cursor-pointer">
+                 <div className="font-medium text-gray-800">{tool.name}</div>
+                 <div className="text-sm text-gray-500">{tool.description}</div>
+               </label>
+             </div>
+           ))}
+         </div>
+         
+         <div className="text-xs text-gray-500 mt-4">
+           💡 Tip: Disabling unused tools can reduce token usage and improve response times
+         </div>
+       </div>
+     );
+   };
+   ```
+
+**Files to Create:**
+- `frontend/src/components/Config/ToolsManagement.tsx`
+
+**Success Criteria:**
+- [ ] Checkboxes toggle correctly
+- [ ] Tool descriptions clear
+- [ ] Disabled state works
+
+---
+
+#### 6.10 ConfigHistory Component
+
+**Status:** 📋 Planned
+
+**Objective:** Display configuration version history with rollback capability.
+
+**Tasks:**
+1. **Create ConfigHistory Component (`frontend/src/components/Config/ConfigHistory.tsx`):**
+   ```typescript
+   import React, { useState, useEffect } from 'react';
+   import { api } from '../../services/api';
+   import type { OpenCodeConfig } from '../../types';
+   
+   interface ConfigHistoryProps {
+     projectId: string;
+     currentVersion?: number;
+     onRollback: (version: number) => Promise<void>;
+   }
+   
+   export const ConfigHistory: React.FC<ConfigHistoryProps> = ({
+     projectId,
+     currentVersion,
+     onRollback,
+   }) => {
+     const [versions, setVersions] = useState<OpenCodeConfig[]>([]);
+     const [loading, setLoading] = useState(true);
+     const [expandedVersion, setExpandedVersion] = useState<number | null>(null);
+     
+     useEffect(() => {
+       const fetchVersions = async () => {
+         try {
+           const response = await api.get(`/api/projects/${projectId}/config/versions`);
+           setVersions(response.data);
+         } catch (err) {
+           console.error('Failed to fetch config versions:', err);
+         } finally {
+           setLoading(false);
+         }
+       };
+       
+       fetchVersions();
+     }, [projectId]);
+     
+     const handleRollback = async (version: number) => {
+       if (window.confirm(`Rollback to version ${version}? This will create a new version with the old configuration.`)) {
+         await onRollback(version);
+       }
+     };
+     
+     if (loading) return <div>Loading history...</div>;
+     if (versions.length === 0) return null;
+     
+     return (
+       <div className="border-t border-gray-200 pt-4">
+         <h3 className="text-lg font-semibold text-gray-800 mb-4">Configuration History</h3>
+         
+         <div className="space-y-2">
+           {versions.map((version) => (
+             <div
+               key={version.version}
+               className={`border rounded-lg p-3 ${
+                 version.is_active ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+               }`}
+             >
+               <div className="flex justify-between items-center">
+                 <div className="flex items-center space-x-3">
+                   <span className="font-semibold text-gray-800">
+                     Version {version.version}
+                   </span>
+                   {version.is_active && (
+                     <span className="px-2 py-1 text-xs font-semibold text-blue-800 bg-blue-200 rounded">
+                       Active
+                     </span>
+                   )}
+                   <span className="text-sm text-gray-500">
+                     {new Date(version.created_at).toLocaleString()}
+                   </span>
+                 </div>
+                 
+                 <div className="flex items-center space-x-2">
+                   <button
+                     onClick={() => setExpandedVersion(
+                       expandedVersion === version.version ? null : version.version
+                     )}
+                     className="text-sm text-blue-600 hover:underline"
+                   >
+                     {expandedVersion === version.version ? 'Hide' : 'Details'}
+                   </button>
+                   
+                   {!version.is_active && (
+                     <button
+                       onClick={() => handleRollback(version.version)}
+                       className="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                     >
+                       Rollback
+                     </button>
+                   )}
+                 </div>
+               </div>
+               
+               {expandedVersion === version.version && (
+                 <div className="mt-3 pt-3 border-t border-gray-200 text-sm space-y-1">
+                   <div><strong>Provider:</strong> {version.model_provider}</div>
+                   <div><strong>Model:</strong> {version.model_name}</div>
+                   <div><strong>Temperature:</strong> {version.temperature}</div>
+                   <div><strong>Max Tokens:</strong> {version.max_tokens}</div>
+                   <div><strong>Tools:</strong> {version.enabled_tools.join(', ')}</div>
+                 </div>
+               )}
+             </div>
+           ))}
+         </div>
+       </div>
+     );
+   };
+   ```
+
+**Files to Create:**
+- `frontend/src/components/Config/ConfigHistory.tsx`
+
+**Success Criteria:**
+- [ ] Versions displayed in reverse chronological order
+- [ ] Active version highlighted
+- [ ] Rollback confirmation dialog works
+- [ ] Details expand/collapse correctly
+
+---
+
+#### 6.11 useConfig Hook
+
+**Status:** 📋 Planned
+
+**Objective:** Custom React hook for configuration API interactions.
+
+**Tasks:**
+1. **Create useConfig Hook (`frontend/src/hooks/useConfig.ts`):**
+   ```typescript
+   import { useState, useEffect } from 'react';
+   import { api } from '../services/api';
+   import type { OpenCodeConfig } from '../types';
+   
+   export const useConfig = (projectId: string) => {
+     const [config, setConfig] = useState<OpenCodeConfig | null>(null);
+     const [loading, setLoading] = useState(true);
+     const [error, setError] = useState<string | null>(null);
+     
+     const fetchConfig = async () => {
+       try {
+         setLoading(true);
+         setError(null);
+         const response = await api.get(`/api/projects/${projectId}/config`);
+         setConfig(response.data);
+       } catch (err: any) {
+         if (err.response?.status === 404) {
+           setConfig(null); // No config yet
+         } else {
+           setError(err.message || 'Failed to load configuration');
+         }
+       } finally {
+         setLoading(false);
+       }
+     };
+     
+     useEffect(() => {
+       fetchConfig();
+     }, [projectId]);
+     
+     const updateConfig = async (newConfig: OpenCodeConfig) => {
+       try {
+         setLoading(true);
+         setError(null);
+         const response = await api.post(`/api/projects/${projectId}/config`, newConfig);
+         setConfig(response.data);
+       } catch (err: any) {
+         setError(err.response?.data?.error || 'Failed to update configuration');
+         throw err;
+       } finally {
+         setLoading(false);
+       }
+     };
+     
+     const rollbackConfig = async (version: number) => {
+       try {
+         setLoading(true);
+         setError(null);
+         await api.post(`/api/projects/${projectId}/config/rollback/${version}`);
+         await fetchConfig(); // Reload config
+       } catch (err: any) {
+         setError(err.response?.data?.error || 'Failed to rollback configuration');
+         throw err;
+       } finally {
+         setLoading(false);
+       }
+     };
+     
+     return {
+       config,
+       loading,
+       error,
+       updateConfig,
+       rollbackConfig,
+       refetch: fetchConfig,
+     };
+   };
+   ```
+
+2. **Add Config Types to Types File (`frontend/src/types/index.ts`):**
+   ```typescript
+   export interface OpenCodeConfig {
+     id: string;
+     project_id: string;
+     version: number;
+     is_active: boolean;
+     model_provider: string;
+     model_name: string;
+     model_version?: string;
+     api_endpoint?: string;
+     api_key?: string; // Only for create/update requests
+     temperature: number;
+     max_tokens: number;
+     enabled_tools: string[];
+     tools_config?: Record<string, any>;
+     system_prompt?: string;
+     max_iterations: number;
+     timeout_seconds: number;
+     created_by: string;
+     created_at: string;
+     updated_at: string;
+   }
+   ```
+
+**Files to Create:**
+- `frontend/src/hooks/useConfig.ts`
+
+**Files to Modify:**
+- `frontend/src/types/index.ts` (add OpenCodeConfig interface)
+
+**Success Criteria:**
+- [ ] Hook loads config on mount
+- [ ] updateConfig creates new version
+- [ ] rollbackConfig triggers refetch
+- [ ] Error handling works correctly
+
+---
+
+### Testing Tasks
+
+#### 6.12 Backend Unit Tests Summary
+
+**Status:** 📋 Planned
+
+**Test Coverage Goals:**
+- Repository layer: 25-30 tests
+- Service layer: 30-35 tests
+- API handler layer: 30-35 tests
+- **Total:** 85-100 backend unit tests
+
+**Key Test Areas:**
+- Configuration CRUD operations
+- Versioning logic (deactivate old, create new)
+- API key encryption/decryption
+- Model validation (OpenAI, Anthropic, custom)
+- Temperature and max_tokens validation
+- Tools validation
+- Rollback functionality
+- Concurrent config updates
+- Foreign key cascades
+
+**Success Criteria:**
+- [ ] All backend tests pass
+- [ ] >90% code coverage for config module
+- [ ] No regressions in existing tests
+
+---
+
+#### 6.13 Frontend Component Tests
+
+**Status:** 📋 Planned
+
+**Test Coverage Goals:**
+- ConfigPanel: 10-12 tests
+- ModelSelector: 8-10 tests
+- ProviderConfig: 8-10 tests
+- ToolsManagement: 6-8 tests
+- ConfigHistory: 8-10 tests
+- useConfig hook: 10-12 tests
+- **Total:** 50-62 frontend tests
+
+**Key Test Areas:**
+- Component rendering
+- User interactions (clicks, typing, toggles)
+- Form validation
+- API call mocking
+- Error handling
+- Edit mode toggle
+- Rollback confirmation
+
+**Success Criteria:**
+- [ ] All frontend tests pass
+- [ ] >80% code coverage for config components
+- [ ] No regressions in existing tests
+
+---
+
+#### 6.14 Integration Tests
+
+**Status:** 📋 Planned
+
+**Test Scenarios:**
+1. **Complete Config Lifecycle:**
+   - Create project → Create config → Update config → Rollback → Delete project
+
+2. **API Key Security:**
+   - Verify encryption in database
+   - Verify key never exposed in API responses
+   - Verify decryption for internal use
+
+3. **Version Management:**
+   - Verify only one active config at a time
+   - Verify version numbering increments correctly
+   - Verify rollback creates new version
+
+**Success Criteria:**
+- [ ] Integration tests pass with real database
+- [ ] API key encryption verified
+- [ ] Cascading deletes working
+
+---
+
+### Documentation
+
+#### 6.15 API Documentation
+
+**Status:** 📋 Planned
+
+**Tasks:**
+- Document all 4 config endpoints in API_SPECIFICATION.md
+- Add request/response examples
+- Document validation rules
+- Document error codes
+
+---
+
+### Success Criteria (Phase 6 Complete)
+
+**Backend:**
+- [ ] Migration 005 (opencode_configs) applied successfully
+- [ ] Config repository tests: 25-30 passing
+- [ ] Config service tests: 30-35 passing
+- [ ] Config API handler tests: 30-35 passing
+- [ ] Integration tests: 3 passing
+- [ ] API key encryption working and tested
+
+**Frontend:**
+- [ ] ConfigPanel component functional
+- [ ] ModelSelector dropdown working
+- [ ] ProviderConfig fields working
+- [ ] ToolsManagement toggles working
+- [ ] ConfigHistory shows versions with rollback
+- [ ] useConfig hook tested
+- [ ] Component tests: 50-62 passing
+
+**Integration:**
+- [ ] End-to-end config lifecycle tested
+- [ ] Default config created for new projects
+- [ ] Config changes reflected in OpenCode execution
+- [ ] Rollback functionality working
+
+**Documentation:**
+- [ ] API endpoints documented
+- [ ] Configuration options documented
+- [ ] IMPROVEMENTS.md updated with Phase 6 deferred items
+- [ ] TODO.md cleaned and ready for Phase 7
 
 ---
 
 ### Dependencies
 
-**Required Before Starting:**
-- ✅ Phase 4 complete (file explorer needed to view OpenCode output files)
-- ✅ Phase 3 complete (task management and state machine)
-- ✅ Phase 2 complete (Kubernetes pod lifecycle)
+**Backend:**
+- PostgreSQL database with migrations 001-004 applied
+- Go 1.24+
+- Existing Project model and repository
 
-**External Dependencies:**
-- OpenCode server Docker image (verify availability in registry)
-- SSE support in Gin framework (use `gin.Context.Stream()`)
-- EventSource API (browser native, no additional libraries)
+**Frontend:**
+- React 18+
+- Existing Project Detail page structure
+- Tailwind CSS for styling
+
+**External:**
+- None (all self-contained)
 
 ---
 
-### Deferred Items (Phase 5+)
+### Deferred Items (Phase 6 → Future)
 
-Items not critical for MVP but valuable for future:
+Items not critical for MVP:
 
-1. **Session Persistence:**
-   - Store full session output logs in database
-   - Compress old logs after 30 days
-   - Add pagination for execution history
+1. **Model Usage Analytics:**
+   - Track token usage per model
+   - Cost estimation dashboard
+   - Monthly spending limits
 
-2. **Execution Queueing:**
-   - Queue tasks when OpenCode server is busy
-   - Show queue position to user
-   - Automatic retry on transient failures
+2. **Config Templates:**
+   - Pre-defined config templates (Fast, Balanced, Quality)
+   - Share configs across projects
+   - Import/export configs
 
-3. **Multi-session Support:**
-   - Allow multiple OpenCode sessions per project
-   - Resource limits to prevent overload
-   - Priority queueing for tasks
+3. **Advanced Provider Support:**
+   - Azure OpenAI integration
+   - Google Gemini integration
+   - Local LLM support (Ollama, LM Studio)
 
-4. **Advanced Monitoring:**
-   - Grafana dashboards for session metrics
-   - Alert on failed sessions
-   - Track token usage per session
+4. **Tool Configuration UI:**
+   - Detailed settings per tool (e.g., web search depth, code exec timeout)
+   - Custom tool development interface
 
 ---
 
 ### Notes
 
-**OpenCode Sidecar Configuration:**
-- Port: 3003 (internal to pod)
-- Resource Limits: 200m-500m CPU, 256Mi-512Mi memory
-- Workspace: /workspace (shared PVC with main container and file-browser)
-- Health Check: HTTP GET /health every 10s
+**Config Encryption Key:**
+- Generate with: `openssl rand -base64 32`
+- Store in environment variable: `CONFIG_ENCRYPTION_KEY`
+- Must be 32 bytes (256 bits) for AES-256-GCM
 
-**SSE vs WebSocket:**
-- Using SSE (Server-Sent Events) for output streaming
-- Simpler than WebSocket for one-way server→client data flow
-- Native browser support via EventSource API
-- Automatic reconnection on disconnect
+**Default Config for New Projects:**
+```json
+{
+  "model_provider": "openai",
+  "model_name": "gpt-4o-mini",
+  "temperature": 0.7,
+  "max_tokens": 4096,
+  "enabled_tools": ["file_ops", "web_search", "code_exec"],
+  "max_iterations": 10,
+  "timeout_seconds": 300
+}
+```
 
-**Task State Transitions:**
-- Execute task: TODO → IN_PROGRESS
-- Session completes: IN_PROGRESS → AI_REVIEW
-- Session fails: IN_PROGRESS → TODO (with error logged)
-- Human reviews: AI_REVIEW → HUMAN_REVIEW or DONE
+**Version Numbering:**
+- Starts at 1 for first config
+- Increments by 1 for each update
+- Rollback creates new version (does NOT reuse old version number)
+
+**Why Versioning:**
+- Immutable audit trail
+- Easy rollback to previous configurations
+- Track config changes over time
 
 ---
 
-**Phase 5 Start Date:** TBD  
+**Phase 6 Start Date:** TBD  
 **Target Completion:** TBD (flexible, 3-developer team)  
 **Author:** Sisyphus (OpenCode AI Agent)
-
----
-
-**Last Updated:** 2026-01-19 12:33 CET
