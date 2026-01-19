@@ -1,15 +1,15 @@
 # OPENCODE PROJECT MANAGER - AGENT KNOWLEDGE BASE
 
-**Generated:** 2026-01-19 09:35:00  
+**Generated:** 2026-01-19 09:38:00  
 **Branch:** main  
 **Project:** Go backend + React frontend + K8s orchestration
-**Status:** ✅ Phase 1 Complete + ✅ Phase 2 Complete + ✅ Phase 3 Complete → 🚧 Phase 4.1-4.4 Complete (File Browser Sidecar with Security & Validation)
+**Status:** ✅ Phase 1 Complete + ✅ Phase 2 Complete + ✅ Phase 3 Complete → 🚧 Phase 4.1-4.5 Complete (File Browser Sidecar - Backend Integration Ready)
 
 ---
 
 ## OVERVIEW
 
-Multi-module monorepo: Go API server, React SPA, 2 Go sidecars (file-browser, session-proxy), K8s manifests. Project management system with AI-powered coding via OpenCode agents. All critical issues resolved. **Phase 1 + Phase 2 + Phase 3 COMPLETE** - Full project management with Kubernetes pod lifecycle, real-time WebSocket updates, task management with Kanban board. **Phase 4 IN PROGRESS** - File Explorer (4.1-4.4 Complete: File Browser Sidecar with Real-time Watching & Security Validation - 80 tests passing).
+Multi-module monorepo: Go API server, React SPA, 2 Go sidecars (file-browser, session-proxy), K8s manifests. Project management system with AI-powered coding via OpenCode agents. All critical issues resolved. **Phase 1 + Phase 2 + Phase 3 COMPLETE** - Full project management with Kubernetes pod lifecycle, real-time WebSocket updates, task management with Kanban board. **Phase 4 IN PROGRESS** - File Explorer (4.1-4.5 Complete: File Browser Sidecar with Backend Integration - Ready for Frontend Development).
 
 ---
 
@@ -403,9 +403,3 @@ make docker-push-dev        # Build and push development
     - Docker image: 21.1MB (multi-stage build, Alpine base, HEALTHCHECK verified)
     - Verification: Backend compiles, all tests pass, no regressions
     - Files modified: pod_template.go (+53 lines for file-browser container with probes)
-    - Hidden files: Default filtering (`.` prefix), query parameter `?include_hidden=true` (4 handler tests)
-    - Sensitive blocklist: 15 patterns always blocked (`.env`, `credentials.json`, etc.) - 3 tests
-    - Implementation: `sensitiveFiles` map + filtering logic in `buildTree()` (lines 24-38, 91-99)
-    - Tests: 10 new comprehensive tests (6 service + 4 handler) - all passing
-    - Total: 80 tests passing across file-browser sidecar (30 service + 39 handler + 11 watcher)
-    - Files: +323 lines (34 service + 2 handler + 182 service tests + 105 handler tests)
