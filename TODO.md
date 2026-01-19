@@ -1,8 +1,8 @@
 # OpenCode Project Manager - TODO List
 
-**Last Updated:** 2026-01-19 19:02 CET  
+**Last Updated:** 2026-01-19 19:03 CET  
 **Current Phase:** Phase 7 - Two-Way Interactions (Weeks 13-14)  
-**Status:** 🚧 IN PROGRESS - Phase 7.1 COMPLETE  
+**Status:** 🚧 IN PROGRESS - Phase 7.1-7.2 COMPLETE  
 **Branch:** main
 
 ---
@@ -20,11 +20,11 @@ See archived phases:
 - [PHASE6.md](./PHASE6.md) - OpenCode Configuration UI (Complete 2026-01-19 18:31)
 
 **Total Project Stats:**
-- ✅ **400 tests passing** (248 backend + 152 frontend)
+- ✅ **425 tests passing** (273 backend + 152 frontend)
 - ✅ **6 phases complete** (Auth, Projects, Tasks, Files, Execution, Config)
-- ✅ **Phase 7.1 complete** (Interaction Model & Repository - 17 new tests)
+- ✅ **Phase 7.1-7.2 complete** (Interaction Model, Repository & Service - 42 new tests)
 - ✅ **Production-ready features:** Authentication, CRUD, real-time updates, file editing, config management
-- ✅ **Next:** Phase 7.2 - Interaction Service
+- ✅ **Next:** Phase 7.3 - WebSocket Interaction Endpoint
 
 ---
 
@@ -207,80 +207,42 @@ See archived phases:
 
 #### 7.2 Interaction Service
 
-**Status:** 📋 Planned
+**Status:** ✅ COMPLETE (2026-01-19 19:03)
 
 **Objective:** Business logic for managing interactions and routing messages.
 
-**Tasks:**
-1. **Create Interaction Service (`backend/internal/service/interaction_service.go`):**
-   ```go
-   package service
-   
-   import (
-       "context"
-       "fmt"
-       
-       "github.com/google/uuid"
-       "github.com/npinot/vibe/backend/internal/model"
-       "github.com/npinot/vibe/backend/internal/repository"
-   )
-   
-   type InteractionService struct {
-       interactionRepo *repository.InteractionRepository
-       sessionService  *SessionService  // For session validation
-   }
-   
-   func NewInteractionService(
-       interactionRepo *repository.InteractionRepository,
-       sessionService *SessionService,
-   ) *InteractionService
-   
-   // CreateUserMessage stores a user message and forwards to OpenCode
-   func (s *InteractionService) CreateUserMessage(
-       ctx context.Context,
-       taskID uuid.UUID,
-       userID uuid.UUID,
-       content string,
-   ) (*model.Interaction, error)
-   
-   // CreateAgentResponse stores an agent response message
-   func (s *InteractionService) CreateAgentResponse(
-       ctx context.Context,
-       taskID uuid.UUID,
-       sessionID uuid.UUID,
-       content string,
-   ) (*model.Interaction, error)
-   
-   // GetTaskHistory retrieves all interactions for a task
-   func (s *InteractionService) GetTaskHistory(
-       ctx context.Context,
-       taskID uuid.UUID,
-   ) ([]model.Interaction, error)
-   
-   // ValidateTaskOwnership ensures user can interact with task
-   func (s *InteractionService) ValidateTaskOwnership(
-       ctx context.Context,
-       taskID uuid.UUID,
-       userID uuid.UUID,
-   ) error
-   ```
+**Completed Implementation:**
+- ✅ **Service:** `backend/internal/service/interaction_service.go` (308 lines)
+  - 8 public methods: CreateUserMessage, CreateAgentResponse, CreateSystemNotification, GetTaskHistory, GetSessionHistory, DeleteTaskHistory, ValidateTaskOwnership, validateSessionBelongsToTask
+  - Authorization pattern: Validates ownership via Task → Project → User chain
+  - Message type-specific validation (2,000 char limit for users, 50,000 for agents/system)
+  - Sentinel errors: ErrTaskNotFound, ErrSessionNotFound, ErrInvalidMessageContent, ErrTaskNotOwnedByUser
+  
+- ✅ **Tests:** `backend/internal/service/interaction_service_test.go` (732 lines)
+  - 25 comprehensive unit tests covering all service methods
+  - Mock-based testing for all repository dependencies
+  - Coverage: success paths, authorization failures, validation errors, not-found scenarios, repository errors
+  - All tests passing ✅
 
-2. **Create Service Tests (`backend/internal/service/interaction_service_test.go`):**
-   - Test `CreateUserMessage()` stores and forwards message
-   - Test `CreateAgentResponse()` stores response
-   - Test `GetTaskHistory()` returns ordered history
-   - Test `ValidateTaskOwnership()` enforces security
-   - Test error handling (invalid task, unauthorized user)
-   - **Target:** 15-20 unit tests
+- ✅ **Security Review:** Oracle architectural review completed
+  - Identified CreateAgentResponse authorization gap (needs internal auth in Phase 7.3)
+  - Fixed inconsistent error handling (added ErrSessionNotFound sentinel error)
+  - Implemented message type-specific validation
+  - Security warning comments added documenting known issues
 
-**Files to Create:**
-- `backend/internal/service/interaction_service.go`
-- `backend/internal/service/interaction_service_test.go`
+**Files Created:**
+- `backend/internal/service/interaction_service.go` ✅
+- `backend/internal/service/interaction_service_test.go` ✅
 
 **Success Criteria:**
-- [ ] Service tests pass (target: 15-20)
-- [ ] Task ownership validation working
-- [ ] Message routing logic correct
+- [x] Service tests pass (25 tests, all passing) ✅
+- [x] Task ownership validation working ✅
+- [x] Message routing logic correct ✅
+- [x] Oracle security review completed ✅
+
+**Known Issues (Deferred to Phase 7.3):**
+- ⚠️ CreateAgentResponse lacks internal authentication - any authenticated user can forge agent responses
+- Solution: Add internal authentication token for session-proxy sidecar in Phase 7.3
 
 ---
 
